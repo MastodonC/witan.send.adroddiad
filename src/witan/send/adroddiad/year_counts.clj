@@ -9,7 +9,7 @@
             [witan.send.adroddiad.single-population :as single-population]
             [witan.send.adroddiad.summary :as summary]))
 
-(defn year-counts [census-data]
+(defn year-counts [census-data file-name]
   (let [counts (-> census-data
                    (tc/group-by [:simulation :calendar-year])
                    (tc/aggregate {:transition-count #(dfn/sum (:transition-count %))})
@@ -20,4 +20,4 @@
         (single-population/single-population-report)
         (vector)
         (large/create-workbook)
-        (large/save-workbook! "workpackage-1-1/ehcp-population.xlsx"))))
+        (large/save-workbook! file-name))))
