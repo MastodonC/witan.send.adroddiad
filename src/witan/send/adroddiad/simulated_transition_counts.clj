@@ -9,10 +9,8 @@
   (let [all-datasets (into []
                            (comp
                             stcio/gzipped-transit-file-paths-xf
-                            (map (fn [file]
-                                   (future
-                                     (-> (into [] (stcio/transit-file->eduction file))
-                                         tc/dataset)))))
+                            (map (fn [file] (stcio/transit-file->eduction file)))
+                            (map (fn [e] (future (tc/dataset (into [] e))))))
                            (stcio/sorted-file-list input-dir))]
     (apply tc/concat-copying (map deref all-datasets))))
 
