@@ -5,7 +5,7 @@
             [tech.v3.dataset.reductions :as ds-reduce]
             [witan.send.adroddiad.simulated-transition-counts.io :as stcio]))
 
-(defn transit->dataset [input-dir]
+(defn transit->dataset-multi-threaded [input-dir]
   (let [all-datasets (into []
                            (comp
                             stcio/gzipped-transit-file-paths-xf
@@ -14,14 +14,33 @@
                            (stcio/sorted-file-list input-dir))]
     (apply tc/concat-copying (map deref all-datasets))))
 
-(defn full-simulation [simulation-input-dir historic-transitions-file-name]
-  (let [simulation-data (transit->dataset simulation-input-dir)
+(defn full-simulation-multi-threaded [simulation-input-dir historic-transitions-file-name]
+  (let [simulation-data (transit->dataset-multi-threaded simulation-input-dir)
         historic-data (-> (tc/dataset historic-transitions-file-name)
                           (tc/add-column "transition-count" 1)
                           (tc/add-column "simulation" -1)
                           (tc/rename-columns :all keyword))]
     (tc/concat-copying historic-data
                        simulation-data)))
+
+(defn transit->dataset [input-dir]
+  (let [all-datasets (into []
+                           (comp
+                            stcio/gzipped-transit-file-paths-xf
+                            (map (fn [file] (stcio/transit-file->eduction file)))
+                            (map (fn [e] (tc/dataset (into [] e)))))
+                           (stcio/sorted-file-list input-dir))]
+    (apply tc/concat-copying all-datasets)))
+
+(defn full-simulation [simulation-input-dir historic-transitions-file-name]
+  (let [simulation-data (transit->dataset-multi-threaded simulation-input-dir)
+        historic-data (-> (tc/dataset historic-transitions-file-name)
+                          (tc/add-column "transition-count" 1)
+                          (tc/add-column "simulation" -1)
+                          (tc/rename-columns :all keyword))]
+    (tc/concat-copying historic-data
+                       simulation-data)))
+
 
 (defn transition-counts->census-counts [transition-counts start-year]
   (let [year-1-census (-> transition-counts
