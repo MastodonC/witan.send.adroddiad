@@ -33,7 +33,7 @@
     (apply tc/concat-copying all-datasets)))
 
 (defn full-simulation [simulation-input-dir historic-transitions-file-name]
-  (let [simulation-data (transit->dataset-multi-threaded simulation-input-dir)
+  (let [simulation-data (transit->dataset simulation-input-dir)
         historic-data (-> (tc/dataset historic-transitions-file-name)
                           (tc/add-column "transition-count" 1)
                           (tc/add-column "simulation" -1)
