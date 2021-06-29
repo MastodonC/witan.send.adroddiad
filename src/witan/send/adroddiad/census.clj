@@ -7,7 +7,6 @@
             [witan.send.adroddiad.summary :as summary]
             [witan.send.adroddiad.chart-utils :as chart-utils]))
 
-<<<<<<< Updated upstream
 (defn census-domain [census]
   (let [ays (into (sorted-set) (-> census :academic-year))
         needs (into (sorted-set) (-> census :need))
