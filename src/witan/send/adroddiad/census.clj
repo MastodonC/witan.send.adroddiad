@@ -7,7 +7,16 @@
             [witan.send.adroddiad.summary :as summary]
             [witan.send.adroddiad.chart-utils :as chart-utils]))
 
-(defn census-report [{:keys [census-data colors-and-shapes series-key legend-label report-sections file-name]}]
+(defn census-domain [census]
+  (let [ays (into (sorted-set) (-> census :academic-year))
+        needs (into (sorted-set) (-> census :need))
+        settings (into (sorted-set) (-> census :setting))]
+    (into []
+          cat
+          [ays needs settings])))
+
+(defn census-report [{:keys [census-data colors-and-shapes series-key legend-label report-sections file-name watermark]
+                      :or {watermark ""}}]
   (let [data (-> census-data
                  (tc/group-by [:simulation :calendar-year series-key])
                  (tc/aggregate {:transition-count #(dfn/sum (:transition-count %))})
@@ -30,6 +39,7 @@
                                    ::large/sheet-name title})
                            (plot/add-overview-legend-items)
                            (plot/zero-y-index)
+                           (update ::plot/canvas plot/add-watermark watermark)
                            (chart-utils/->large-charts)))))
               report-sections)
         (large/create-workbook)

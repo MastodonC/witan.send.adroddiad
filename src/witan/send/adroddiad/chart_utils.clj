@@ -3,13 +3,23 @@
             [kixi.plot :as plot]
             [kixi.plot.colors :as colors]))
 
-(defn colors-and-shapes [census-data]
-  (colors/colors-and-shapes census-data))
-
 (defn domains [census-data]
   {:needs          (into (sorted-set) (-> census-data :need))
    :settings       (into (sorted-set) (-> census-data :setting))
-   :academic-years (into (sorted-set) (-> census-data :academic-year))})
+   :academic-years (let [ncys (into (sorted-set) (-> census-data :academic-year))]
+                     (conj ncys
+                           (dec (first ncys))
+                           (inc (last ncys))))})
+
+(defn colors-and-shapes
+  ([census-data extra-domain-items]
+   (colors/domain-colors-and-shapes
+    (into []
+          cat
+          (conj (vals (domains census-data))
+                extra-domain-items))))
+  ([census-data]
+   (colors-and-shapes census-data [])))
 
 (defn ->large-charts [chart]
   (assoc chart ::large/images [{::large/image (-> chart ::plot/canvas :buffer plot/->byte-array)}]))
