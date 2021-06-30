@@ -17,30 +17,35 @@
 
 (defn census-report [{:keys [census-data colors-and-shapes series-key legend-label report-sections file-name watermark]
                       :or {watermark ""}}]
+  (println (str "Building " file-name))
   (let [data (-> census-data
                  (tc/group-by [:simulation :calendar-year series-key])
                  (tc/aggregate {:transition-count #(dfn/sum (:transition-count %))})
                  (summary/seven-number-summary [:calendar-year series-key] :transition-count)
                  (tc/order-by [:calendar-year series-key]))]
-    (-> (into []
-              (map (fn [{:keys [title series]}]
-                     (let [data-table (-> data
-                                          (tc/select-rows #(series (series-key %)))
-                                          (tc/order-by [series-key :calendar-year]))
-                           grouped-data (-> data-table
-                                            (tc/group-by [series-key]))]
-                       (-> (series/grouped-ds->median-iqr-95-series-and-legend {::series/colors-and-shapes colors-and-shapes
-                                                                                ::series/grouped-data grouped-data
-                                                                                ::series/series-key series-key})
-                           (merge {::plot/legend-label legend-label
-                                   ::plot/title {::plot/label title}}
-                                  plot/base-pop-chart-spec
-                                  {::large/data data-table
-                                   ::large/sheet-name title})
-                           (plot/add-overview-legend-items)
-                           (plot/zero-y-index)
-                           (update ::plot/canvas plot/add-watermark watermark)
-                           (chart-utils/->large-charts)))))
-              report-sections)
-        (large/create-workbook)
-        (large/save-workbook! file-name))))
+    (try (-> (into []
+                   (map (fn [{:keys [title series]}]
+                          (let [data-table (-> data
+                                               (tc/select-rows #(series (series-key %)))
+                                               (tc/order-by [series-key :calendar-year]))
+                                grouped-data (-> data-table
+                                                 (tc/group-by [series-key]))]
+                            (-> (series/grouped-ds->median-iqr-95-series-and-legend {::series/colors-and-shapes colors-and-shapes
+                                                                                     ::series/grouped-data grouped-data
+                                                                                     ::series/series-key series-key})
+                                (merge {::plot/legend-label legend-label
+                                        ::plot/title {::plot/label title}}
+                                       plot/base-pop-chart-spec
+                                       {::large/data data-table
+                                        ::large/sheet-name title})
+                                (plot/add-overview-legend-items)
+                                (plot/zero-y-index)
+                                (update ::plot/canvas plot/add-watermark watermark)
+                                (chart-utils/->large-charts)))))
+                   report-sections)
+             (large/create-workbook)
+             (large/save-workbook! file-name))
+         (println (str file-name " complete!"))
+         {:file-name file-name}
+         (catch Exception e (println "Failed to create " file-name)
+                (ex-info (str "Failed to create " file-name) {:file-name file-name} e)))))
