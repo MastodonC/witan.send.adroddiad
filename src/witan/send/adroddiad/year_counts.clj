@@ -19,17 +19,21 @@
       (summary/seven-number-summary [:calendar-year] :transition-count)
       (tc/order-by [:calendar-year])))
 
-(defn year-counts [census-data file-name {:keys [color shape watermark] :as _config
+(defn year-counts [census-data file-name {:keys [color shape watermark value-key legend-label title base-chart-spec] :as _config
                                           :or {color colors/blue
                                                shape \A
-                                               watermark ""}}]
+                                               watermark ""
+                                               value-key :transition-count
+                                               base-chart-spec plot/base-pop-chart-spec
+                                               legend-label "Population"
+                                               title "Total EHCPs"}}]
   (let [counts (-> census-data
                    (tc/group-by [:simulation :calendar-year])
-                   (tc/aggregate {:transition-count #(dfn/sum (:transition-count %))})
-                   (summary/seven-number-summary [:calendar-year] :transition-count)
+                   (tc/aggregate {value-key #(dfn/sum (value-key %))})
+                   (summary/seven-number-summary [:calendar-year] value-key)
                    (tc/order-by [:calendar-year]))]
     (-> {:census-data counts}
-        (merge {:color color :shape shape :legend-label "Population" :title "Total EHCPs" :watermark watermark})
+        (merge {:color color :shape shape :legend-label legend-label :title title :watermark watermark :base-chart-spec base-chart-spec})
         (single-population/single-population-report)
         (vector)
         (large/create-workbook)

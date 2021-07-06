@@ -6,12 +6,13 @@
             [kixi.plot.colors :as colors]
             [witan.send.adroddiad.chart-utils :as chart-utils]))
 
-(defn single-population-report [{:keys [census-data color shape legend-label title watermark]}]
+(defn single-population-report [{:keys [census-data color shape legend-label title watermark base-chart-spec]
+                                 :or {base-chart-spec plot/base-pop-chart-spec}}]
   (-> {::series/series (series/ds->median-iqr-95-series census-data color shape)
-       ::series/legend-spec [(series/legend-spec "Population" color (colors/legend-shape shape))]}
+       ::series/legend-spec [(series/legend-spec legend-label color (colors/legend-shape shape))]}
       (merge {::plot/legend-label legend-label
               ::plot/title {::plot/label title}}
-             plot/base-pop-chart-spec
+             base-chart-spec
              {::large/data census-data
               ::large/sheet-name title})
       (plot/add-overview-legend-items)
