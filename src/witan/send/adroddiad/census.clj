@@ -63,3 +63,71 @@
                          (a/to-chan chart-defs))
     (a/<!! (a/into [] output-chan))))
 
+(def settings-sections [{:title "EHCPs All Settings" :series (sorted-set "EYS" "FEC" "IMS" "ISS" "ISSR" "MMSIA" "MMSOA"
+                                                                         "MSSIA" "MSSOA" "MSSR" "MU" "MUOA" "OTH" "SP16"
+                                                                         "NEET")}
+                        {:title "EHCPs by Mainstream" :series (sorted-set "EYS" "FEC" "IMS" "MMSIA" "MMSOA" "MU" "MUOA")}
+                        {:title "EHCPs by Special" :series (sorted-set "ISS" "ISSR" "MSSIA" "MSSOA" "MSSR" "NMSS" "NMSSR")}
+                        {:title "EHCPs by Post 16" :series (sorted-set "FEC" "SP16")}
+                        {:title "EHCPs by Other" :series (sorted-set "NEET" "OTH")}])
+
+(def needs-sections [{:title "All Needs" :series (sorted-set "ASD" "HI" "MLD" "MSI" "PD" "PMLD" "SEMH" "SLCN" "SLD" "SPLD" "VI")}
+                     {:title "Physical" :series (sorted-set "HI" "MSI" "PD" "VI")}
+                     {:title "Interaction" :series (sorted-set "ASD" "SEMH" "SLCN")}
+                     {:title "Learning" :series (sorted-set "MLD" "PMLD" "SLD" "SPLD")}])
+
+(def ncy-sections [{:title "EHCPs All NCYs" :series (sorted-set -3 -2 -1 0 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17)}
+                   {:title "EHCPS Early years" :series (sorted-set -3 -2 -1 0)}
+                   {:title "EHCPs Key Stage 1" :series (sorted-set 1 2)}
+                   {:title "EHCPs Key Stage 2" :series (sorted-set 3 4 5 6)}
+                   {:title "EHCPs Key Stage 3" :series (sorted-set 7 8 9)}
+                   {:title "EHCPs Key Stage 4" :series (sorted-set 10 11)}
+                   {:title "EHCPs Key Stage 5" :series (sorted-set 12 13 14)}
+                   {:title "EHCPs NCY 15+" :series (sorted-set 15 16 17 18 19 20 21)}])
+
+(defn census-analysis [{:keys [simulated-transitions colors-and-shapes start-year base-out-dir watermark
+                               settings-sections needs-sections ncy-sections]
+                        :or {settings-sections settings-sections
+                             needs-sections needs-sections
+                             ncy-section ncy-sections}}]
+  (let [census-data        (stc/transition-counts->census-counts simulated-transitions start-year)
+        joiners            (-> simulated-transitions
+                               (tc/select-rows #(= "NONSEND" (get % :setting-1)))
+                               (tc/map-columns :calendar-year-2 [:calendar-year] inc)
+                               (tc/select-columns [:calendar-year-2 :transition-count :simulation :academic-year-2 :need-2 :setting-2])
+                               (tc/rename-columns {:calendar-year-2 :calendar-year
+                                                   :academic-year-2 :academic-year
+                                                   :setting-2       :setting
+                                                   :need-2          :need}))
+        movers-in          (-> simulated-transitions
+                               (tc/select-rows #(not= (:setting-1 %) (:setting-2 %)))
+                               (tc/map-columns :calendar-year-2 [:calendar-year] inc)
+                               (tc/select-columns [:calendar-year-2 :academic-year-2 :setting-2 :need-2 :transition-count :simulation])
+                               (tc/rename-columns {:calendar-year-2 :calendar-year
+                                                   :academic-year-2 :academic-year
+                                                   :setting-2       :setting
+                                                   :need-2          :need}))
+        joiners-movers-in  (tc/concat-copying joiners movers-in)
+        leavers            (-> simulated-transitions
+                               (tc/select-rows #(= "NONSEND" (get % :setting-2)))
+                               (tc/select-columns [:calendar-year :transition-count :simulation :academic-year-1 :need-1 :setting-1])
+                               (tc/rename-columns {:academic-year-1 :academic-year
+                                                   :setting-1       :setting
+                                                   :need-1          :need}))
+        movers-out         (-> simulated-transitions
+                               (tc/select-rows #(not= (:setting-1 %) (:setting-2 %)))
+                               (tc/select-columns [:calendar-year :academic-year-1 :setting-1 :need-1 :transition-count :simulation])
+                               (tc/rename-columns {:academic-year-1 :academic-year
+                                                   :setting-1       :setting
+                                                   :need-1          :need}))
+        leavers-movers-out (tc/concat-copying leavers movers-out)]
+    {:census-data census-data
+     :joiners joiners
+     :movers-in movers-in
+     :joiners-movers-in joiners-movers-in
+     :leavers leavers
+     :movers-out movers-out
+     :leavers-movers-out leavers-movers-out
+     :settings-sections settings-sections
+     :needs-sections needs-sections
+     :ncy-sections ncy-sections}))
