@@ -5,7 +5,9 @@
             [tablecloth.api :as tc]
             [tech.v3.datatype.functional :as dfn]
             [witan.send.adroddiad.summary :as summary]
-            [witan.send.adroddiad.chart-utils :as chart-utils]))
+            [witan.send.adroddiad.chart-utils :as chart-utils]
+            [witan.send.adroddiad.simulated-transition-counts :as stc]
+            [clojure.core.async :as a]))
 
 (defn census-domain [census]
   (let [ays (into (sorted-set) (-> census :academic-year))
@@ -51,3 +53,13 @@
          {:file-name file-name}
          (catch Exception e (println "Failed to create " file-name)
                 (ex-info (str "Failed to create " file-name) {:file-name file-name} e)))))
+
+(defn census-reports [chart-defs]
+  (let [concurrent (max 2 (dec (.. Runtime getRuntime availableProcessors)))
+        output-chan (a/chan)]
+    (a/pipeline-blocking concurrent
+                         output-chan
+                         (map census-report)
+                         (a/to-chan chart-defs))
+    (a/<!! (a/into [] output-chan))))
+
