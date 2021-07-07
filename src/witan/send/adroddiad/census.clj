@@ -15,13 +15,15 @@
           cat
           [ays needs settings])))
 
-(defn census-report [{:keys [census-data colors-and-shapes series-key legend-label report-sections file-name watermark]
-                      :or {watermark ""}}]
+(defn census-report [{:keys [census-data colors-and-shapes series-key legend-label report-sections file-name watermark base-chart-spec value-key]
+                      :or {watermark ""
+                           base-chart-spec plot/base-pop-chart-spec
+                           value-key :transition-count}}]
   (println (str "Building " file-name))
   (let [data (-> census-data
                  (tc/group-by [:simulation :calendar-year series-key])
-                 (tc/aggregate {:transition-count #(dfn/sum (:transition-count %))})
-                 (summary/seven-number-summary [:calendar-year series-key] :transition-count)
+                 (tc/aggregate {value-key #(dfn/sum (value-key %))})
+                 (summary/seven-number-summary [:calendar-year series-key] value-key)
                  (tc/order-by [:calendar-year series-key]))]
     (try (-> (into []
                    (map (fn [{:keys [title series]}]
@@ -35,7 +37,7 @@
                                                                                      ::series/series-key series-key})
                                 (merge {::plot/legend-label legend-label
                                         ::plot/title {::plot/label title}}
-                                       plot/base-pop-chart-spec
+                                       base-chart-spec
                                        {::large/data data-table
                                         ::large/sheet-name title})
                                 (plot/add-overview-legend-items)
