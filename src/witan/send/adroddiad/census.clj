@@ -90,7 +90,7 @@
                                settings-sections needs-sections ncy-sections]
                         :or {settings-sections settings-sections
                              needs-sections needs-sections
-                             ncy-section ncy-sections}}]
+                             ncy-sections ncy-sections}}]
   (let [census-data        (stc/transition-counts->census-counts simulated-transitions start-year)
         joiners            (-> simulated-transitions
                                (tc/select-rows #(= "NONSEND" (get % :setting-1)))
