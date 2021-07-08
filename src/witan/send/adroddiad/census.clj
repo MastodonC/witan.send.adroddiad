@@ -44,7 +44,16 @@
                              file-name watermark base-chart-spec value-key]
                       :or {watermark ""
                            base-chart-spec plot/base-pop-chart-spec
-                           value-key :transition-count}}]
+                           value-key :transition-count
+                           report-sections (cond
+                                             (= series-key :setting)
+                                             settings-sections
+
+                                             (= series-key :need)
+                                             needs-sections
+
+                                             (= series-key :academic-year)
+                                             ncy-sections)}}]
   (println (str "Building " file-name))
   (let [data (-> census-data
                  (tc/group-by [:simulation :calendar-year series-key])
