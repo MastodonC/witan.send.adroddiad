@@ -2,38 +2,8 @@
   (:require [tablecloth.api :as tc]
             [tech.v3.datatype.functional :as dfn]
             [witan.send.adroddiad.simulated-transition-counts :as stc]
-            [witan.send.adroddiad.summary :as summary]))
-
-(defn leaver? [transition]
-  (= "NONSEND" (get transition :setting-2)))
-
-(defn joiner? [transition]
-  (= "NONSEND" (get transition :setting-1)))
-
-(defn mover? [transition]
-  (and (not (joiner? transition))
-       (not (leaver? transition))
-       (not= (:setting-1 transition) (:setting-2 transition))))
-
-(defn leavers-from [simulation-results setting]
-  (-> simulation-results
-      (tc/select-rows #(= setting (:setting-1 %)))
-      (tc/select-rows leaver?)))
-
-(defn movers-to [simulation-results setting]
-  (-> simulation-results
-      (tc/select-rows mover?)
-      (tc/select-rows #(= setting (:setting-2 %)))))
-
-(defn movers-from [simulation-results setting]
-  (-> simulation-results
-      (tc/select-rows mover?)
-      (tc/select-rows #(= setting (:setting-1 %)))))
-
-(defn joiners-to [simulation-results setting]
-  (-> simulation-results
-      (tc/select-rows #(= setting (:setting-2 %)))
-      (tc/select-rows joiner?)))
+            [witan.send.adroddiad.summary :as summary]
+            [witan.send.adroddiad.transitions :as tr]))
 
 (defn count-census-by-year [census-simuation-data]
   (-> census-simuation-data
@@ -53,25 +23,25 @@
         (tc/select-columns [:calendar-year :median])
         (tc/rename-columns {:median :median-total})
         (tc/left-join (-> simulations
-                          (joiners-to setting)
+                          (tr/joiners-to setting)
                           count-census-by-year
                           (tc/select-columns [:calendar-year :median])
                           (tc/rename-columns {:median :median-joiners-to}))
                       [:calendar-year])
         (tc/left-join (-> simulations
-                          (movers-to setting)
+                          (tr/movers-to setting)
                           count-census-by-year
                           (tc/select-columns [:calendar-year :median])
                           (tc/rename-columns {:median :median-movers-to}))
                       [:calendar-year])
         (tc/left-join (-> simulations
-                          (movers-from setting)
+                          (tr/movers-from setting)
                           count-census-by-year
                           (tc/select-columns [:calendar-year :median])
                           (tc/rename-columns {:median :median-movers-from}))
                       [:calendar-year])
         (tc/left-join (-> simulations
-                          (leavers-from setting)
+                          (tr/leavers-from setting)
                           count-census-by-year
                           (tc/select-columns [:calendar-year :median])
                           (tc/rename-columns {:median :median-leavers-from}))
