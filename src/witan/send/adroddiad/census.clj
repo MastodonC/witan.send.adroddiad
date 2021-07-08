@@ -17,7 +17,8 @@
           cat
           [ays needs settings])))
 
-(defn census-report [{:keys [census-data colors-and-shapes series-key legend-label report-sections file-name watermark base-chart-spec value-key]
+(defn census-report [{:keys [census-data colors-and-shapes series-key legend-label report-sections
+                             file-name watermark base-chart-spec value-key]
                       :or {watermark ""
                            base-chart-spec plot/base-pop-chart-spec
                            value-key :transition-count}}]
