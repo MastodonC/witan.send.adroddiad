@@ -18,10 +18,11 @@
           [ays needs settings])))
 
 (defn census-report [{:keys [census-data colors-and-shapes series-key legend-label report-sections
-                             file-name watermark base-chart-spec value-key]
+                             file-name watermark base-chart-spec value-key la]
                       :or {watermark ""
                            base-chart-spec plot/base-pop-chart-spec
-                           value-key :transition-count}}]
+                           value-key :transition-count
+                           la ""}}]
   (println (str "Building " file-name))
   (let [data (-> census-data
                  (tc/group-by [:simulation :calendar-year series-key])
@@ -39,7 +40,7 @@
                                                                                      ::series/grouped-data grouped-data
                                                                                      ::series/series-key series-key})
                                 (merge {::plot/legend-label legend-label
-                                        ::plot/title {::plot/label title}}
+                                        ::plot/title {::plot/label (str la " EHCPs by " title)}}
                                        base-chart-spec
                                        {::large/data data-table
                                         ::large/sheet-name title})
