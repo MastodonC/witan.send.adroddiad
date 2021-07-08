@@ -17,6 +17,29 @@
           cat
           [ays needs settings])))
 
+(def settings-sections [{:title "All Settings" :series (sorted-set "EYS" "FEC" "IMS" "ISS" "ISSR" "MMSIA" "MMSOA"
+                                                                   "MSSIA" "MSSOA" "MSSR" "MU" "MUOA" "OTH" "SP16"
+                                                                   "NEET")}
+                        {:title "Mainstream" :series (sorted-set "EYS" "FEC" "IMS" "MMSIA" "MMSOA" "MU" "MUOA")}
+                        {:title "Special" :series (sorted-set "ISS" "ISSR" "MSSIA" "MSSOA" "MSSR" "NMSS" "NMSSR")}
+                        {:title "Post 16" :series (sorted-set "FEC" "SP16")}
+                        {:title "Other" :series (sorted-set "NEET" "OTH")}])
+
+(def needs-sections [{:title "All Needs" :series (sorted-set "ASD" "HI" "MLD" "MSI" "PD" "PMLD" "SEMH" "SLCN" "SLD" "SPLD" "VI")}
+                     {:title "Physical Needs" :series (sorted-set "HI" "MSI" "PD" "VI")}
+
+                     {:title "Interaction Needs" :series (sorted-set "ASD" "SEMH" "SLCN")}
+                     {:title "Learning Needs" :series (sorted-set "MLD" "PMLD" "SLD" "SPLD")}])
+
+(def ncy-sections [{:title "All NCYs" :series (sorted-set -3 -2 -1 0 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21)}
+                   {:title "Early years" :series (sorted-set -3 -2 -1 0)}
+                   {:title "Key Stage 1" :series (sorted-set 1 2)}
+                   {:title "Key Stage 2" :series (sorted-set 3 4 5 6)}
+                   {:title "Key Stage 3" :series (sorted-set 7 8 9)}
+                   {:title "Key Stage 4" :series (sorted-set 10 11)}
+                   {:title "Key Stage 5" :series (sorted-set 12 13 14)}
+                   {:title "NCY 15+" :series (sorted-set 15 16 17 18 19 20 21)}])
+
 (defn census-report [{:keys [census-data colors-and-shapes series-key legend-label report-sections
                              file-name watermark base-chart-spec value-key]
                       :or {watermark ""
@@ -64,29 +87,6 @@
                          (map census-report)
                          (a/to-chan chart-defs))
     (a/<!! (a/into [] output-chan))))
-
-(def settings-sections [{:title "All Settings" :series (sorted-set "EYS" "FEC" "IMS" "ISS" "ISSR" "MMSIA" "MMSOA"
-                                                                   "MSSIA" "MSSOA" "MSSR" "MU" "MUOA" "OTH" "SP16"
-                                                                   "NEET")}
-                        {:title "Mainstream" :series (sorted-set "EYS" "FEC" "IMS" "MMSIA" "MMSOA" "MU" "MUOA")}
-                        {:title "Special" :series (sorted-set "ISS" "ISSR" "MSSIA" "MSSOA" "MSSR" "NMSS" "NMSSR")}
-                        {:title "Post 16" :series (sorted-set "FEC" "SP16")}
-                        {:title "Other" :series (sorted-set "NEET" "OTH")}])
-
-(def needs-sections [{:title "All Needs" :series (sorted-set "ASD" "HI" "MLD" "MSI" "PD" "PMLD" "SEMH" "SLCN" "SLD" "SPLD" "VI")}
-                     {:title "Physical Needs" :series (sorted-set "HI" "MSI" "PD" "VI")}
-
-                     {:title "Interaction Needs" :series (sorted-set "ASD" "SEMH" "SLCN")}
-                     {:title "Learning Needs" :series (sorted-set "MLD" "PMLD" "SLD" "SPLD")}])
-
-(def ncy-sections [{:title "All NCYs" :series (sorted-set -3 -2 -1 0 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21)}
-                   {:title "Early years" :series (sorted-set -3 -2 -1 0)}
-                   {:title "Key Stage 1" :series (sorted-set 1 2)}
-                   {:title "Key Stage 2" :series (sorted-set 3 4 5 6)}
-                   {:title "Key Stage 3" :series (sorted-set 7 8 9)}
-                   {:title "Key Stage 4" :series (sorted-set 10 11)}
-                   {:title "Key Stage 5" :series (sorted-set 12 13 14)}
-                   {:title "NCY 15+" :series (sorted-set 15 16 17 18 19 20 21)}])
 
 (defn census-analysis [{:keys [simulated-transitions colors-and-shapes start-year base-out-dir watermark
                                settings-sections needs-sections ncy-sections]
