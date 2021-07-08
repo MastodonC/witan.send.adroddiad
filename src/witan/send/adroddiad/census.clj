@@ -29,7 +29,8 @@
                  (summary/seven-number-summary [:calendar-year series-key] value-key)
                  (tc/order-by [:calendar-year series-key]))]
     (try (-> (into []
-                   (map (fn [{:keys [title series]}]
+                   (map (fn [{:keys [title sheet-name series]
+                              :or {sheet-name title}}]
                           (let [data-table (-> data
                                                (tc/select-rows #(series (series-key %)))
                                                (tc/order-by [series-key :calendar-year]))
@@ -42,7 +43,7 @@
                                         ::plot/title {::plot/label title}}
                                        base-chart-spec
                                        {::large/data data-table
-                                        ::large/sheet-name title})
+                                        ::large/sheet-name sheet-name})
                                 (plot/add-overview-legend-items)
                                 (plot/zero-y-index)
                                 (update ::plot/canvas plot/add-watermark watermark)
