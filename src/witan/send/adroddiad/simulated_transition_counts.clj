@@ -1,6 +1,7 @@
 (ns witan.send.adroddiad.simulated-transition-counts
   (:require [clojure.core.async :as a]
             [tablecloth.api :as tc]
+            [witan.send.adroddiad.transitions :as tr]
             [witan.send.adroddiad.simulated-transition-counts.io :as stcio]))
 
 (defn transit->dataset-multi-threaded [input-dir]
@@ -53,20 +54,6 @@
     (tc/concat-copying historic-data
                        simulation-data)))
 
+(def min-calendar-year tr/min-calendar-year)
 
-(defn transition-counts->census-counts [transition-counts start-year]
-  (let [year-1-census (-> transition-counts
-                          (tc/select-rows #(= (:calendar-year %) start-year))
-                          (tc/drop-columns [:setting-2 :need-2 :academic-year-2])
-                          (tc/rename-columns {:setting-1 :setting
-                                              :need-1 :need
-                                              :academic-year-1 :academic-year}))]
-    (-> transition-counts
-        (tc/map-columns :calendar-year-2 [:calendar-year] #(inc %))
-        (tc/drop-columns [:calendar-year :setting-1 :need-1 :academic-year-1])
-        (tc/rename-columns {:calendar-year-2 :calendar-year
-                            :setting-2 :setting
-                            :need-2 :need
-                            :academic-year-2 :academic-year})
-        (tc/concat year-1-census)
-        (tc/drop-rows #(= "NONSEND" (:setting %))))))
+(def transition-counts->census-counts tr/transitions->census)

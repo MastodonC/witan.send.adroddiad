@@ -40,6 +40,16 @@
                    {:title "Key Stage 5" :series (sorted-set 12 13 14)}
                    {:title "NCY 15+" :series (sorted-set 15 16 17 18 19 20 21)}])
 
+(defn census-report-data
+  ([{:keys [census-data series-key value-key]}]
+   (-> census-data
+       (tc/group-by [:simulation :calendar-year series-key])
+       (tc/aggregate {value-key #(dfn/sum (value-key %))})
+       (summary/seven-number-summary [:calendar-year series-key] value-key)
+       (tc/order-by [:calendar-year series-key])))
+  ([census-data options]
+   (census-report-data (assoc options :census-data census-data))))
+
 (defn census-report [{:keys [census-data colors-and-shapes series-key legend-label report-sections
                              file-name watermark base-chart-spec value-key]
                       :or {watermark ""
@@ -55,11 +65,9 @@
                                              (= series-key :academic-year)
                                              ncy-sections)}}]
   (println (str "Building " file-name))
-  (let [data (-> census-data
-                 (tc/group-by [:simulation :calendar-year series-key])
-                 (tc/aggregate {value-key #(dfn/sum (value-key %))})
-                 (summary/seven-number-summary [:calendar-year series-key] value-key)
-                 (tc/order-by [:calendar-year series-key]))]
+  (let [data (census-report-data {:census-data census-data
+                                  :series-key series-key
+                                  :value-key value-key})]
     (try (-> (into []
                    (map (fn [{:keys [title sheet-name series]
                               :or {sheet-name title}}]
