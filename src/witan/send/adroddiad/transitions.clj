@@ -1,5 +1,6 @@
 (ns witan.send.adroddiad.transitions
-  (:require [tablecloth.api :as tc]))
+  (:require [tablecloth.api :as tc]
+            [tech.v3.datatype.functional :as dfn]))
 
 (defn leaver? [transition]
   (= "NONSEND" (get transition :setting-2)))
@@ -30,7 +31,11 @@
 (defn joiners-to [simulation-results setting]
   (-> simulation-results
       (tc/select-rows #(= setting (:setting-2 %)))
-      (tc/select-rows joiner?)))
+      (tc/select-rows joiner?)
+      (tc/map-columns :calendar-year [:calendar-year] #(dec %))))
+
+(defn min-calendar-year [transitions]
+  (dfn/reduce-min (:calendar-year transitions)))
 
 (defn transitions->census
   ([transitions start-year]
@@ -50,4 +55,4 @@
          (tc/concat year-1-census)
          (tc/drop-rows #(= "NONSEND" (:setting %))))))
   ([transitions]
-   (transitions->census transitions (reduce min (-> transitions :calendar-year)))))
+   (transitions->census transitions (min-calendar-year transitions))))

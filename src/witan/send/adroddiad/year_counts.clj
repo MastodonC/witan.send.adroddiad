@@ -12,11 +12,12 @@
 (defn population-by-year
   "Takes a census count and returns a t.m.dataset with a count of total
   population per year."
-  [census-data]
+  [{:keys [census-data value-key]
+    :or {value-key :transition-count}}]
   (-> census-data
       (tc/group-by [:simulation :calendar-year])
-      (tc/aggregate {:transition-count #(dfn/sum (:transition-count %))})
-      (summary/seven-number-summary [:calendar-year] :transition-count)
+      (tc/aggregate {value-key #(dfn/sum (value-key %))})
+      (summary/seven-number-summary [:calendar-year] value-key)
       (tc/order-by [:calendar-year])))
 
 (defn year-counts [census-data file-name {:keys [color shape watermark value-key legend-label title base-chart-spec] :as _config
@@ -27,11 +28,8 @@
                                                base-chart-spec plot/base-pop-chart-spec
                                                legend-label "Population"
                                                title "Total EHCPs"}}]
-  (let [counts (-> census-data
-                   (tc/group-by [:simulation :calendar-year])
-                   (tc/aggregate {value-key #(dfn/sum (value-key %))})
-                   (summary/seven-number-summary [:calendar-year] value-key)
-                   (tc/order-by [:calendar-year]))]
+  (let [counts (population-by-year {:census-data census-data
+                                    :value-key value-key})]
     (-> {:census-data counts}
         (merge {:color color :shape shape :legend-label legend-label :title title :watermark watermark :base-chart-spec base-chart-spec})
         (single-population/single-population-report)
