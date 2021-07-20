@@ -2,11 +2,13 @@
   (:require [cljplot.build :as plotb]
             [cljplot.config :as cfg]
             [cljplot.render :as plotr]
+            [kixi.large :as large]
             [kixi.plot :as plot]
             [kixi.plot.colors :as colors]
             [kixi.plot.series :as series]
             [tablecloth.api :as tc]
             [tech.v3.datatype.functional :as dfn]
+            [witan.send.adroddiad.chart-utils :as chart-utils]
             [witan.send.adroddiad.simulated-transition-counts :as stc]
             [witan.send.adroddiad.summary :as summary]
             [witan.send.adroddiad.transitions :as tr]))
@@ -46,18 +48,18 @@
                              (summary/seven-number-summary [:calendar-year] :transition-count)
                              (tc/order-by [:calendar-year]))}))
 
-(defn setting-analysis-summary [setting-analysis]
+(defn setting-analysis-summary [setting-analysis-map]
   (-> (apply tc/concat-copying
              (into []
                    (map (fn [[k ds]] (-> ds (tc/add-column :transition-type k))))
-                   setting-analysis))
+                   setting-analysis-map))
       (tc/select-columns [:calendar-year :transition-type :median])
       (tc/pivot->wider [:transition-type] [:median])
       (tc/map-columns :next-year-total ["setting-total" "setting-joiners" "setting-movers-in" "setting-leavers" "setting-movers-out"]
                       (fn [total joiners in leavers out] (- (+ total joiners in)
                                                             (+ leavers out))))))
 
-(defn setting-analysis-chart [simulated-transition-counts
+(defn setting-analysis-chart [setting-analysis-map
                               setting
                               {:keys [x-axis y-axis size legend-font legend-font-size title title-format watermark] :as _chart-config
                                :or {x-axis {::tick-formatter int ::label "Calendar Year"}
@@ -70,7 +72,7 @@
                                     title (str setting " analysis")
                                     title-format {:font-size 36 :font "Open Sans Bold" :font-style :bold :margin 36}
                                     watermark (str setting " analysis")}}]
-  (let [{:keys [setting-total setting-joiners setting-movers-in setting-leavers setting-movers-out] :as _setting-analysis} (setting-analysis simulated-transition-counts "SSAFLAM")
+  (let [{:keys [setting-total setting-joiners setting-movers-in setting-leavers setting-movers-out] :as _setting-analysis} setting-analysis-map
         _cfg (swap! cfg/configuration
                     (fn [c]
                       (-> c
@@ -158,6 +160,24 @@
         (plotr/render-lattice size)
         (plot/add-watermark watermark))))
 
+
+(defn setting-analysis-report [simulated-transitions file-name]
+  (let [settings (into (sorted-set)
+                       (-> simulated-transitions
+                           (tc/select-rows #(= -1 (:simulation %)))
+                           (tc/drop-rows #(= "NONSEND" (:setting-1 %)))
+                           :setting-1))]
+    (-> (into []
+              (comp
+               (map (fn [setting]
+                      (let [sam (setting-analysis simulated-transitions setting)]
+                        (-> {::large/sheet-name setting
+                             ::plot/canvas      (setting-analysis-chart sam setting {})
+                             ::large/data       (setting-analysis-summary sam)}
+                            (chart-utils/->large-charts))))))
+              settings)
+        (large/create-workbook)
+        (large/save-workbook! file-name))))
 
 (comment
 
