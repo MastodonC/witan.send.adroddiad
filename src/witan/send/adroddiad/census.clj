@@ -69,25 +69,28 @@
                                   :series-key series-key
                                   :value-key value-key})]
     (try (-> (into []
-                   (map (fn [{:keys [title sheet-name series]
-                              :or {sheet-name title}}]
-                          (let [data-table (-> data
-                                               (tc/select-rows #(series (series-key %)))
-                                               (tc/order-by [series-key :calendar-year]))
-                                grouped-data (-> data-table
-                                                 (tc/group-by [series-key]))]
-                            (-> (series/grouped-ds->median-iqr-95-series-and-legend {::series/colors-and-shapes colors-and-shapes
-                                                                                     ::series/grouped-data grouped-data
-                                                                                     ::series/series-key series-key})
-                                (merge {::plot/legend-label legend-label
-                                        ::plot/title {::plot/label title}}
-                                       base-chart-spec
-                                       {::large/data data-table
-                                        ::large/sheet-name sheet-name})
-                                (plot/add-overview-legend-items)
-                                (plot/zero-y-index)
-                                (update ::plot/canvas plot/add-watermark watermark)
-                                (chart-utils/->large-charts)))))
+                   (keep (fn [{:keys [title sheet-name series]
+                               :or {sheet-name title}
+                               :as conf}]
+                           (try (let [data-table (-> data
+                                                     (tc/select-rows #(series (series-key %)))
+                                                     (tc/order-by [series-key :calendar-year]))
+                                      grouped-data (-> data-table
+                                                       (tc/group-by [series-key]))]
+                                  (when (< 0 (tc/row-count data-table))
+                                    (-> (series/grouped-ds->median-iqr-95-series-and-legend {::series/colors-and-shapes colors-and-shapes
+                                                                                             ::series/grouped-data grouped-data
+                                                                                             ::series/series-key series-key})
+                                        (merge {::plot/legend-label legend-label
+                                                ::plot/title {::plot/label title}}
+                                               base-chart-spec
+                                               {::large/data data-table
+                                                ::large/sheet-name sheet-name})
+                                        (plot/add-overview-legend-items)
+                                        (plot/zero-y-index)
+                                        (update ::plot/canvas plot/add-watermark watermark)
+                                        (chart-utils/->large-charts))))
+                                (catch Exception e (throw (ex-info (format "Failed to create %s" title) conf e))))))
                    report-sections)
              (large/create-workbook)
              (large/save-workbook! file-name))
