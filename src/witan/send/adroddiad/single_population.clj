@@ -1,13 +1,13 @@
 (ns witan.send.adroddiad.single-population
   (:require [kixi.large :as large]
-            [kixi.large.legacy :as ll]
             [kixi.plot :as plot]
-            [kixi.plot.series :as series]
             [kixi.plot.colors :as colors]
+            [kixi.plot.series :as series]
             [witan.send.adroddiad.chart-utils :as chart-utils]))
 
-(defn single-population-report [{:keys [census-data color shape legend-label title watermark base-chart-spec]
-                                 :or {base-chart-spec plot/base-pop-chart-spec}}]
+(defn single-population-report [{:keys [census-data color shape legend-label title watermark base-chart-spec chartf]
+                                 :or {base-chart-spec plot/base-pop-chart-spec
+                                      chartf plot/zero-y-index}}]
   (-> {::series/series (series/ds->median-iqr-95-series census-data color shape)
        ::series/legend-spec [(series/legend-spec legend-label color (colors/legend-shape shape))]}
       (merge {::plot/legend-label legend-label
@@ -16,6 +16,6 @@
              {::large/data census-data
               ::large/sheet-name title})
       (plot/add-overview-legend-items)
-      (plot/zero-y-index)
+      (chartf)
       (update ::plot/canvas plot/add-watermark watermark)
       (chart-utils/->large-charts)))
