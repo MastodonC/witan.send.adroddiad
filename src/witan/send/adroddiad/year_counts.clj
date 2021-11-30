@@ -1,11 +1,10 @@
 (ns witan.send.adroddiad.year-counts
   (:require [kixi.large :as large]
-            [kixi.large.legacy :as ll]
             [kixi.plot :as plot]
-            [kixi.plot.series :as series]
             [kixi.plot.colors :as colors]
             [tablecloth.api :as tc]
             [tech.v3.datatype.functional :as dfn]
+            [tech.v3.datatype.gradient :as dt-grad]
             [witan.send.adroddiad.single-population :as single-population]
             [witan.send.adroddiad.summary :as summary]))
 
@@ -13,12 +12,28 @@
   "Takes a census count and returns a t.m.dataset with a count of total
   population per year."
   [{:keys [census-data value-key]
-    :or {value-key :transition-count}}]
-  (-> census-data
-      (tc/group-by [:simulation :calendar-year])
-      (tc/aggregate {value-key #(dfn/sum (value-key %))})
-      (summary/seven-number-summary [:calendar-year] value-key)
-      (tc/order-by [:calendar-year])))
+    :or   {value-key :transition-count}}]
+  (let [base-report (-> census-data
+                        (tc/group-by [:simulation :calendar-year])
+                        (tc/aggregate {value-key #(dfn/sum (value-key %))})
+                        (summary/seven-number-summary [:calendar-year] value-key)
+                        (tc/order-by [:calendar-year]))
+        yoy-diffs   (-> base-report
+                        (tc/order-by [:calendar-year])
+                        (tc/add-columns {:median-yoy-diff   (fn add-year-on-year [ds]
+                                                              (let [medians (:median ds)
+                                                                    diffs   (dt-grad/diff1d medians)]
+                                                                (into [] cat [[0] diffs])))
+                                         :median-yoy-%-diff (fn add-year-on-year-% [ds]
+                                                              (let [medians (:median ds)
+                                                                    diffs   (dt-grad/diff1d medians)
+                                                                    diff-%s (dfn// diffs (drop-last (:median ds)))]
+                                                                (into [] cat [[0] diff-%s])))})
+                        (tc/select-columns [:calendar-year :median-yoy-diff :median-yoy-%-diff]))]
+    (-> base-report
+        (tc/inner-join yoy-diffs [:calendar-year])
+        (tc/select-columns [:calendar-year :min :low-95 :q1 :median :q3 :high-95 :max :total-median :pct-of-total :median-yoy-diff :median-yoy-%-diff])
+        (tc/order-by [:calendar-year]))))
 
 (defn year-counts [census-data file-name {:keys [color shape watermark value-key legend-label title base-chart-spec chartf] :as _config
                                           :or {color colors/blue
