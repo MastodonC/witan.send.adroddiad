@@ -67,7 +67,7 @@
                                     size {:width 1539
                                           :height 1037
                                           :background colors/white}
-                                    legend-font"Open Sans Bold"
+                                    legend-font "Open Sans Bold"
                                     legend-font-size 24
                                     title (str setting " analysis")
                                     title-format {:font-size 36 :font "Open Sans Bold" :font-style :bold :margin 36}
@@ -82,38 +82,38 @@
               cat
               [(into [[:grid nil {:position [0 4]}]]
                      (map (fn [s] (-> s
-                                      (update 2 assoc :position [0 4])
-                                      (update 2 assoc :label (str "Movers to " setting)))))
+                                     (update 2 assoc :position [0 4])
+                                     (update 2 assoc :label (str "Movers to " setting)))))
                      (series/ds->median-iqr-95-series
                       (-> setting-movers-in
                           (tc/map-columns :calendar-year [:calendar-year] (fn [cy] (+ cy 0.5))))
                       colors/mc-dark-blue \v))
                (into [[:grid nil {:position [0 3]}]]
                      (map (fn [s] (-> s
-                                      (update 2 assoc :position [0 3])
-                                      (update 2 assoc :label (str "Joiners to " setting)))))
+                                     (update 2 assoc :position [0 3])
+                                     (update 2 assoc :label (str "Joiners to " setting)))))
                      (series/ds->median-iqr-95-series
                       (-> setting-joiners
                           (tc/map-columns :calendar-year [:calendar-year] (fn [cy] (+ cy 0.5))))
                       colors/mc-dark-blue \V))
                (into [[:grid nil {:position [0 2]}]]
                      (map (fn [s] (-> s
-                                      (update 2 assoc :position [0 2])
-                                      (update 2 assoc :label (str "Total Population for " setting)))))
+                                     (update 2 assoc :position [0 2])
+                                     (update 2 assoc :label (str "Total Population for " setting)))))
                      (series/ds->median-iqr-95-series
                       setting-total colors/mc-dark-green \O))
                (into [[:grid nil {:position [0 1]}]]
                      (map (fn [s] (-> s
-                                      (update 2 assoc :position [0 1])
-                                      (update 2 assoc :label (str "Leavers from " setting)))))
+                                     (update 2 assoc :position [0 1])
+                                     (update 2 assoc :label (str "Leavers from " setting)))))
                      (series/ds->median-iqr-95-series
                       (-> setting-leavers
                           (tc/map-columns :calendar-year [:calendar-year] (fn [cy] (+ cy 0.5))))
                       colors/mc-orange \A))
                (into [[:grid nil {:position [0 0]}]]
                      (map (fn [s] (-> s
-                                      (update 2 assoc :position [0 0])
-                                      (update 2 assoc :label (str "Movers from " setting)))))
+                                     (update 2 assoc :position [0 0])
+                                     (update 2 assoc :label (str "Movers from " setting)))))
                      (series/ds->median-iqr-95-series
                       (-> setting-movers-out
                           (tc/map-columns :calendar-year [:calendar-year] (fn [cy] (+ cy 0.5))))
