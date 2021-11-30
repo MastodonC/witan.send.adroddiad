@@ -72,7 +72,7 @@
          (tc/inner-join totals [:calendar-year])
          (tc/map-columns :pct-of-total [:median :total-median] (fn [m tm] (float (/ m tm))))
          (tc/inner-join yoy-diffs [:calendar-year series-key])
-         (tc/select-columns [:calendar-year :setting :min :low-95 :q1 :median :q3 :high-95 :max :total-median :pct-of-total :median-yoy-diff :median-yoy-%-diff])
+         (tc/select-columns [:calendar-year series-key :min :low-95 :q1 :median :q3 :high-95 :max :total-median :pct-of-total :median-yoy-diff :median-yoy-%-diff])
          (tc/order-by [:calendar-year series-key]))))
   ([census-data options]
    (census-report-data (assoc options :census-data census-data))))
