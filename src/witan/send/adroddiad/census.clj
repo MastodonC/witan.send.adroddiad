@@ -1,13 +1,14 @@
 (ns witan.send.adroddiad.census
-  (:require [kixi.large :as large]
+  (:require [clojure.core.async :as a]
+            [kixi.large :as large]
             [kixi.plot :as plot]
             [kixi.plot.series :as series]
             [tablecloth.api :as tc]
             [tech.v3.datatype.functional :as dfn]
-            [witan.send.adroddiad.summary :as summary]
+            [tech.v3.datatype.gradient :as dt-grad]
             [witan.send.adroddiad.chart-utils :as chart-utils]
             [witan.send.adroddiad.simulated-transition-counts :as stc]
-            [clojure.core.async :as a]))
+            [witan.send.adroddiad.summary :as summary]))
 
 (defn census-domain [census]
   (let [ays (into (sorted-set) (-> census :academic-year))
@@ -42,11 +43,37 @@
 
 (defn census-report-data
   ([{:keys [census-data series-key value-key]}]
-   (-> census-data
-       (tc/group-by [:simulation :calendar-year series-key])
-       (tc/aggregate {value-key #(dfn/sum (value-key %))})
-       (summary/seven-number-summary [:calendar-year series-key] value-key)
-       (tc/order-by [:calendar-year series-key])))
+   (let [base-report (-> census-data
+                         (tc/group-by [:simulation :calendar-year series-key])
+                         (tc/aggregate {value-key #(dfn/sum (value-key %))})
+                         (summary/seven-number-summary [:calendar-year series-key] value-key))
+         totals (-> census-data
+                    (tc/group-by [:simulation :calendar-year])
+                    (tc/aggregate {value-key #(dfn/sum (value-key %))})
+                    (summary/seven-number-summary [:calendar-year] value-key)
+                    (tc/order-by [:calendar-year])
+                    (tc/select-columns [:calendar-year :median])
+                    (tc/rename-columns {:median :total-median}))
+         yoy-diffs (-> base-report
+                       (tc/order-by [series-key :calendar-year])
+                       (tc/group-by [series-key])
+                       (tc/add-columns {:median-yoy-diff (fn add-year-on-year [ds]
+                                                           (let [medians (:median ds)
+                                                                 diffs (dt-grad/diff1d medians)]
+                                                             (into [] cat [[0] diffs])))
+                                        :median-yoy-%-diff (fn add-year-on-year-% [ds]
+                                                             (let [medians (:median ds)
+                                                                   diffs (dt-grad/diff1d medians)
+                                                                   diff-%s (dfn// diffs (drop-last (:median ds)))]
+                                                               (into [] cat [[0] diff-%s])))})
+                       (tc/ungroup)
+                       (tc/select-columns [:calendar-year series-key :median-yoy-diff :median-yoy-%-diff]))]
+     (-> base-report
+         (tc/inner-join totals [:calendar-year])
+         (tc/map-columns :pct-of-total [:median :total-median] (fn [m tm] (float (/ m tm))))
+         (tc/inner-join yoy-diffs [:calendar-year series-key])
+         (tc/select-columns [:calendar-year :setting :min :low-95 :q1 :median :q3 :high-95 :max :total-median :pct-of-total :median-yoy-diff :median-yoy-%-diff])
+         (tc/order-by [:calendar-year series-key]))))
   ([census-data options]
    (census-report-data (assoc options :census-data census-data))))
 
