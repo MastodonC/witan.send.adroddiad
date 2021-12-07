@@ -28,11 +28,17 @@
       (tc/select-rows mover?)
       (tc/select-rows #(= setting (:setting-1 %)))))
 
-(defn joiners-to [simulation-results setting]
-  (-> simulation-results
-      (tc/select-rows #(= setting (:setting-2 %)))
-      (tc/select-rows joiner?)
-      (tc/map-columns :calendar-year [:calendar-year] #(dec %))))
+(defn joiners-to
+  ([simulation-results setting]
+   (-> simulation-results
+       (tc/select-rows #(= setting (:setting-2 %)))
+       (tc/select-rows joiner?)
+       (tc/map-columns :calendar-year [:calendar-year] #(dec %))))
+  ([simulation-results]
+   (-> simulation-results
+       (tc/select-rows #(= (:setting-2 %) (:setting-2 %)))
+       (tc/select-rows joiner?)
+       (tc/map-columns :calendar-year [:calendar-year] #(dec %)))))
 
 (defn min-calendar-year [transitions]
   (dfn/reduce-min (:calendar-year transitions)))
