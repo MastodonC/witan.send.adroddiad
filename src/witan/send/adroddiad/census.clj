@@ -64,7 +64,8 @@
                                         :median-yoy-%-diff (fn add-year-on-year-% [ds]
                                                              (let [medians (:median ds)
                                                                    diffs (dt-grad/diff1d medians)
-                                                                   diff-%s (dfn// diffs (drop-last (:median ds)))]
+                                                                   diff-%s (let [medians-but-last (map #(if (zero? %) 1 %) (drop-last (:median ds)))]
+                                                                             (dfn// diffs medians-but-last))]
                                                                (into [] cat [[0] diff-%s])))})
                        (tc/ungroup)
                        (tc/select-columns [:calendar-year series-key :median-yoy-diff :median-yoy-%-diff]))]
