@@ -106,11 +106,6 @@
                                                    {:color (colors/color :black 50)}]
                                                   [:rect "90% range"
                                                    {:color (colors/color :black 25)}]
-                                                  [:shape (str "Movers to " need)
-                                                   {:color  colors/mc-dark-blue
-                                                    :shape  \^
-                                                    :size   15
-                                                    :stroke {:size 4.0}}]
                                                   [:shape (str "Joiners to " need)
                                                    {:color  colors/mc-dark-blue
                                                     :shape  \A
@@ -124,11 +119,6 @@
                                                   [:shape (str "Leavers from " need)
                                                    {:color  colors/mc-orange
                                                     :shape  \V
-                                                    :size   15
-                                                    :stroke {:size 4.0}}]
-                                                  [:shape (str "Movers from " need)
-                                                   {:color  colors/mc-orange
-                                                    :shape  \v
                                                     :size   15
                                                     :stroke {:size 4.0}}]])
         (plotr/render-lattice size)
