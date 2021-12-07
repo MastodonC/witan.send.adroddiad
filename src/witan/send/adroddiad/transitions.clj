@@ -18,10 +18,15 @@
       (tc/select-rows #(= setting (:setting-1 %)))
       (tc/select-rows leaver?)))
 
-(defn movers-to [simulation-results setting]
-  (-> simulation-results
-      (tc/select-rows mover?)
-      (tc/select-rows #(= setting (:setting-2 %)))))
+(defn movers-to
+  ([simulation-results setting]
+   (-> simulation-results
+       (tc/select-rows mover?)
+       (tc/select-rows #(= setting (:setting-2 %)))))
+  ([simulation-results]
+   (-> simulation-results
+       (tc/select-rows mover?)
+       (tc/select-rows #(= (:setting-2 %) (:setting-2 %))))))
 
 (defn movers-from [simulation-results setting]
   (-> simulation-results
