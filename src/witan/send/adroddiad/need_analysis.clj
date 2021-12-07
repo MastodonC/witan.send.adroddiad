@@ -30,27 +30,13 @@
                        (tc/aggregate {:transition-count #(dfn/sum (:transition-count %))})
                        (summary/seven-number-summary [:calendar-year] :transition-count)
                        (tc/order-by [:calendar-year]))
-     :need-movers-in (-> simulated-transition-counts
-                         (tc/select-rows #(= need (:need-2 %)))
-                         (tr/movers-to)
-                         (tc/group-by [:simulation :calendar-year])
-                         (tc/aggregate {:transition-count #(dfn/sum (:transition-count %))})
-                         (summary/seven-number-summary [:calendar-year] :transition-count)
-                         (tc/order-by [:calendar-year]))
      :need-leavers (-> simulated-transition-counts
                        (tc/select-rows #(= need (:need-1 %)))
                        (tr/leavers-from)
                        (tc/group-by [:simulation :calendar-year])
                        (tc/aggregate {:transition-count #(dfn/sum (:transition-count %))})
                        (summary/seven-number-summary [:calendar-year] :transition-count)
-                       (tc/order-by [:calendar-year]))
-     :need-movers-out (-> simulated-transition-counts
-                          (tc/select-rows #(= need (:need-1 %)))
-                          (tr/movers-from)
-                          (tc/group-by [:simulation :calendar-year])
-                          (tc/aggregate {:transition-count #(dfn/sum (:transition-count %))})
-                          (summary/seven-number-summary [:calendar-year] :transition-count)
-                          (tc/order-by [:calendar-year]))}))
+                       (tc/order-by [:calendar-year]))}))
 
 (defn need-analysis-summary [need-analysis-map]
   (-> (apply tc/concat-copying
@@ -59,9 +45,9 @@
                    need-analysis-map))
       (tc/select-columns [:calendar-year :transition-type :median])
       (tc/pivot->wider [:transition-type] [:median])
-      (tc/map-columns :next-year-total ["need-total" "need-joiners" "need-movers-in" "need-leavers" "need-movers-out"]
-                      (fn [total joiners in leavers out] (- (+ total joiners in)
-                                                            (+ leavers out))))))
+      (tc/map-columns :next-year-total ["need-total" "need-joiners" "need-leavers"]
+                      (fn [total joiners leavers] (- (+ total joiners)
+                                                     (+ leavers))))))
 
 (defn need-analysis-chart [need-analysis-map
                            need
@@ -84,15 +70,7 @@
                           (assoc-in [:legend :font-size] legend-font-size))))]
     (-> (into []
               cat
-              [(into [[:grid nil {:position [0 4]}]]
-                     (map (fn [s] (-> s
-                                      (update 2 assoc :position [0 4])
-                                      (update 2 assoc :label (str "Movers to " need)))))
-                     (series/ds->median-iqr-95-series
-                      (-> need-movers-in
-                          (tc/map-columns :calendar-year [:calendar-year] (fn [cy] (+ cy 0.5))))
-                      colors/mc-dark-blue \v))
-               (into [[:grid nil {:position [0 3]}]]
+              [(into [[:grid nil {:position [0 3]}]]
                      (map (fn [s] (-> s
                                       (update 2 assoc :position [0 3])
                                       (update 2 assoc :label (str "Joiners to " need)))))
@@ -113,15 +91,7 @@
                      (series/ds->median-iqr-95-series
                       (-> need-leavers
                           (tc/map-columns :calendar-year [:calendar-year] (fn [cy] (+ cy 0.5))))
-                      colors/mc-orange \A))
-               (into [[:grid nil {:position [0 0]}]]
-                     (map (fn [s] (-> s
-                                      (update 2 assoc :position [0 0])
-                                      (update 2 assoc :label (str "Movers from " need)))))
-                     (series/ds->median-iqr-95-series
-                      (-> need-movers-out
-                          (tc/map-columns :calendar-year [:calendar-year] (fn [cy] (+ cy 0.5))))
-                      colors/mc-orange \^))])
+                      colors/mc-orange \A))])
         (plotb/preprocess-series)
         (plotb/update-scales :x :fmt (::tick-formatter x-axis))
         (plotb/update-scales :y :fmt (::tick-formatter y-axis))
