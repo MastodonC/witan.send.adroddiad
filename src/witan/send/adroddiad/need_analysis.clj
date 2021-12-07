@@ -38,6 +38,7 @@
                          (summary/seven-number-summary [:calendar-year] :transition-count)
                          (tc/order-by [:calendar-year]))
      :need-leavers (-> simulated-transition-counts
+                       (tc/select-rows #(= need (:need-1 %)))
                        (tr/leavers-from need)
                        (tc/group-by [:simulation :calendar-year])
                        (tc/aggregate {:transition-count #(dfn/sum (:transition-count %))})

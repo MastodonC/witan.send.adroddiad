@@ -13,10 +13,15 @@
        (not (leaver? transition))
        (not= (:setting-1 transition) (:setting-2 transition))))
 
-(defn leavers-from [simulation-results setting]
-  (-> simulation-results
-      (tc/select-rows #(= setting (:setting-1 %)))
-      (tc/select-rows leaver?)))
+(defn leavers-from
+  ([simulation-results setting]
+   (-> simulation-results
+       (tc/select-rows #(= setting (:setting-1 %)))
+       (tc/select-rows leaver?)))
+  ([simulation-results]
+   (-> simulation-results
+       (tc/select-rows #(= (:setting-1 %) (:setting-1 %)))
+       (tc/select-rows leaver?))))
 
 (defn movers-to
   ([simulation-results setting]
