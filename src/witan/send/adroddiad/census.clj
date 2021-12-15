@@ -79,8 +79,9 @@
    (census-report-data (assoc options :census-data census-data))))
 
 (defn census-report [{:keys [census-data colors-and-shapes series-key legend-label report-sections
-                             file-name watermark base-chart-spec value-key]
-                      :or {watermark ""
+                             file-name watermark data-table-formatf base-chart-spec value-key]
+                      :or {data-table-formatf identity
+                           watermark ""
                            base-chart-spec plot/base-pop-chart-spec
                            value-key :transition-count
                            report-sections (cond
@@ -98,8 +99,8 @@
                                   :value-key value-key})]
     (try (-> (into []
                    (keep (fn [{:keys [title sheet-name series]
-                               :or {sheet-name title}
-                               :as conf}]
+                              :or {sheet-name title}
+                              :as conf}]
                            (try (let [data-table (-> data
                                                      (tc/select-rows #(series (series-key %)))
                                                      (tc/order-by [series-key :calendar-year]))
@@ -112,7 +113,7 @@
                                         (merge {::plot/legend-label legend-label
                                                 ::plot/title {::plot/label title}}
                                                base-chart-spec
-                                               {::large/data data-table
+                                               {::large/data (data-table-formatf data-table)
                                                 ::large/sheet-name sheet-name})
                                         (plot/add-overview-legend-items)
                                         (plot/zero-y-index)
