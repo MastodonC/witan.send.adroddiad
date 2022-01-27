@@ -82,7 +82,9 @@
    (census-report-data (assoc options :census-data census-data))))
 
 (defn census-report [{:keys [census-data colors-and-shapes series-key legend-label report-sections
-                             file-name watermark data-table-formatf base-chart-spec value-key]
+                             file-name watermark data-table-formatf base-chart-spec value-key
+                             bottom top ;; define y-axis
+                             ]
                       :or {data-table-formatf identity
                            watermark ""
                            base-chart-spec plot/base-pop-chart-spec
@@ -99,13 +101,18 @@
   (println (str "Building " file-name))
   (let [data (census-report-data {:census-data census-data
                                   :series-key series-key
-                                  :value-key value-key})]
+                                  :value-key value-key})
+        plot-index-f (fn [m]
+                       (if (and bottom top)
+                         (plot/stated-y-index (merge m {::plot/bottom bottom ::plot/top top}))
+                         (plot/zero-y-index m)))]
     (try (-> (into []
                    (keep (fn [{:keys [title sheet-name series]
                               :or {sheet-name title}
                               :as conf}]
-                           (try (let [data-table (-> data
-                                                     (tc/select-rows #(series (series-key %)))
+                           (try (let [series-selector-f (into #{} series)
+                                      data-table (-> data
+                                                     (tc/select-rows #(series-selector-f (series-key %)))
                                                      (tc/order-by [series-key :calendar-year]))
                                       grouped-data (-> data-table
                                                        (tc/group-by [series-key]))]
@@ -119,7 +126,7 @@
                                                {::large/data (data-table-formatf data-table)
                                                 ::large/sheet-name sheet-name})
                                         (plot/add-overview-legend-items)
-                                        (plot/zero-y-index)
+                                        plot-index-f
                                         (update ::plot/canvas plot/add-watermark watermark)
                                         (chart-utils/->large-charts))))
                                 (catch Exception e (throw (ex-info (format "Failed to create %s" title) conf e))))))
