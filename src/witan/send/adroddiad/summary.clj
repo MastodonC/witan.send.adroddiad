@@ -15,6 +15,7 @@
           :median     (ds-reduce/prob-quantile value-column 0.50)
           :q3         (ds-reduce/prob-quantile value-column 0.75)
           :high-95    (ds-reduce/prob-quantile value-column 0.95)
-          :max        (ds-reduce/prob-quantile value-column 1.0)}
+          :max        (ds-reduce/prob-quantile value-column 1.0)
+          :row-count  (ds-reduce/row-count)}
          joined-ds)
         (tc/separate-column :agg-column agg-columns identity))))
