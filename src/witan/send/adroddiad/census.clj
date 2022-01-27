@@ -144,7 +144,7 @@
     (a/pipeline-blocking concurrent
                          output-chan
                          (map census-report)
-                         (a/to-chan chart-defs))
+                         (a/to-chan! chart-defs))
     (a/<!! (a/into [] output-chan))))
 
 (defn census-analysis [{:keys [simulated-transitions colors-and-shapes start-year base-out-dir watermark
