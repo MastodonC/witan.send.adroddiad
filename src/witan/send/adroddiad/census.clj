@@ -71,7 +71,10 @@
                        (tc/select-columns [:calendar-year series-key :median-yoy-diff :median-yoy-%-diff]))]
      (-> base-report
          (tc/inner-join totals [:calendar-year])
-         (tc/map-columns :pct-of-total [:median :total-median] (fn [m tm] (float (/ m tm))))
+         (tc/map-columns :pct-of-total [:median :total-median] (fn [m tm] (if (or (zero? m)
+                                                                                 (zero? tm))
+                                                                           nil
+                                                                           (float (/ m tm)))))
          (tc/inner-join yoy-diffs [:calendar-year series-key])
          (tc/select-columns [:calendar-year series-key :min :low-95 :q1 :median :q3 :high-95 :max :total-median :pct-of-total :median-yoy-diff :median-yoy-%-diff])
          (tc/order-by [:calendar-year series-key]))))
@@ -79,7 +82,9 @@
    (census-report-data (assoc options :census-data census-data))))
 
 (defn census-report [{:keys [census-data colors-and-shapes series-key legend-label report-sections
-                             file-name watermark data-table-formatf base-chart-spec value-key]
+                             file-name watermark data-table-formatf base-chart-spec value-key
+                             bottom top ;; define y-axis
+                             ]
                       :or {data-table-formatf identity
                            watermark ""
                            base-chart-spec plot/base-pop-chart-spec
@@ -96,13 +101,18 @@
   (println (str "Building " file-name))
   (let [data (census-report-data {:census-data census-data
                                   :series-key series-key
-                                  :value-key value-key})]
+                                  :value-key value-key})
+        plot-index-f (fn [m]
+                       (if (and bottom top)
+                         (plot/stated-y-index (merge m {::plot/bottom bottom ::plot/top top}))
+                         (plot/zero-y-index m)))]
     (try (-> (into []
                    (keep (fn [{:keys [title sheet-name series]
                               :or {sheet-name title}
                               :as conf}]
-                           (try (let [data-table (-> data
-                                                     (tc/select-rows #(series (series-key %)))
+                           (try (let [series-selector-f (into #{} series)
+                                      data-table (-> data
+                                                     (tc/select-rows #(series-selector-f (series-key %)))
                                                      (tc/order-by [series-key :calendar-year]))
                                       grouped-data (-> data-table
                                                        (tc/group-by [series-key]))]
@@ -116,7 +126,7 @@
                                                {::large/data (data-table-formatf data-table)
                                                 ::large/sheet-name sheet-name})
                                         (plot/add-overview-legend-items)
-                                        (plot/zero-y-index)
+                                        plot-index-f
                                         (update ::plot/canvas plot/add-watermark watermark)
                                         (chart-utils/->large-charts))))
                                 (catch Exception e (throw (ex-info (format "Failed to create %s" title) conf e))))))
@@ -134,7 +144,7 @@
     (a/pipeline-blocking concurrent
                          output-chan
                          (map census-report)
-                         (a/to-chan chart-defs))
+                         (a/to-chan! chart-defs))
     (a/<!! (a/into [] output-chan))))
 
 (defn census-analysis [{:keys [simulated-transitions colors-and-shapes start-year base-out-dir watermark

@@ -161,23 +161,26 @@
         (plot/add-watermark watermark))))
 
 
-(defn setting-analysis-report [simulated-transitions file-name]
-  (let [settings (into (sorted-set)
-                       (-> simulated-transitions
-                           (tc/select-rows #(= -1 (:simulation %)))
-                           (tc/drop-rows #(= "NONSEND" (:setting-1 %)))
-                           :setting-1))]
-    (-> (into []
-              (comp
-               (map (fn [setting]
-                      (let [sam (setting-analysis simulated-transitions setting)]
-                        (-> {::large/sheet-name setting
-                             ::plot/canvas      (setting-analysis-chart sam setting {})
-                             ::large/data       (setting-analysis-summary sam)}
-                            (chart-utils/->large-charts))))))
-              settings)
-        (large/create-workbook)
-        (large/save-workbook! file-name))))
+(defn setting-analysis-report
+  ([simulated-transitions file-name options]
+   (let [settings (into (sorted-set)
+                        (-> simulated-transitions
+                            (tc/select-rows #(= -1 (:simulation %)))
+                            (tc/drop-rows #(= "NONSEND" (:setting-1 %)))
+                            :setting-1))]
+     (-> (into []
+               (comp
+                (map (fn [setting]
+                       (let [sam (setting-analysis simulated-transitions setting)]
+                         (-> {::large/sheet-name setting
+                              ::plot/canvas      (setting-analysis-chart sam setting options)
+                              ::large/data       (setting-analysis-summary sam)}
+                             (chart-utils/->large-charts))))))
+               settings)
+         (large/create-workbook)
+         (large/save-workbook! file-name))))
+  ([simulated-transitions file-name]
+   (setting-analysis-report simulated-transitions file-name {})))
 
 (comment
 
