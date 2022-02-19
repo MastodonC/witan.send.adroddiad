@@ -53,6 +53,27 @@
         (large/create-workbook)
         (large/save-workbook! file-name))))
 
+(defn year-counts-comparison [first-census second-census file-name {:keys [colors shapes watermark value-key legend-label title base-chart-spec chartf] :as _config
+                                                                    :or {colors [colors/blue colors/orange]
+                                                                         shapes [\A \^]
+                                                                         watermark ""
+                                                                         value-key :transition-count
+                                                                         base-chart-spec plot/base-pop-chart-spec
+                                                                         legend-label "Population"
+                                                                         chartf plot/zero-y-index
+                                                                         title "Total EHCPs"}}]
+  (let [first-census-counts (population-by-year {:census-data first-census
+                                                 :value-key value-key})
+        second-census-counts (population-by-year {:census-data second-census
+                                                  :value-key value-key})]
+    (-> (single-population/two-populations-report (merge {:first-census first-census-counts
+                                                          :second-census second-census-counts}
+                                                         {:colors colors :shapes shapes :legend-label legend-label
+                                                          :title title :watermark watermark :base-chart-spec base-chart-spec :chartf chartf}))
+        (vector)
+        (large/create-workbook)
+        (large/save-workbook! file-name))))
+
 (defn population-by-year-chart
   [{:keys [census-data population-by-year-data file-name color shape watermark value-key legend-label title base-chart-spec chartf] :as _config
     :or {color colors/blue
