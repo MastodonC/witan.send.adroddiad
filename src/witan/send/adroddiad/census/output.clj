@@ -10,4 +10,5 @@
 (defn ->csv-with-ids [census out-file]
   (-> census
       census-columns
+      (tc/order-by [:id :calendar-year])
       (tc/write! out-file)))
