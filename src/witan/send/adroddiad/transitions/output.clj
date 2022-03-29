@@ -5,7 +5,9 @@
   (-> transitions
       (tc/select-columns [:id :calendar-year
                           :setting-1 :need-1 :academic-year-1
-                          :setting-2 :need-2 :academic-year-2])
+                          :setting-2 :need-2 :academic-year-2
+                          :transition-type])
+      (tc/order-by [:id :calendar-year])
       (tc/write! out-file)))
 
 (defn ->csv-model-ready [transitions out-file]
