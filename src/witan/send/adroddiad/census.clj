@@ -136,7 +136,7 @@
          (println (str file-name " complete!"))
          {:file-name file-name}
          (catch Exception e (println "Failed to create " file-name)
-                (ex-info (str "Failed to create " file-name) {:file-name file-name} e)))))
+                (throw (ex-info (str "Failed to create " file-name) {:file-name file-name} e))))))
 
 (defn census-reports [chart-defs]
   (let [concurrent (max 2 (dec (.. Runtime getRuntime availableProcessors)))
