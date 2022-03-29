@@ -2,16 +2,45 @@
   (:require [tablecloth.api :as tc]
             [tech.v3.datatype.functional :as dfn]))
 
-(defn leaver? [transition]
-  (= "NONSEND" (get transition :setting-2)))
+(defn leaver?
+  ([setting-1 setting-2]
+   (and (not= "NONSEND" setting-1)
+        (= "NONSEND" setting-2)))
+  ([{:keys [setting-1 setting-2]}]
+   (leaver? setting-1 setting-2)))
 
-(defn joiner? [transition]
-  (= "NONSEND" (get transition :setting-1)))
+(defn joiner?
+  ([setting-1 setting-2]
+   (and (= "NONSEND" setting-1)
+        (not= "NONSEND" setting-2)))
+  ([{:keys [setting-1 setting-2]}]
+   (joiner? setting-1 setting-2)))
 
-(defn mover? [transition]
-  (and (not (joiner? transition))
-       (not (leaver? transition))
-       (not= (:setting-1 transition) (:setting-2 transition))))
+(defn mover?
+  ([setting-1 setting-2]
+   (and (not (joiner? setting-1 setting-2))
+        (not (leaver? setting-1 setting-2))
+        (not= setting-1 setting-2)))
+  ([{:keys [setting-1 setting-2]}]
+   (mover? setting-1 setting-2)))
+
+(defn stayer?
+  ([setting-1 setting-2]
+   (and (not= "NONSEND" setting-1 setting-2)
+        (= setting-1 setting-2)))
+  ([{:keys [setting-1 setting-2]}]
+   (stayer? setting-1 setting-2)))
+
+(defn transition-type
+  ([setting-1 setting-2]
+   (cond
+     (leaver? setting-1 setting-2) "leaver"
+     (joiner? setting-1 setting-2) "joiner"
+     (mover? setting-1 setting-2) "mover"
+     (stayer? setting-1 setting-2) "stayer"
+     :else "NONSEND"))
+  ([{:keys [setting-1 setting-2]}]
+   (transition-type setting-1 setting-2)))
 
 (defn leavers-from
   ([simulation-results setting]
@@ -74,6 +103,7 @@
                              :need-2 :need
                              :academic-year-2 :academic-year})
          (tc/concat year-1-census)
+         (tc/drop-columns [:calendar-year-2])
          (tc/drop-rows #(= "NONSEND" (:setting %))))))
   ([transitions]
    (transitions->census transitions (min-calendar-year transitions))))

@@ -46,12 +46,13 @@
                                                title "Total EHCPs"}}]
   (let [counts (population-by-year {:census-data census-data
                                     :value-key value-key})]
-    (-> {:census-data counts}
-        (merge {:color color :shape shape :legend-label legend-label :title title :watermark watermark :base-chart-spec base-chart-spec :chartf chartf})
-        (single-population/single-population-report)
-        (vector)
-        (large/create-workbook)
-        (large/save-workbook! file-name))))
+    {:file-name file-name
+     :xl (-> {:census-data counts}
+             (merge {:color color :shape shape :legend-label legend-label :title title :watermark watermark :base-chart-spec base-chart-spec :chartf chartf})
+             (single-population/single-population-report)
+             (vector)
+             (large/create-workbook)
+             (large/save-workbook! file-name))}))
 
 (defn population-by-year-chart
   [{:keys [census-data population-by-year-data file-name color shape watermark value-key legend-label title base-chart-spec chartf] :as _config

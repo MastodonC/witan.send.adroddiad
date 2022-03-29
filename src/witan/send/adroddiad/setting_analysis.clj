@@ -14,39 +14,42 @@
             [witan.send.adroddiad.transitions :as tr]))
 
 (defn setting-analysis [simulated-transition-counts setting]
-  (let [min-year (stc/min-calendar-year simulated-transition-counts)]
-    {:setting-total (-> simulated-transition-counts
-                        (tr/transitions->census min-year)
-                        (tc/select-rows #(= setting (:setting %)))
-                        (tc/group-by [:simulation :calendar-year])
-                        (tc/aggregate {:transition-count #(dfn/sum (:transition-count %))})
-                        (summary/seven-number-summary [:calendar-year] :transition-count)
-                        (tc/order-by [:calendar-year]))
-     :setting-joiners (-> simulated-transition-counts
-                          (tr/joiners-to setting)
+  (try
+    (let [min-year (stc/min-calendar-year simulated-transition-counts)]
+      {:setting-total (-> simulated-transition-counts
                           (tr/transitions->census min-year)
+                          (tc/select-rows #(= setting (:setting %)))
                           (tc/group-by [:simulation :calendar-year])
                           (tc/aggregate {:transition-count #(dfn/sum (:transition-count %))})
                           (summary/seven-number-summary [:calendar-year] :transition-count)
                           (tc/order-by [:calendar-year]))
-     :setting-movers-in (-> simulated-transition-counts
-                            (tr/movers-to setting)
+       :setting-joiners (-> simulated-transition-counts
+                            (tr/joiners-to setting)
+                            (tr/transitions->census min-year)
                             (tc/group-by [:simulation :calendar-year])
                             (tc/aggregate {:transition-count #(dfn/sum (:transition-count %))})
                             (summary/seven-number-summary [:calendar-year] :transition-count)
                             (tc/order-by [:calendar-year]))
-     :setting-leavers (-> simulated-transition-counts
-                          (tr/leavers-from setting)
-                          (tc/group-by [:simulation :calendar-year])
-                          (tc/aggregate {:transition-count #(dfn/sum (:transition-count %))})
-                          (summary/seven-number-summary [:calendar-year] :transition-count)
-                          (tc/order-by [:calendar-year]))
-     :setting-movers-out (-> simulated-transition-counts
-                             (tr/movers-from setting)
-                             (tc/group-by [:simulation :calendar-year])
-                             (tc/aggregate {:transition-count #(dfn/sum (:transition-count %))})
-                             (summary/seven-number-summary [:calendar-year] :transition-count)
-                             (tc/order-by [:calendar-year]))}))
+       :setting-movers-in (-> simulated-transition-counts
+                              (tr/movers-to setting)
+                              (tc/group-by [:simulation :calendar-year])
+                              (tc/aggregate {:transition-count #(dfn/sum (:transition-count %))})
+                              (summary/seven-number-summary [:calendar-year] :transition-count)
+                              (tc/order-by [:calendar-year]))
+       :setting-leavers (-> simulated-transition-counts
+                            (tr/leavers-from setting)
+                            (tc/group-by [:simulation :calendar-year])
+                            (tc/aggregate {:transition-count #(dfn/sum (:transition-count %))})
+                            (summary/seven-number-summary [:calendar-year] :transition-count)
+                            (tc/order-by [:calendar-year]))
+       :setting-movers-out (-> simulated-transition-counts
+                               (tr/movers-from setting)
+                               (tc/group-by [:simulation :calendar-year])
+                               (tc/aggregate {:transition-count #(dfn/sum (:transition-count %))})
+                               (summary/seven-number-summary [:calendar-year] :transition-count)
+                               (tc/order-by [:calendar-year]))})
+    (catch Exception e
+      (throw (ex-info "Couldn't do setting analysis." {:setting setting} e)))))
 
 (defn setting-analysis-summary [setting-analysis-map]
   (-> (apply tc/concat-copying
@@ -163,22 +166,24 @@
 
 (defn setting-analysis-report
   ([simulated-transitions file-name options]
+   (println "Building Setting Analysis report")
    (let [settings (into (sorted-set)
                         (-> simulated-transitions
                             (tc/select-rows #(= -1 (:simulation %)))
                             (tc/drop-rows #(= "NONSEND" (:setting-1 %)))
                             :setting-1))]
-     (-> (into []
-               (comp
-                (map (fn [setting]
-                       (let [sam (setting-analysis simulated-transitions setting)]
-                         (-> {::large/sheet-name setting
-                              ::plot/canvas      (setting-analysis-chart sam setting options)
-                              ::large/data       (setting-analysis-summary sam)}
-                             (chart-utils/->large-charts))))))
-               settings)
-         (large/create-workbook)
-         (large/save-workbook! file-name))))
+     {:file-name file-name
+      :xl (-> (into []
+                    (comp
+                     (map (fn [setting]
+                            (let [sam (setting-analysis simulated-transitions setting)]
+                              (-> {::large/sheet-name setting
+                                   ::plot/canvas      (setting-analysis-chart sam setting options)
+                                   ::large/data       (setting-analysis-summary sam)}
+                                  (chart-utils/->large-charts))))))
+                    settings)
+              (large/create-workbook)
+              (large/save-workbook! file-name))}))
   ([simulated-transitions file-name]
    (setting-analysis-report simulated-transitions file-name {})))
 
