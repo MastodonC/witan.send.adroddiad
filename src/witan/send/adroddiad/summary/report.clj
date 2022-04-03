@@ -2,6 +2,7 @@
   (:require
    [clojure.java.io :as io]
    [com.climate.claypoole.lazy :as lazy]
+   [kixi.large :as xl]
    [kixi.plot :as plot]
    [kixi.plot.series :as series]
    [tablecloth.api :as tc]
@@ -92,7 +93,8 @@
            ;;       (tc/aggregate {:transition-count #(dfn/sum (:transition-count %))})
            ;;       (tc/order-by [order-key])))
            ]
-    :as m}]
+    :as m
+    :or {cpu-pool (java.util.concurrent.ForkJoinPool/commonPool)}}]
   (assoc m
          :summary
          (let [historical-transitions (historical-transitions->simulated-counts historical-transition-file)]
@@ -114,21 +116,24 @@
                        :as m}]
   (assoc m :summary
          (reduce-kv (fn [m k v] ;; FIXME: factor this out into a function that could be passed in, perhaps at the level below the assoc onto the accumulator
-                      (let [{:keys [domain-value]} k
-                            {:keys [data]} v
-                            color (-> domain-value color-and-shape-map :color)
-                            shape (-> domain-value color-and-shape-map :shape)
-                            line-y :median
-                            ribbon-1-high-y :q3 ribbon-1-low-y :q1
-                            ribbon-2-high-y :high-95 ribbon-2-low-y :low-95]
-                        (assoc m k (assoc v
-                                          :series
-                                          (series/ds->line-and-double-ribbon
-                                           data
-                                           {:color color :shape shape
-                                            :x order-key :line-y line-y
-                                            :ribbon-1-high-y ribbon-1-high-y :ribbon-1-low-y ribbon-1-low-y
-                                            :ribbon-2-high-y ribbon-2-high-y :ribbon-2-low-y ribbon-2-low-y})))))
+                      (try
+                        (let [{:keys [domain-value]} k
+                              {:keys [data]} v
+                              color (-> domain-value color-and-shape-map :color)
+                              shape (-> domain-value color-and-shape-map :shape)
+                              line-y :median
+                              ribbon-1-high-y :q3 ribbon-1-low-y :q1
+                              ribbon-2-high-y :high-95 ribbon-2-low-y :low-95]
+                          (assoc m k (assoc v
+                                            :series
+                                            (series/ds->line-and-double-ribbon
+                                             data
+                                             {:color color :shape shape
+                                              :x order-key :line-y line-y
+                                              :ribbon-1-high-y ribbon-1-high-y :ribbon-1-low-y ribbon-1-low-y
+                                              :ribbon-2-high-y ribbon-2-high-y :ribbon-2-low-y ribbon-2-low-y}))))
+                        (catch Exception e
+                          (throw (ex-info (format "Failed to create series for %s" (:domain-value k)) {:k k :v v} e)))))
                     {}
                     summary)))
 
@@ -174,9 +179,16 @@
         legend (into []
                      (map (fn [[k v]]
                             (:legend v)))
-                     summary-subset)]
+                     summary-subset)
+        data (apply tc/concat-copying
+                    (into []
+                          (map (fn [[k v]]
+                                 (:data v)))
+                          summary-subset))]
     (-> summary-items
         (merge chart-configuration)
+        (assoc :title chart-title) ;; should be sheet title?
+        (assoc :data data)
         (assoc :chart
                (-> {::series/series series
                     ::series/legend-spec legend}
@@ -186,3 +198,16 @@
                    (plot/add-overview-legend-items)
                    chartf
                    (update ::plot/canvas plot/add-watermark watermark))))))
+
+(defn ->excel [charts {:keys [format-table-f
+                              file-name]
+                       :or {format-table-f format-table}}]
+  (-> (into []
+            (map (fn [{:keys [title chart data]
+                      :as _config}]
+                   {::xl/sheet-name title
+                    ::xl/images [{::xl/image (-> chart ::plot/canvas :buffer plot/->byte-array)}]
+                    ::xl/data (format-table-f data)}))
+            charts)
+      (xl/create-workbook)
+      (xl/save-workbook! file-name)))
