@@ -24,10 +24,12 @@
                       :academic-year "NCY"
                       :population    "Population"}))
 
-;; FIXME: This should return the chart and the data for the table and
-;; any formatting things so that I can pass it to a function to create
-;; a xl
-(defn chart [chart-data {:keys [legend-label watermark title ncys]}]
+(defn format-table [ds]
+  (-> ds
+      (tc/reorder-columns [:calendar-year :academic-year :population])
+      (tc/order-by :calendar-year :academic-year)))
+
+(defn chart [chart-data {:keys [legend-label watermark title ncys] :as chart-spec}]
   (let [population-subset (select-keys chart-data ncys)
         lines (into []
                     (map (fn [[_ v]]
@@ -37,17 +39,16 @@
                       (map (fn [[_ v]]
                              (:legend v)))
                       population-subset)]
-    (assoc chart-data
-           :chart
-           (-> {::series/series lines
-                ::series/legend-spec legends
-                ::plot/legend-label legend-label
-                ::plot/title title}
-               plot/zero-y-index
-               (update ::plot/canvas plot/add-watermark watermark)))))
+    (assoc chart-spec
+           :chart (-> {::series/series lines
+                       ::series/legend-spec legends
+                       ::plot/legend-label legend-label
+                       ::plot/title title}
+                      (merge plot/base-pop-chart-spec)
+                      plot/zero-y-index
+                      (update ::plot/canvas plot/add-watermark watermark))
+           :data (apply tc/concat (map :data (vals population-subset))))))
 
-(defn format-table [ds]
-  (tc/reorder-columns ds [:calendar-year :academic-year :population]))
 
 
 (defn ->population [file-name]
@@ -111,11 +112,26 @@
   (def charts
     (into []
           (comp
-           (map (fn [m] (assoc m
-                              :watermark "Test"
-                              :legend-label "NCYs")))
+           #_(map (fn [m] (assoc m
+                                :watermark "Test"
+                                :legend-label "NCYs")))
            (map (partial chart data)))
           chart-sections))
+
+
+  (-> (into []
+            (map (fn [{:keys [title chart data]}]
+                   {::xl/sheet-name title
+                    ::xl/images [{::xl/image (-> chart ::plot/canvas :buffer plot/->byte-array)}]
+                    ::xl/data (-> data
+                                  format-table
+                                  friendly-column-names)}))
+            charts)
+      (xl/create-workbook)
+      (xl/save-workbook! "population.xlsx"))
+
+
+
 
 
 
