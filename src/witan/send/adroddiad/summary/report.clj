@@ -164,12 +164,16 @@
                              legend-label
                              base-chart-spec]
                       :as chart-configuration}]
-  (let [summary-subset (select-keys
-                        summary
-                        (into []
-                              (map (fn [s]
-                                     {:domain-key domain-key :domain-value s}))
-                              chart-selector))
+  (let [summary-subset (into (sorted-map-by
+                              (fn [key1 key2]
+                                (compare (:domain-value key1)
+                                         (:domain-value key2))))
+                             (select-keys
+                              summary
+                              (into []
+                                    (map (fn [s]
+                                           {:domain-key domain-key :domain-value s}))
+                                    chart-selector)))
         series (into []
                      (comp
                       (map (fn [[k v]]
