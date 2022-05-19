@@ -12,12 +12,14 @@
                            (inc (last ncys))))})
 
 (defn colors-and-shapes
-  ([census-data extra-domain-items]
+  ([census-data extra-domain-items palette]
    (colors/domain-colors-and-shapes
     (into []
           cat
           (conj (vals (domains census-data))
-                extra-domain-items))))
+                extra-domain-items)) palette))
+  ([census-data extra-domain-items]
+   (colors-and-shapes extra-domain-items))
   ([census-data]
    (colors-and-shapes census-data [])))
 
