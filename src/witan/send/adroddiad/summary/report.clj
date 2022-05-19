@@ -110,6 +110,47 @@
              (update-vals $ (fn [ds] {:data ds}))
              (update-keys $ (fn [k] {:domain-key (key (first k)) :domain-value (val (first k))}))))))
 
+(comment
+  {{:domain-key :setting :domain-value "NMI"}
+   {:data "some tmd"
+    :series "a vector of series to be plotted"
+    :legend "the legend items that match this series"
+    }
+
+   {:domain-key :setting :domain-value "Mainstream"}
+   {:data "some other tmd"
+    :series "a vector of series to be plotted"
+    :legend "the legend items that match this series"}
+
+   }
+
+  [{ ;; lots chart spec stuff
+    :data "all the concatenated data shown on this chart"
+    :series "all the series for this chart"
+    :legends "all the legend items for this chart"
+    :chart "the actual chart image"
+    }]
+
+  {{:domain-key :setting :domain-value "NMI"}
+   {:data "some tmd"
+    :series "a vector of series to be plotted"
+    :legend "the legend items that match this series"
+    }
+
+   {:domain-key :setting :domain-value "Mainstream"}
+   {:data "some other tmd"
+    :series "a vector of series to be plotted"
+    :legend "the legend items that match this series"}
+
+   }
+
+  [{ ;; lots chart spec stuff
+    :data "all the concatenated data shown on this chart"
+    :series "all the series for this chart"
+    :legends "all the legend items for this chart"
+    :chart "the actual chart image"
+    }])
+
 (defn summary-series [{:keys [summary
                               color-and-shape-map ;; colors-and-shapes
                               order-key]
