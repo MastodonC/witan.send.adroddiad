@@ -19,7 +19,7 @@
           (conj (vals (domains census-data))
                 extra-domain-items)) palette))
   ([census-data extra-domain-items]
-   (colors-and-shapes extra-domain-items))
+   (colors-and-shapes census-data extra-domain-items))
   ([census-data]
    (colors-and-shapes census-data [])))
 
