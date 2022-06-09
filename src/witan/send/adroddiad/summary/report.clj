@@ -97,17 +97,26 @@
   (assoc m
          :summary
          (let [historical-transitions (historical-transitions->simulated-counts historical-transition-file)]
-           (as-> simulated-transitions-files $
-             (lazy/upmap cpu-pool (partial read-and-split ds-split-key) $)
-             (mapcat identity $)
-             (conj $ historical-transitions)
-             (lazy/upmap cpu-pool simulation-transform $)
-             (summary/seven-number-summary $ [domain-key order-key] value-key)
-             (tc/order-by $ [order-key])
-             (tc/group-by $ [domain-key] {:result-type :as-map})
-             ;; create the data key
-             (update-vals $ (fn [ds] {:data ds}))
-             (update-keys $ (fn [k] {:domain-key (key (first k)) :domain-value (val (first k))}))))))
+           (if (nil? simulated-transitions-files)
+             (as-> historical-transitions $
+               (simulation-transform $)
+               (summary/seven-number-summary $ [domain-key order-key] value-key)
+               (tc/order-by $ [order-key])
+               (tc/group-by $ [domain-key] {:result-type :as-map})
+               ;; create the data key
+               (update-vals $ (fn [ds] {:data ds}))
+               (update-keys $ (fn [k] {:domain-key (key (first k)) :domain-value (val (first k))})))
+             (as-> simulated-transitions-files $
+               (lazy/upmap cpu-pool (partial read-and-split ds-split-key) $)
+               (mapcat identity $)
+               (conj $ historical-transitions)
+               (lazy/upmap cpu-pool simulation-transform $)
+               (summary/seven-number-summary $ [domain-key order-key] value-key)
+               (tc/order-by $ [order-key])
+               (tc/group-by $ [domain-key] {:result-type :as-map})
+               ;; create the data key
+               (update-vals $ (fn [ds] {:data ds}))
+               (update-keys $ (fn [k] {:domain-key (key (first k)) :domain-value (val (first k))})))))))
 
 (comment
   {{:domain-key :setting :domain-value "NMI"}
