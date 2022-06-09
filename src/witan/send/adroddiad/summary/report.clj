@@ -68,14 +68,13 @@
                     :academic-year-1 :need-1 :setting-1
                     :academic-year-2 :need-2 :setting-2])
       (tc/aggregate {:transition-count tc/row-count})
-      (tc/map-columns :calendar-year-2 [:calendar-year] inc)
       (tc/add-column :simulation -1)
       (tc/convert-types {:academic-year-1 :int8
                          :academic-year-2 :int8
                          :calendar-year :int16
-                         :calendar-year-2 :int16
                          :simulation :int8
-                         :transition-count :int64})))
+                         :transition-count :int64})
+      (tc/map-columns :calendar-year-2 [:calendar-year] inc)))
 
 (defn summarise-simulations
   [{:keys [cpu-pool ;; Allows us to share the resources between all the jobs
