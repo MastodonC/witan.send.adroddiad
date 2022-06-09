@@ -1,7 +1,7 @@
 {:paths ["src" "resources"]
  :deps  {org.clojure/clojure       {:mvn/version "1.11.0"}
-         mastodonc/kixi.plot {:git/url "https://github.com/MastodonC/kixi.plot.git"
-                              :sha "174d6b1f354dff5212b103ef3c2c813349e12d19"}
+         mastodonc/kixi.plot       {:git/url "https://github.com/MastodonC/kixi.plot.git"
+                                    :sha "e67319dd1f0403da4d5d35cb94d800af24a8c8a9"}
          mastodonc/kixi.large      {:git/url "https://github.com/MastodonC/kixi.large.git"
                                     :sha "c593467394c7007b565fbd395afe00920c6d334d"}
          reducibles/reducibles     {:mvn/version "0.3.0"}
