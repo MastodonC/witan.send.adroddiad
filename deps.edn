@@ -1,9 +1,12 @@
 {:paths ["src" "resources"]
- :deps  {org.clojure/clojure   {:mvn/version "1.10.3"}
-         mastodonc/kixi.plot   {:local/root "../kixi.plot"}
-         reducibles/reducibles {:mvn/version "0.3.0"}
+ :deps  {org.clojure/clojure       {:mvn/version "1.10.3"}
+         mastodonc/kixi.plot       {:git/url "https://github.com/MastodonC/kixi.plot.git"
+                                    :sha "2510f7a391f8a0be455bd02428ba820027bb980a"}
+         mastodonc/kixi.large      {:git/url "https://github.com/MastodonC/kixi.large.git"
+                                    :sha "c593467394c7007b565fbd395afe00920c6d334d"}
+         reducibles/reducibles     {:mvn/version "0.3.0"}
          com.cognitect/transit-clj {:mvn/version "1.0.324"}
-         org.clojure/core.async {:mvn/version "1.5.648"}}
+         org.clojure/core.async    {:mvn/version "1.5.648"}}
  :aliases
  {:test    {:extra-paths ["test"]
             :extra-deps  {org.clojure/test.check {:mvn/version "1.1.0"}}}
