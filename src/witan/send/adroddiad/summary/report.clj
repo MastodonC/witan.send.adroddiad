@@ -208,6 +208,7 @@
                      {:keys [chart-title chart-selector ;; these two are based on what is currently in main-report but done up with keywords and then merged with the rest
                              ;; the above lets me do stuff like have different bottom/top for different charts for comparison
                              ;; bottom top ; These should be partialed in with the chartf
+                             title
                              chartf
                              watermark
                              legend-label
