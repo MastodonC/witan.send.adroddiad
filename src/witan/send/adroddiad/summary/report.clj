@@ -66,7 +66,7 @@
       (tc/dataset {:key-fn keyword})
       (tc/group-by [:calendar-year
                     :academic-year-1 :need-1 :setting-1
-                    :academic-year-2 :need-2 :setting-2])
+                    :academic-year-2 :need-2 :setting-2 :id])
       (tc/aggregate {:transition-count tc/row-count})
       (tc/add-column :simulation -1)
       (tc/convert-types {:academic-year-1 :int8
