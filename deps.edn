@@ -1,6 +1,7 @@
 {:paths ["src" "resources"]
  :deps  {org.clojure/clojure   {:mvn/version "1.10.3"}
          mastodonc/kixi.plot   {:local/root "../kixi.plot"}
+         mastodonc/kixi.large   {:local/root "../kixi.large"} ;; should these be pointing at github?
          reducibles/reducibles {:mvn/version "0.3.0"}
          com.cognitect/transit-clj {:mvn/version "1.0.324"}
          org.clojure/core.async {:mvn/version "1.5.648"}}
