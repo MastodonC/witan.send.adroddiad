@@ -240,7 +240,7 @@
                           summary-subset))]
     (-> summary-items
         (merge chart-configuration)
-        (assoc :title chart-title) ;; should be sheet title?
+        (assoc :title title) ;; should be sheet title?
         (assoc :data data)
         (assoc :chart
                (-> {::series/series series
