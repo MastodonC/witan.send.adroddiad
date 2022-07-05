@@ -112,7 +112,7 @@
                                :as conf}]
                            (try (let [series-selector-f (into #{} series)
                                       data-table (-> data
-                                                     (tc/select-rows #(comp series-selector-f (series-key %)))
+                                                     (tc/select-rows #(boolean (series-selector-f (series-key %))))
                                                      (tc/order-by [series-key :calendar-year]))
                                       grouped-data (-> data-table
                                                        (tc/group-by [series-key]))]
