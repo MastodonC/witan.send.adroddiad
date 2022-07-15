@@ -249,11 +249,13 @@
                               file-name]
                        :or {format-table-f format-table}}]
   (-> (into []
-            (map (fn [{:keys [title chart data]
-                      :as _config}]
+            (map (fn [{:keys [title chart data display-table]
+                       :as _config}]
                    {::xl/sheet-name title
                     ::xl/images [{::xl/image (-> chart ::plot/canvas :buffer plot/->byte-array)}]
-                    ::xl/data (format-table-f data)}))
+                    ::xl/data (if display-table
+                                display-table
+                                (format-table-f data))}))
             charts)
       (xl/create-workbook)
       (xl/save-workbook! file-name)))
