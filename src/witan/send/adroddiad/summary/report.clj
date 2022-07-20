@@ -225,34 +225,37 @@
                      (map (fn [[k v]]
                             (:legend v)))
                      summary-subset)
-        data (apply tc/concat-copying
-                    (into []
-                          (map (fn [[k v]]
-                                 (:data v)))
-                          summary-subset))]
-    (-> summary-items
-        (merge chart-configuration)
-        (assoc :title chart-title) ;; should be sheet title?
-        (assoc :data data)
-        (assoc :chart
-               (-> {::series/series series
-                    ::series/legend-spec legend}
-                   (merge {::plot/legend-label legend-label
-                           ::plot/title {::plot/label chart-title}}
-                          base-chart-spec)
-                   (plot/add-overview-legend-items)
-                   chartf
-                   (update ::plot/canvas plot/add-watermark watermark))))))
+        data (into []
+                   (map (fn [[k v]]
+                          (:data v)))
+                   summary-subset)]
+    (when (seq data)
+      (-> summary-items
+          (merge chart-configuration)
+          (assoc :title chart-title) ;; should be sheet title?
+          (assoc :data (apply tc/concat-copying
+                              data))
+          (assoc :chart
+                 (-> {::series/series series
+                      ::series/legend-spec legend}
+                     (merge {::plot/legend-label legend-label
+                             ::plot/title {::plot/label chart-title}}
+                            base-chart-spec)
+                     (plot/add-overview-legend-items)
+                     chartf
+                     (update ::plot/canvas plot/add-watermark watermark)))))))
 
 (defn ->excel [charts {:keys [format-table-f
                               file-name]
                        :or {format-table-f format-table}}]
   (-> (into []
-            (map (fn [{:keys [title chart data]
-                      :as _config}]
+            (map (fn [{:keys [title chart data display-table]
+                       :as _config}]
                    {::xl/sheet-name title
                     ::xl/images [{::xl/image (-> chart ::plot/canvas :buffer plot/->byte-array)}]
-                    ::xl/data (format-table-f data)}))
+                    ::xl/data (if display-table
+                                display-table
+                                (format-table-f data))}))
             charts)
       (xl/create-workbook)
       (xl/save-workbook! file-name)))
