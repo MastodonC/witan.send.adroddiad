@@ -232,7 +232,7 @@
     (when (seq data)
       (-> summary-items
           (merge chart-configuration)
-          (assoc :title chart-title) ;; should be sheet title?
+          (assoc :sheet-name (or sheet-name chart-title))
           (assoc :data (apply tc/concat-copying
                               data))
           (assoc :chart
@@ -249,9 +249,9 @@
                               file-name]
                        :or {format-table-f format-table}}]
   (-> (into []
-            (map (fn [{:keys [title chart data display-table]
+            (map (fn [{:keys [sheet-name chart data display-table]
                        :as _config}]
-                   {::xl/sheet-name title
+                   {::xl/sheet-name sheet-name
                     ::xl/images [{::xl/image (-> chart ::plot/canvas :buffer plot/->byte-array)}]
                     ::xl/data (if display-table
                                 display-table
