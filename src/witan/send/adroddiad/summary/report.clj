@@ -200,6 +200,7 @@
                      {:keys [chart-title chart-selector ;; these two are based on what is currently in main-report but done up with keywords and then merged with the rest
                              ;; the above lets me do stuff like have different bottom/top for different charts for comparison
                              ;; bottom top ; These should be partialed in with the chartf
+                             sheet-name
                              chartf
                              watermark
                              legend-label
@@ -232,7 +233,7 @@
     (when (seq data)
       (-> summary-items
           (merge chart-configuration)
-          (assoc :title chart-title) ;; should be sheet title?
+          (assoc :sheet-name (or sheet-name chart-title))
           (assoc :data (apply tc/concat-copying
                               data))
           (assoc :chart
@@ -249,9 +250,9 @@
                               file-name]
                        :or {format-table-f format-table}}]
   (-> (into []
-            (map (fn [{:keys [title chart data display-table]
+            (map (fn [{:keys [sheet-name chart data display-table]
                        :as _config}]
-                   {::xl/sheet-name title
+                   {::xl/sheet-name sheet-name
                     ::xl/images [{::xl/image (-> chart ::plot/canvas :buffer plot/->byte-array)}]
                     ::xl/data (if display-table
                                 display-table
