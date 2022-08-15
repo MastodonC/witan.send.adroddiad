@@ -1,5 +1,5 @@
 {:paths ["src" "resources"]
- :deps  {org.clojure/clojure   {:mvn/version "1.10.3"}
+ :deps  {org.clojure/clojure   {:mvn/version "1.11.1"}
          mastodonc/kixi.plot   {:git/url "https://github.com/MastodonC/kixi.plot.git"
                                 :sha     "e67319dd1f0403da4d5d35cb94d800af24a8c8a9"}
          mastodonc/kixi.large   {:git/url "https://github.com/MastodonC/kixi.large.git"
