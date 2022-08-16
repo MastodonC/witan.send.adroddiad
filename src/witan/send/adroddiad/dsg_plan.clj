@@ -5,7 +5,7 @@
             [tech.v3.datatype.functional :as dfn]
             [witan.send.adroddiad.summary.report :as summary-report]))
 
-;; Dataset needs to be in a canonical census with transition-count shape for this to work 
+;; Dataset needs to be in a canonical census with transition-count shape for this to work
 (defn ncy->age
   "Taken from witan.send.domain.academic-years to avoid a dependency"
   [ncy]
@@ -46,8 +46,8 @@
       (tc/complete :calendar-year :setting :need)
       (tc/replace-missing :transition-count :value 0)))
 
-(defn transform-simulations 
-  [{:keys [simulations 
+(defn transform-simulations
+  [{:keys [simulations
            simulations-transform-f
            cpu-pool]
     :or {cpu-pool (java.util.concurrent.ForkJoinPool/commonPool)}}]
@@ -96,9 +96,31 @@
                 simulated-transitions-files))
    (historical-transitions->simulated-counts historical-transitions-file)))
 
+(defn by-age-wide
+  ([summary metric]
+   (-> summary
+       (tc/select-columns [:calendar-year :setting :age-group metric])
+       (tc/pivot->wider [:calendar-year] metric {:drop-missing? false})
+       (tc/order-by [:setting :age-group])
+       (tc/rename-columns {:setting "Placement"
+                           :age-group "Age Group"})))
+  ([summary]
+   (by-age-wide summary :mean)))
+
+(defn by-need-wide
+  ([summary metric]
+   (-> summary
+       (tc/select-columns [:calendar-year :setting :need metric])
+       (tc/pivot->wider [:calendar-year] metric {:drop-missing? false})
+       (tc/order-by [:setting :need])
+       (tc/rename-columns {:setting "Placement"
+                           :need "Primary Need"})))
+  ([summary]
+   (by-need-wide summary :mean)))
+
 (comment
 
-  ;; by-age and by-need examples 
+  ;; by-age and by-need examples
   (def cpu-pool (cp/threadpool (- (cp/ncpus) 2)))
 
   @(def by-age
