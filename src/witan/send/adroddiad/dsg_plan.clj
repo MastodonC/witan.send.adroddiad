@@ -1,10 +1,9 @@
 (ns witan.send.adroddiad.dsg-plan
   (:require [com.climate.claypoole.lazy :as lazy]
-            [witan.send.adroddiad.summary :as summary]
             [tablecloth.api :as tc]
+            [tech.v3.dataset.reductions :as ds-reduce]
             [tech.v3.datatype.functional :as dfn]
-            [witan.send.adroddiad.summary.report :as summary-report]
-            [witan.send.adroddiad.transitions :as at]))
+            [witan.send.adroddiad.summary.report :as summary-report]))
 
 ;; Dataset needs to be in a canonical census with transition-count shape for this to work 
 (defn ncy->age
@@ -47,19 +46,23 @@
       (tc/complete :calendar-year :setting :need)
       (tc/replace-missing :transition-count :value 0)))
 
-
-(defn summarise-simulations
-  [{:keys [cpu-pool ;; Allows us to share the resources between all the jobs
-           simulations ;; history + all simulations from parquet
-           domain-keys                  ;; [:calendar-year :age-group :setting-category] or [:calendar-year :age-group :need]
-           order-keys ;; :calendar-year ;; this is just the x-key
-           value-key ;; :transition-count
-           simulation-transform]
+(defn transform-simulations 
+  [{:keys [simulations 
+           simulations-transform-f
+           cpu-pool]
     :or {cpu-pool (java.util.concurrent.ForkJoinPool/commonPool)}}]
-  (as-> simulations $
-    (lazy/upmap cpu-pool simulation-transform $)
-    (summary/seven-number-summary $ domain-keys value-key)
-    (tc/order-by $ order-keys)))
+  (lazy/upmap cpu-pool simulations-transform-f simulations))
+
+(defn summarise-simulations [{:keys [simulations
+                                     domain-keys
+                                     value-key]}]
+  (ds-reduce/group-by-column-agg
+   domain-keys
+   {:sum       (ds-reduce/sum value-key)
+    :row-count (ds-reduce/row-count)
+    :mean      (ds-reduce/mean value-key)
+    :median    (ds-reduce/prob-median value-key)}
+   simulations))
 
 (defn historical-transitions->simulated-counts [transition-file]
   (-> transition-file
@@ -92,3 +95,58 @@
                 (partial summary-report/read-and-split :simulation)
                 simulated-transitions-files))
    (historical-transitions->simulated-counts historical-transitions-file)))
+
+(comment
+
+  ;; by-age and by-need examples 
+  (def cpu-pool (cp/threadpool (- (cp/ncpus) 2)))
+
+  @(def by-age
+     (->> {:historical-transitions-file (str in-dir "transitions.csv")
+           :simulated-transitions-files pqt-files
+           :cpu-pool cpu-pool}
+          (simulations-seq)
+          (assoc
+           {:simulations-transform-f (fn [simulation]
+                                       (-> simulation
+                                           at/transitions->census
+                                           (tc/map-columns :setting [:setting]
+                                                           (fn [s]
+                                                             (roll-up-names s)))
+                                           (tc/drop-rows #(< 20 (:academic-year %)))
+                                           summarise-setting-by-age))
+            :cpu-pool cpu-pool}
+           :simulations)
+          (transform-simulations)
+          (assoc
+           {:domain-keys [:calendar-year :setting :age-group]
+            :value-key :transition-count}
+           :simulations)
+          (summarise-simulations)))
+
+  @(def by-need
+     (->> {:historical-transitions-file (str in-dir "transitions.csv")
+           :simulated-transitions-files pqt-files
+           :cpu-pool cpu-pool}
+          (simulations-seq)
+          (assoc
+           {:simulations-transform-f (fn [simulation]
+                                       (-> simulation
+                                           at/transitions->census
+                                           (tc/map-columns :setting [:setting]
+                                                           (fn [s]
+                                                             (roll-up-names s)))
+                                           (tc/drop-rows #(< 20 (:academic-year %)))
+                                           summarise-setting-by-need))
+            :cpu-pool cpu-pool}
+           :simulations)
+          (transform-simulations)
+          (assoc
+           {:domain-keys [:calendar-year :setting :need]
+            :value-key :transition-count}
+           :simulations)
+          (summarise-simulations)))
+
+
+
+  )
