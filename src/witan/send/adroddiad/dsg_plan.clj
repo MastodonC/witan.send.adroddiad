@@ -88,18 +88,20 @@
            simulated-transitions-files
            cpu-pool]
     :or {cpu-pool (java.util.concurrent.ForkJoinPool/commonPool)}}]
-  (conj
-   (sequence
-    cat
-    (lazy/upmap cpu-pool
-                (partial summary-report/read-and-split :simulation)
-                simulated-transitions-files))
-   (historical-transitions->simulated-counts historical-transitions-file)))
+  (let [history (historical-transitions->simulated-counts historical-transitions-file)]
+    (sequence
+     (comp
+      cat
+      (map (fn [ds] (tc/concat history ds))))
+     (lazy/upmap cpu-pool
+                 (partial summary-report/read-and-split :simulation)
+                 simulated-transitions-files))))
 
 (defn by-age-wide
   ([summary metric]
    (-> summary
        (tc/select-columns [:calendar-year :setting :age-group metric])
+       (tc/order-by [:setting :age-group :calendar-year])
        (tc/pivot->wider [:calendar-year] metric {:drop-missing? false})
        (tc/order-by [:setting :age-group])
        (tc/rename-columns {:setting "Placement"
