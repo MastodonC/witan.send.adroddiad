@@ -27,7 +27,7 @@
     (<= 20 age 25) "Age 20 to 25"
     (< 25 age) "Over 25"))
 
-(defn summarise-setting-by-age [census]
+(defn summarise-setting-by-age-group [census]
   (-> census
       (tc/map-columns :age-group [:academic-year]
                       (fn [ay]
