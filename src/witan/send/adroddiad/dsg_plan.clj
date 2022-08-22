@@ -113,6 +113,7 @@
   ([summary metric]
    (-> summary
        (tc/select-columns [:calendar-year :setting :need metric])
+       (tc/order-by [:setting :need :calendar-year])
        (tc/pivot->wider [:calendar-year] metric {:drop-missing? false})
        (tc/order-by [:setting :need])
        (tc/rename-columns {:setting "Placement"
@@ -138,7 +139,7 @@
                                                            (fn [s]
                                                              (roll-up-names s)))
                                            (tc/drop-rows #(< 20 (:academic-year %)))
-                                           summarise-setting-by-age))
+                                           summarise-setting-by-age-group))
             :cpu-pool cpu-pool}
            :simulations)
           (transform-simulations)
