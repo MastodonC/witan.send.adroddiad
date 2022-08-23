@@ -27,7 +27,7 @@
     (<= 20 age 25) "Age 20 to 25"
     (< 25 age) "Over 25"))
 
-(defn summarise-setting-by-age [census]
+(defn summarise-setting-by-age-group [census]
   (-> census
       (tc/map-columns :age-group [:academic-year]
                       (fn [ay]
@@ -88,18 +88,20 @@
            simulated-transitions-files
            cpu-pool]
     :or {cpu-pool (java.util.concurrent.ForkJoinPool/commonPool)}}]
-  (conj
-   (sequence
-    cat
-    (lazy/upmap cpu-pool
-                (partial summary-report/read-and-split :simulation)
-                simulated-transitions-files))
-   (historical-transitions->simulated-counts historical-transitions-file)))
+  (let [history (historical-transitions->simulated-counts historical-transitions-file)]
+    (sequence
+     (comp
+      cat
+      (map (fn [ds] (tc/concat history ds))))
+     (lazy/upmap cpu-pool
+                 (partial summary-report/read-and-split :simulation)
+                 simulated-transitions-files))))
 
 (defn by-age-wide
   ([summary metric]
    (-> summary
        (tc/select-columns [:calendar-year :setting :age-group metric])
+       (tc/order-by [:setting :age-group :calendar-year])
        (tc/pivot->wider [:calendar-year] metric {:drop-missing? false})
        (tc/order-by [:setting :age-group])
        (tc/rename-columns {:setting "Placement"
@@ -111,6 +113,7 @@
   ([summary metric]
    (-> summary
        (tc/select-columns [:calendar-year :setting :need metric])
+       (tc/order-by [:setting :need :calendar-year])
        (tc/pivot->wider [:calendar-year] metric {:drop-missing? false})
        (tc/order-by [:setting :need])
        (tc/rename-columns {:setting "Placement"
@@ -136,7 +139,7 @@
                                                            (fn [s]
                                                              (roll-up-names s)))
                                            (tc/drop-rows #(< 20 (:academic-year %)))
-                                           summarise-setting-by-age))
+                                           summarise-setting-by-age-group))
             :cpu-pool cpu-pool}
            :simulations)
           (transform-simulations)
