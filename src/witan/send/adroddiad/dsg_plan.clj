@@ -20,8 +20,8 @@
   "Taken from witan.send.domain.academic-years to avoid a dependency"
   [age]
   (cond
-    (< age 5) "Age 0 to 5"
-    (<= 5 age 10) "Age 05 to 10"
+    (< age 5) "Under 5"
+    (<= 5 age 10) "Age 5 to 10"
     (<= 11 age 15) "Age 11 to 15"
     (<= 16 age 19) "Age 16 to 19"
     (<= 20 age 25) "Age 20 to 25"
