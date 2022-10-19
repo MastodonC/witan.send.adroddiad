@@ -251,14 +251,15 @@
 (defn ->excel [charts {:keys [format-table-f
                               file-name]
                        :or {format-table-f format-table}}]
-  (-> (into []
-            (map (fn [{:keys [sheet-name chart data display-table]
-                       :as _config}]
-                   {::xl/sheet-name sheet-name
-                    ::xl/images [{::xl/image (-> chart ::plot/canvas :buffer plot/->byte-array)}]
-                    ::xl/data (if display-table
-                                display-table
-                                (format-table-f data))}))
-            charts)
-      (xl/create-workbook)
-      (xl/save-workbook! file-name)))
+  (let [wb (-> (into []
+                     (map (fn [{:keys [sheet-name chart data display-table]
+                                :as _config}]
+                            {::xl/sheet-name sheet-name
+                             ::xl/images [{::xl/image (-> chart ::plot/canvas :buffer plot/->byte-array)}]
+                             ::xl/data (if display-table
+                                         display-table
+                                         (format-table-f data))}))
+                     charts)
+               (xl/create-workbook))]
+    (xl/save-workbook! wb file-name)
+    wb))
