@@ -85,6 +85,7 @@
            domain-key                  ;; :setting
            order-key ;; :calendar-year ;; this is just the x-key
            value-key ;; :transition-count
+           summariser
            simulation-transform ;; (fn [ds]
            ;;   (-> ds
            ;;       (setting-fix)
@@ -103,7 +104,10 @@
              (mapcat identity $)
              (conj $ historical-transitions)
              (lazy/upmap cpu-pool simulation-transform $)
-             (summary/seven-number-summary $ [domain-key order-key] value-key)
+             (summary/summary-statistics $
+                                         [domain-key order-key] 
+                                         (or summariser
+                                             (summary/default-summariser value-key)))
              (tc/order-by $ [order-key])
              (tc/group-by $ [domain-key] {:result-type :as-map})
              ;; create the data key
