@@ -10,6 +10,7 @@
     :low-95     (ds-reduce/prob-quantile value-column 0.05)
     :q1         (ds-reduce/prob-quantile value-column 0.25)
     :median     (ds-reduce/prob-quantile value-column 0.50)
+    :mean       (ds-reduce/mean value-column)
     :q3         (ds-reduce/prob-quantile value-column 0.75)
     :high-95    (ds-reduce/prob-quantile value-column 0.95)
     :max        (ds-reduce/prob-quantile value-column 1.0)
