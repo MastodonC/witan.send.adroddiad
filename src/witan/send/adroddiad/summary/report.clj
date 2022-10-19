@@ -105,11 +105,13 @@
              (conj $ historical-transitions)
              (lazy/upmap cpu-pool simulation-transform $)
              (summary/summary-statistics $
-                                         [domain-key order-key] 
+                                         [:domain-key order-key] 
                                          (or summariser
                                              (summary/default-summariser value-key)))
              (tc/order-by $ [order-key])
-             (tc/group-by $ [domain-key] {:result-type :as-map})
+             (tc/rename-columns $ {domain-key :domain-key})
+             (tc/reorder-columns $ [:domain-key order-key])
+             (tc/group-by $ [:domain-key] {:result-type :as-map})
              ;; create the data key
              (update-vals $ (fn [ds] {:data ds}))
              (update-keys $ (fn [k]
