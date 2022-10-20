@@ -115,7 +115,7 @@
              ;; create the data key
              (update-vals $ (fn [ds] {:data ds}))
              (update-keys $ (fn [k]
-                              {:line-id (val (first k))}
+                              {:domain-value (val (first k))}
                               #_{:domain-key (key (first k)) :domain-value (val (first k))}))))))
 
 (comment
@@ -166,10 +166,10 @@
   (assoc m :summary
          (reduce-kv (fn [m k v] ;; FIXME: factor this out into a function that could be passed in, perhaps at the level below the assoc onto the accumulator
                       (try
-                        (let [{:keys [line-id]} k
+                        (let [{:keys [domain-value]} k
                               {:keys [data]} v
-                              color (-> line-id color-and-shape-map :color)
-                              shape (-> line-id color-and-shape-map :shape)
+                              color (-> domain-value color-and-shape-map :color)
+                              shape (-> domain-value color-and-shape-map :shape)
                               line-y :median
                               ribbon-1-high-y :q3 ribbon-1-low-y :q1
                               ribbon-2-high-y :high-95 ribbon-2-low-y :low-95]
@@ -182,7 +182,7 @@
                                               :ribbon-1-high-y ribbon-1-high-y :ribbon-1-low-y ribbon-1-low-y
                                               :ribbon-2-high-y ribbon-2-high-y :ribbon-2-low-y ribbon-2-low-y}))))
                         (catch Exception e
-                          (throw (ex-info (format "Failed to create series for %s" (:line-id k)) {:k k :v v} e)))))
+                          (throw (ex-info (format "Failed to create series for %s" (:domain-value k)) {:k k :v v} e)))))
                     {}
                     summary)))
 
@@ -192,12 +192,12 @@
                        :as m}]
   (assoc m :summary
          (reduce-kv (fn [m k v]
-                      (let [{:keys [line-id]} k
-                            color (-> line-id color-and-shape-map :color)
-                            shape (-> line-id color-and-shape-map :legend-shape)]
+                      (let [{:keys [domain-value]} k
+                            color (-> domain-value color-and-shape-map :color)
+                            shape (-> domain-value color-and-shape-map :legend-shape)]
                         (assoc m k (assoc v
                                           :legend
-                                          (series/legend-spec line-id color shape)))))
+                                          (series/legend-spec domain-value color shape)))))
                     {}
                     summary)))
 
