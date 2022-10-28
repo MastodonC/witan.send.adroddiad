@@ -107,3 +107,34 @@
          (tc/drop-rows #(= "NONSEND" (:setting %))))))
   ([transitions]
    (transitions->census transitions (min-calendar-year transitions))))
+
+(defn census-counts->census-counts-complete
+  "Given `census` dataset, returns aggregated dataset with
+  transition-counts summed for each complete combination of
+  [:calendar-year :setting :academic-year :need] including count of 0
+  for combinations not in the `census`.
+
+  Input dataset `census` must contain columns [:calendar-year :setting
+  :academic-year :need :transition-counts]
+
+  Note that the completion of [:calendar-year :setting :academic-year
+  :need] is not contrained to valid-states."
+  [census]
+  (-> census
+      (tc/group-by [:calendar-year :setting :academic-year :need])
+      (tc/aggregate {:transition-count #(dfn/sum (:transition-count %))})
+      (tc/complete :setting :academic-year :need :calendar-year)
+      (tc/replace-missing [:transition-count] :value 0)))
+
+(defn transition-counts->census-counts-complete
+  "Given `transitions` dataset, returns corresponding census dataset with
+   :transition-counts summed for each complete combination of
+   [:calendar-year :setting :academic-year :need] including count of 0
+   for combinations not in the `transitions`.
+
+   Note that the completion of [:calendar-year :setting :academic-year
+   :need] is not contrained to valid-states."
+  [transitions]
+  (-> transitions
+      transitions->census
+      census-counts->census-counts-complete))
