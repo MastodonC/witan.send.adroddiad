@@ -85,6 +85,7 @@
            domain-key                  ;; :setting
            order-key ;; :calendar-year ;; this is just the x-key
            value-key ;; :transition-count
+           summariser
            simulation-transform ;; (fn [ds]
            ;;   (-> ds
            ;;       (setting-fix)
@@ -103,12 +104,18 @@
              (mapcat identity $)
              (conj $ historical-transitions)
              (lazy/upmap cpu-pool simulation-transform $)
-             (summary/seven-number-summary $ [domain-key order-key] value-key)
+             (summary/summary-statistics $
+                                         [domain-key order-key] 
+                                         (or summariser
+                                             (summary/default-summariser value-key)))
              (tc/order-by $ [order-key])
-             (tc/group-by $ [domain-key] {:result-type :as-map})
+             (tc/rename-columns $ {domain-key :domain-key})
+             (tc/reorder-columns $ [:domain-key order-key])
+             (tc/group-by $ [:domain-key] {:result-type :as-map})
              ;; create the data key
              (update-vals $ (fn [ds] {:data ds}))
-             (update-keys $ (fn [k] {:domain-key (key (first k)) :domain-value (val (first k))}))))))
+             (update-keys $ (fn [k]
+                              {:domain-value (val (first k))}))))))
 
 (comment
   {{:domain-key :setting :domain-value "NMI"}
@@ -249,14 +256,15 @@
 (defn ->excel [charts {:keys [format-table-f
                               file-name]
                        :or {format-table-f format-table}}]
-  (-> (into []
-            (map (fn [{:keys [sheet-name chart data display-table]
-                       :as _config}]
-                   {::xl/sheet-name sheet-name
-                    ::xl/images [{::xl/image (-> chart ::plot/canvas :buffer plot/->byte-array)}]
-                    ::xl/data (if display-table
-                                display-table
-                                (format-table-f data))}))
-            charts)
-      (xl/create-workbook)
-      (xl/save-workbook! file-name)))
+  (let [wb (-> (into []
+                     (map (fn [{:keys [sheet-name chart data display-table]
+                                :as _config}]
+                            {::xl/sheet-name sheet-name
+                             ::xl/images [{::xl/image (-> chart ::plot/canvas :buffer plot/->byte-array)}]
+                             ::xl/data (if display-table
+                                         display-table
+                                         (format-table-f data))}))
+                     charts)
+               (xl/create-workbook))]
+    (xl/save-workbook! wb file-name)
+    wb))
