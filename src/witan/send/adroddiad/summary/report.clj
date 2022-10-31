@@ -115,8 +115,7 @@
              ;; create the data key
              (update-vals $ (fn [ds] {:data ds}))
              (update-keys $ (fn [k]
-                              {:domain-value (val (first k))}
-                              #_{:domain-key (key (first k)) :domain-value (val (first k))}))))))
+                              {:domain-value (val (first k))}))))))
 
 (comment
   {{:domain-key :setting :domain-value "NMI"}

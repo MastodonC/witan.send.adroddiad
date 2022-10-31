@@ -118,12 +118,12 @@
   :academic-year :need :transition-counts]
 
   Note that the completion of [:calendar-year :setting :academic-year
-  :need] is not contrained to valid-states."
+  :need] is not constrained to valid-states."
   [census]
   (-> census
       (tc/group-by [:calendar-year :setting :academic-year :need])
       (tc/aggregate {:transition-count #(dfn/sum (:transition-count %))})
-      (tc/complete :setting :academic-year :need :calendar-year)
+      (tc/complete :calendar-year :setting :academic-year :need)
       (tc/replace-missing [:transition-count] :value 0)))
 
 (defn transition-counts->census-counts-complete
@@ -133,7 +133,7 @@
    for combinations not in the `transitions`.
 
    Note that the completion of [:calendar-year :setting :academic-year
-   :need] is not contrained to valid-states."
+   :need] is not constrained to valid-states."
   [transitions]
   (-> transitions
       transitions->census
