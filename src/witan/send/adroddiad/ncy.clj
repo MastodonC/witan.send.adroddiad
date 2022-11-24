@@ -1,6 +1,17 @@
 (ns witan.send.adroddiad.ncy
-  (:require [tablecloth.api :as tc]
+  (:require [clojure.set :as cs]
+            [tablecloth.api :as tc]
             [hyperfiddle.rcf :as rcf]))
+
+
+(defn- inclusive-range [beginning end]
+  (range beginning (inc end)))
+
+
+(def ncys
+  "Set of national curriculum years (NCY), coded numerically, with
+  reception as NCY 0 and earlier NCYs as negative integers."
+  (into (sorted-set) (inclusive-range -4 20)))
 
 
 (def ncy->age-at-start-of-school-year 
@@ -40,9 +51,7 @@
   the start of that school/academic year, hence the maximum NCY in
   this map is 20 (age 24 at start of school/academic year).
   "
-  (let [ncy (range -4 (inc 20))]
-    (apply sorted-map (interleave ncy (map #(+ % 4) ncy)))))
-
+  (apply sorted-map (interleave ncys (map #(+ % 4) ncys))))
 
 
 (def age-at-start-of-school-year->ncy
@@ -82,12 +91,11 @@
   the start of that school/academic year, hence the maximum age in
   this map is 24 (NCY 20).
   "
-  (let [age (range 0 (inc 24))]
-    (apply sorted-map (interleave age (map #(- % 4) age)))))
+  (cs/map-invert ncy->age-at-start-of-school-year))
 
 
 
-(rcf/tests
+(rcf/tests                              ; tests for ncy->age… and age…->ncy
 
  "Age at start of reception should be 4 years, per gov.uk/schools-admissions/school-starting-age"
  (ncy->age-at-start-of-school-year 0) := 4
@@ -176,7 +184,7 @@
          (tc/drop-columns #(= "_ref" %) :src-table-name)))))
 
 
-(rcf/tests
+(rcf/tests                              ; Tests for impute-nil-ncy
 
  "Where all :academic-year are nil (so no reference rows), should just add nil :academic-year column."
  (-> (tc/dataset {:id [-1 -0] :calendar-year 2000 :academic-year nil})
