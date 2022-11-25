@@ -105,7 +105,7 @@
              (conj $ historical-transitions)
              (lazy/upmap cpu-pool simulation-transform $)
              (summary/summary-statistics $
-                                         [domain-key order-key] 
+                                         [domain-key order-key]
                                          (or summariser
                                              (summary/default-summariser value-key)))
              (tc/order-by $ [order-key])
@@ -221,7 +221,7 @@
                               summary
                               (into []
                                     (map (fn [s]
-                                           {:domain-key domain-key :domain-value s}))
+                                           {:domain-value s}))
                                     chart-selector)))
         series (into []
                      (comp
