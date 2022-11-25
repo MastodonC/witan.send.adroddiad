@@ -221,7 +221,7 @@
                               summary
                               (into []
                                     (map (fn [s]
-                                           {:domain-key domain-key :domain-value s}))
+                                           {:domain-value s}))
                                     chart-selector)))
         series (into []
                      (comp
