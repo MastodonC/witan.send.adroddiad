@@ -5,12 +5,14 @@
             [hyperfiddle.rcf :as rcf]))
 
 
+;;; # Utility functions
 (defn- inclusive-range
   "Returns a lazy seq of nums from `start` (inclusive) to `end` (inclusive), by step 1"
   [start end]
   (range start (inc end)))
 
 
+;;; # National Curriculum Years and ages
 (def ncys
   "Set of national curriculum years (NCY), coded numerically, with
   reception as NCY 0 and earlier NCYs as negative integers."
@@ -97,34 +99,7 @@
   (set/map-invert ncy->age-at-start-of-school-year))
 
 
-
-(rcf/tests                              ; tests for ncy->age… and age…->ncy
-
- "Age at start of reception should be 4 years, per gov.uk/schools-admissions/school-starting-age"
- (ncy->age-at-start-of-school-year 0) := 4
-
- "Age at start of NCY -4 to 20 should be 0 to 24 respectively"
- (map ncy->age-at-start-of-school-year (range -4 (inc 20))) := (range 0  (inc 24))
-
- "ncy->age… should return nil for non-integer NCYs outside -4 to 20 inclusive"
- (map ncy->age-at-start-of-school-year [-5 0.5 21]) := '(nil nil nil)
-
- "NCY entered at age 4 should be 0 (reception), per gov.uk/schools-admissions/school-starting-age"
- (age-at-start-of-school-year->ncy 4) := 0
-
- "NCY entered at age 0 to 24 should be -4 to 20 respectively"
- (map age-at-start-of-school-year->ncy (range  0 (inc 24))) := (range -4 (inc 20))
- 
- "Round trip test: ncy->age… followed by age…->ncy should return the same for integers -4 to 20 inclusive"
- (map (comp age-at-start-of-school-year->ncy ncy->age-at-start-of-school-year) (range -4 (inc 20))) := (range -4 (inc 20))
- 
- "age…->ncy should return nil for non-integer age outside 0 to 24 inclusive"
- (map age-at-start-of-school-year->ncy [-1 0.5 25]) := '(nil nil nil)
- 
- )
-
-
-
+;;; # Imputation for missing National Curriculum Year
 (defn impute-nil-ncy
   "Impute values for National Curriculum Year (NCY) where nil in `ds`.
 
@@ -194,75 +169,12 @@
          (tc/drop-columns #(= "_ref" %) :src-table-name)))))
 
 
-(rcf/tests                              ; Tests for impute-nil-ncy
 
- "Where all :academic-year are nil (so no reference rows), should just add nil :academic-year column."
- (-> (tc/dataset {:id [-1 -0] :calendar-year 2000 :academic-year nil})
-     (impute-nil-ncy)) :=
- (-> (tc/dataset {:id [-1 -0] :calendar-year 2000 :academic-year nil :academic-year-imputation nil}))
-
-
- "For a subject with a reference row (`:id`s 2 to 5 in test data below),
-  should impute NCY for any rows with nil NCY, otherwise leaves as is.
-   NOTE: NCY may be imputed outside the SEND range of -4 to 20.
-   NOTE: Ignoring :academic-year-imputation column for the moment"
- (-> (tc/concat (tc/dataset {:id  1 :calendar-year [2000 2001 2002] :academic-year      nil     })
-                (tc/dataset {:id  2 :calendar-year [2000 2001 2002] :academic-year [nil   1 nil]})
-                (tc/dataset {:id  3 :calendar-year [2000 2001 2002] :academic-year [nil nil   2]})
-                (tc/dataset {:id  4 :calendar-year [2000 2001 2002] :academic-year [nil nil  -4]})
-                (tc/dataset {:id  5 :calendar-year [2000 2001 2002] :academic-year [ 20 nil nil]})
-                (tc/dataset {:id  6 :calendar-year [2000 2001 2002] :academic-year [  0   1   2]}))
-     (impute-nil-ncy)
-     (tc/drop-columns :academic-year-imputation)
-     (tc/order-by [:id :calendar-year])) :=
- (-> (tc/concat (tc/dataset {:id  1 :calendar-year [2000 2001 2002] :academic-year      nil     })
-                (tc/dataset {:id  2 :calendar-year [2000 2001 2002] :academic-year [  0   1   2]})
-                (tc/dataset {:id  3 :calendar-year [2000 2001 2002] :academic-year [  0   1   2]})
-                (tc/dataset {:id  4 :calendar-year [2000 2001 2002] :academic-year [ -6  -5  -4]})
-                (tc/dataset {:id  5 :calendar-year [2000 2001 2002] :academic-year [ 20  21  22]})
-                (tc/dataset {:id  6 :calendar-year [2000 2001 2002] :academic-year [  0   1   2]})))
-
- 
- "Where imputation occurs the source should be described in the `:academic-year-imputation` column"
- (-> (tc/dataset {:id  7 :calendar-year [2000 2001] :academic-year [nil   1]})
-     (impute-nil-ncy)) :=
- (-> (tc/dataset {:id  7 :calendar-year [2000 2001] :academic-year [  0   1] :academic-year-imputation ["Imputed from NCY=1 in 2001" nil]}))
- 
- 
- "Where column names are specified they should be used, including specification of a separate column for the NCY after imputation."
- (-> (tc/dataset {:id  8 :cy [2000 2001] :ncy [nil   1]})
-     (impute-nil-ncy {:cy :cy :ncy :ncy :ncy-imputed :ncyi :ncy-imputation :ncyi-desc})) :=
- (-> (tc/dataset {:id  8 :cy [2000 2001] :ncy [nil   1]  :ncyi [  0   1] :ncyi-desc ["Imputed from NCY=1 in 2001" nil]}))
-
-
- "Should also be able to specify options as keyword parameters (rather than a map), and the algorithm should work with non-keyword column names"
- (-> (tc/dataset {'id  9 "SEN2 census year" [2000 2001] 'NCY [nil   1]})
-     (impute-nil-ncy :id 'id :cy "SEN2 census year" :ncy 'NCY :ncy-imputed 'NCY :ncy-imputation 'ncy-imputation-desc)) :=
- (-> (tc/dataset {'id  9 "SEN2 census year" [2000 2001] 'NCY [  0   1] 'ncy-imputation-desc ["Imputed from NCY=1 in 2001" nil]}))
-
- 
- "With multiple possible ref. records, the one with lowest census/calendar-year should be used (:id 9 & 10).
-  If there are multiple such records, then the one with smallest NCY is chosen (:id 11).
-  Note that if pupils do not progress at a rate of one NCY per census/calendar-year then this can result in
-  discontinuities if a CYP repeats or goes back a NCY and has missing NCY in subsequent years (:id 12 & 13)."
- (-> (tc/concat (tc/dataset {:id 10 :cy [2000 2001      2002] :ncy [nil   1   2]})
-                (tc/dataset {:id 11 :cy [2000 2001      2002] :ncy [nil   1   0]})
-                (tc/dataset {:id 12 :cy [2000 2001 2001     ] :ncy [nil   1   0]})
-                (tc/dataset {:id 13 :cy [2000 2001      2002] :ncy [  1   1 nil]})
-                (tc/dataset {:id 14 :cy [2000 2001      2002] :ncy [  1   0 nil]}))
-     (impute-nil-ncy :cy :cy :ncy :ncy :ncy-imputed :ncy :ncy-imputation :ncy-imputation)) :=
- (-> (tc/concat (tc/dataset {:id 10 :cy [2000 2001      2002] :ncy [  0   1   2] :ncy-imputation ["Imputed from NCY=1 in 2001" nil nil]})
-                (tc/dataset {:id 11 :cy [2000 2001      2002] :ncy [  0   1   0] :ncy-imputation ["Imputed from NCY=1 in 2001" nil nil]})
-                (tc/dataset {:id 12 :cy [2000 2001 2001     ] :ncy [ -1   1   0] :ncy-imputation ["Imputed from NCY=0 in 2001" nil nil]})
-                (tc/dataset {:id 13 :cy [2000 2001      2002] :ncy [  1   1   3] :ncy-imputation [nil nil "Imputed from NCY=1 in 2000"]})
-                (tc/dataset {:id 14 :cy [2000 2001      2002] :ncy [  1   0   3] :ncy-imputation [nil nil "Imputed from NCY=1 in 2000"]})))
- 
- )
 
 
 
 (comment
-  ;; National Curriculum Year Table
+  ;;; # National Curriculum Year Table
   (-> (tc/dataset {:ncy ncys})
       (tc/map-columns :age-at-start-of-school-year [:ncy] #(ncy->age-at-start-of-school-year %))
       (tc/map-columns :age-at-end-of-school-year [:age-at-start-of-school-year] #(inc %))
@@ -292,7 +204,148 @@
   ;;    |   18 |                           22 |                         23 |
   ;;    |   19 |                           23 |                         24 |
   ;;    |   20 |                           24 |                         25 |
-
-
-
   )
+
+
+;;; # Tests
+;;; ## Tests for ncy->age… and age…->ncy
+(rcf/tests "Age at start of reception should be 4 years, per gov.uk/schools-admissions/school-starting-age"
+           (ncy->age-at-start-of-school-year 0) := 4)
+
+(rcf/tests
+ "Age at start of NCY -4 to 20 should be 0 to 24 respectively"
+ (map ncy->age-at-start-of-school-year (range -4 (inc 20))) := (range 0  (inc 24)))
+
+(rcf/tests
+ "ncy->age… should return nil for non-integer NCYs outside -4 to 20 inclusive"
+ (map ncy->age-at-start-of-school-year [-5 0.5 21]) := '(nil nil nil))
+
+(rcf/tests
+ "NCY entered at age 4 should be 0 (reception), per gov.uk/schools-admissions/school-starting-age"
+ (age-at-start-of-school-year->ncy 4) := 0)
+
+(rcf/tests
+ "NCY entered at age 0 to 24 should be -4 to 20 respectively"
+ (map age-at-start-of-school-year->ncy (range  0 (inc 24))) := (range -4 (inc 20)))
+
+(rcf/tests
+ "Round trip test: ncy->age… followed by age…->ncy should return the same for integers -4 to 20 inclusive"
+ (map (comp age-at-start-of-school-year->ncy ncy->age-at-start-of-school-year) (range -4 (inc 20))) := (range -4 (inc 20)))
+
+(rcf/tests
+ "age…->ncy should return nil for non-integer age outside 0 to 24 inclusive"
+ (map age-at-start-of-school-year->ncy [-1 0.5 25]) := '(nil nil nil))
+
+
+;;; ## Tests for impute-nil-ncy
+(rcf/tests
+ "Where all `ncy` are nil (so no reference rows), should not blow up
+ and should return input dataset (including any other columns -
+ here :row-id) with add nil `ncy-imputation` column added."
+ (let [test-ds (-> (tc/concat (tc/dataset {:id  1 :calendar-year [2000 2001 2002] :academic-year      nil     })
+                              (tc/dataset {:id  2 :calendar-year [2000 2001 2002] :academic-year      nil     }))
+                   (tc/add-column :row-id (range)))]
+   (impute-nil-ncy test-ds) := (tc/add-column test-ds :academic-year-imputation nil)))
+
+
+(rcf/tests
+ "Rows with non-nil `ncy` should be returned as is save for addition
+of nil `ncy-imputation` column, regardless of other rows with nil `ncy`."
+ (let [test-ds (-> (tc/concat (tc/dataset {:id  2 :calendar-year [2000 2001 2002] :academic-year [  0   1   2]})
+                              (tc/dataset {:id  3 :calendar-year [2000 2001 2002] :academic-year [  0 nil nil]})
+                              (tc/dataset {:id  4 :calendar-year [2000 2001 2002] :academic-year [nil   1 nil]})
+                              (tc/dataset {:id  5 :calendar-year [2000 2001 2002] :academic-year [nil nil   2]})
+                              (tc/dataset {:id  6 :calendar-year [2000 2001 2002] :academic-year [  0   1 nil]})
+                              (tc/dataset {:id  7 :calendar-year [2000 2001 2002] :academic-year [nil   1   2]})
+                              (tc/dataset {:id  8 :calendar-year [2000 2001 2002] :academic-year [nil  -4 nil]})
+                              (tc/dataset {:id  9 :calendar-year [2000 2001 2002] :academic-year [nil  20 nil]}))
+                   (tc/add-column :row-id (range))
+                   (tc/reorder-columns [:row-id]))
+       test-rows (into (sorted-set) ((tc/drop-missing test-ds [:academic-year]) :row-id))]
+   (-> test-ds
+       (impute-nil-ncy)
+       (tc/select-rows #(test-rows (:row-id %)))
+       (tc/order-by [:row-id]))
+   
+   :=
+   (-> test-ds
+       (tc/select-rows test-rows)
+       (tc/select-rows #(test-rows (:row-id %)))
+       (tc/add-column :academic-year-imputation nil))))
+
+
+(rcf/tests
+ "For a CYP with a reference row (with non-nil `ncy`), should impute
+ `ncy` for any rows with nil `ncy`, otherwise leave as is.
+  NOTE: Ignoring `ncy-imputation` column for the moment"
+ (-> (tc/concat (tc/dataset {:id  3 :calendar-year [2000 2001 2002] :academic-year [  0 nil nil]})
+                (tc/dataset {:id  4 :calendar-year [2000 2001 2002] :academic-year [nil   1 nil]})
+                (tc/dataset {:id  5 :calendar-year [2000 2001 2002] :academic-year [nil nil   2]})
+                (tc/dataset {:id  6 :calendar-year [2000 2001 2002] :academic-year [  0   1 nil]})
+                (tc/dataset {:id  7 :calendar-year [2000 2001 2002] :academic-year [nil   1   2]}))
+     (impute-nil-ncy)
+     (tc/drop-columns :academic-year-imputation)
+     (tc/order-by [:id :calendar-year])) :=
+ (-> (tc/concat (tc/dataset {:id  3 :calendar-year [2000 2001 2002] :academic-year [  0   1   2]})
+                (tc/dataset {:id  4 :calendar-year [2000 2001 2002] :academic-year [  0   1   2]})
+                (tc/dataset {:id  5 :calendar-year [2000 2001 2002] :academic-year [  0   1   2]})
+                (tc/dataset {:id  6 :calendar-year [2000 2001 2002] :academic-year [  0   1   2]})
+                (tc/dataset {:id  7 :calendar-year [2000 2001 2002] :academic-year [  0   1   2]}))))
+
+
+(rcf/tests
+ "Note that `ncy` may be imputed outside the SEND range of -4 to 20"
+ (-> (tc/concat (tc/dataset {:id  8 :calendar-year [2000 2001 2002] :academic-year [nil  -4 nil]})
+                (tc/dataset {:id  9 :calendar-year [2000 2001 2002] :academic-year [nil  20 nil]}))
+     (impute-nil-ncy)
+     (tc/drop-columns :academic-year-imputation)
+     (tc/order-by [:id :calendar-year])) :=
+ (-> (tc/concat (tc/dataset {:id  8 :calendar-year [2000 2001 2002] :academic-year [ -5  -4  -3]})
+                (tc/dataset {:id  9 :calendar-year [2000 2001 2002] :academic-year [ 19  20  21]}))))
+
+
+(rcf/tests
+ "Where imputation occurs the source should be described in the `:academic-year-imputation` column"
+ (-> (tc/dataset {:id 10 :calendar-year [2000 2001] :academic-year [nil   1]})
+     (impute-nil-ncy)) :=
+ (-> (tc/dataset {:id 10 :calendar-year [2000 2001] :academic-year [  0   1] :academic-year-imputation ["Imputed from NCY=1 in 2001" nil]})))
+
+
+(rcf/tests
+ "Where column names are specified they should be used, including
+ specification of a separate column for the NCY after imputation."
+ (-> (tc/dataset {:id 12 :cy [2000 2001] :ncy [nil   1]})
+     (impute-nil-ncy {:cy :cy :ncy :ncy :ncy-imputed :ncyi :ncy-imputation :ncyi-desc})) :=
+ (-> (tc/dataset {:id 12 :cy [2000 2001] :ncy [nil   1]  :ncyi [  0   1] :ncyi-desc ["Imputed from NCY=1 in 2001" nil]})))
+
+
+(rcf/tests
+ "Should also be able to specify options as keyword parameters (rather than a map)."
+ (-> (tc/dataset {:id 12 :cy [2000 2001] :ncy [nil   1]})
+     (impute-nil-ncy :cy :cy :ncy :ncy :ncy-imputed :ncyi :ncy-imputation :ncyi-desc)) :=
+ (-> (tc/dataset {:id 12 :cy [2000 2001] :ncy [nil   1]  :ncyi [  0   1] :ncyi-desc ["Imputed from NCY=1 in 2001" nil]})))
+
+
+(rcf/tests
+ "The algorithm should work with non-keyword column names"
+ (-> (tc/dataset {'id 13 "SEN2 census year" [2000 2001] 'NCY [nil   1]})
+     (impute-nil-ncy :id 'id :cy "SEN2 census year" :ncy 'NCY :ncy-imputed 'NCY :ncy-imputation 'ncy-imputation-desc)) :=
+ (-> (tc/dataset {'id 13 "SEN2 census year" [2000 2001] 'NCY [  0   1] 'ncy-imputation-desc ["Imputed from NCY=1 in 2001" nil]})))
+
+
+(rcf/tests
+ "With multiple possible ref. records, the one with lowest census/calendar-year should be used (:id 21 & 22).
+  If there are multiple such records, then the one with smallest NCY is chosen (:id 23).
+  Note that if pupils do not progress at a rate of one NCY per census/calendar-year then this can result in
+  discontinuities if a CYP repeats or goes back a NCY and has missing NCY in subsequent years (:id 24 & 25)."
+ (-> (tc/concat (tc/dataset {:id 21 :cy [2000 2001      2002] :ncy [nil   1       2]})
+                (tc/dataset {:id 22 :cy [2000 2001      2002] :ncy [nil   1       1]})
+                (tc/dataset {:id 23 :cy [2000 2001 2001     ] :ncy [nil   1   0    ]})
+                (tc/dataset {:id 24 :cy [2000 2001      2002] :ncy [  1   1     nil]})
+                (tc/dataset {:id 25 :cy [2000 2001      2002] :ncy [  1   0     nil]}))
+     (impute-nil-ncy :cy :cy :ncy :ncy :ncy-imputed :ncy :ncy-imputation :ncy-imputation)) :=
+ (-> (tc/concat (tc/dataset {:id 21 :cy [2000 2001      2002] :ncy [  0   1       2] :ncy-imputation ["Imputed from NCY=1 in 2001" nil nil]})
+                (tc/dataset {:id 22 :cy [2000 2001      2002] :ncy [  0   1       1] :ncy-imputation ["Imputed from NCY=1 in 2001" nil nil]})
+                (tc/dataset {:id 23 :cy [2000 2001 2001     ] :ncy [ -1   1   0    ] :ncy-imputation ["Imputed from NCY=0 in 2001" nil nil]})
+                (tc/dataset {:id 24 :cy [2000 2001      2002] :ncy [  1   1       3] :ncy-imputation [nil nil "Imputed from NCY=1 in 2000"]})
+                (tc/dataset {:id 25 :cy [2000 2001      2002] :ncy [  1   0       3] :ncy-imputation [nil nil "Imputed from NCY=1 in 2000"]}))))
