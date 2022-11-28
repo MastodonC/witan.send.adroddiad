@@ -1,23 +1,20 @@
 (ns witan.send.adroddiad.dsg-plan
-  (:require [com.climate.claypoole.lazy :as lazy]
+  (:require [witan.send.adroddiad.ncy :as ncy]
+            [com.climate.claypoole.lazy :as lazy]
             [tablecloth.api :as tc]
             [tech.v3.dataset.reductions :as ds-reduce]
             [tech.v3.datatype.functional :as dfn]
             [witan.send.adroddiad.summary.report :as summary-report]))
 
-;; Dataset needs to be in a canonical census with transition-count shape for this to work
-(defn ncy->age
-  "Taken from witan.send.domain.academic-years to avoid a dependency"
-  [ncy]
-  (+ ncy 5))
-
-(defn age->ncy
-  "Taken from witan.send.domain.academic-years to avoid a dependency"
-  [age]
-  (- age 5))
 
 (defn age-group
-  "Taken from witan.send.domain.academic-years to avoid a dependency"
+  "Age groups for DSG management plan
+
+  From the \"Introduction\" tab of the DSG Management Plan template v5
+  and per section 2, part 1, item 1.1 of the [2022 SEN2
+  guide](https://assets.publishing.service.gov.uk/government/uploads/system/uploads/attachment_data/file/1013751/SEN2_2022_Guide.pdf).
+
+  Age is age in whole number of years on 31st August prior to starting the school/academic year."
   [age]
   (cond
     (< age 5) "Under 5"
@@ -32,7 +29,7 @@
       (tc/map-columns :age-group [:academic-year]
                       (fn [ay]
                         (-> ay
-                            ncy->age
+                            ncy/ncy->age-at-start-of-school-year
                             age-group)))
       (tc/group-by [:calendar-year :setting :age-group])
       (tc/aggregate {:transition-count #(dfn/sum (:transition-count %))})
