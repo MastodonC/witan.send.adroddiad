@@ -110,36 +110,46 @@
    the CYP progresses at a rate of 1 NCY per census/calendar-year.
 
    For rows where imputation is required (nil? NCY) and possible the
-   imputed NCY value is returned in the specifiec column and a string
+   imputed NCY value is returned in the specifiec column and a map
    describing the imputation mapped into a separate column.
 
    For rows where imputation is not requried (some? NCY) or not possible
    the existing NCY value (which may be nil) is returned in the specified
    column and the imputation description column is left nil.
 
-   Names of columns of `ds` to use are specified in (optional) options
-   map (or as keyword options) as follows:
-   `id`             - unique identifier for the pupil
-                      {default :id}
-   `cy`             - calendar|census year
-                      {default :calendar-year}
-   `ncy`            - National Curriculum Year
-                      {default :academic-year}
-   `ncy-imputed`    - column to contain NCYs after imputation
-                      (can be the same as `ncy`)
-                      {default :academic-year}
-   `ncy-imputation` - imputation description column in returned dataset
-                      {default :academic-year-imputation}
+   Names of columns of `ds` to use (and keys to use within `ncy-imputation`)
+   are specified in (optional) options map (or as keyword options) as follows:
+  
+   `id`                  - unique identifier for the pupil
+                           {default :id}
+   `cy`                  - calendar|census year
+                           {default :calendar-year}
+   `ncy`                 - National Curriculum Year
+                           {default :academic-year}
+   `ncy-imputed`         - column to contain NCYs after imputation
+                           (can be the same as `ncy`)
+                           {default :academic-year}
+   `ncy-imputation`      - imputation description column in returned dataset
+                           {default :academic-year-imputation}
+   `imputation-from-ncy` - key to use (within `ncy-imputation` map)
+                           for reference NCY
+                           {default :from-ncy}
+   `imputation-from-cy`  - key to use (within `ncy-imputation` map)
+                           for reference census/calendar year
+                           {default :from-cy}
 
   NOTE: Row order of ds may NOT be preserved.
   NOTE: Algorithm relies on input dataset `ds` NOT being named \"_ref\".
   "
-  ([ds & {:keys [id cy ncy ncy-imputed ncy-imputation]
-          :or   {id             :id
-                 cy             :calendar-year
-                 ncy            :academic-year
-                 ncy-imputed    :academic-year
-                 ncy-imputation :academic-year-imputation}}]
+  ([ds & {:keys [id cy ncy ncy-imputed ncy-imputation imputation-from-cy imputation-from-ncy]
+          :or   {id                  :id
+                 cy                  :calendar-year
+                 ncy                 :academic-year
+                 ncy-imputed         :academic-year
+                 ncy-imputation      :academic-year-imputation
+                 imputation-from-cy  :from-calendar-year
+                 imputation-from-ncy :from-academic-year
+                 }}]
    (if (zero? (-> ds
                   (tc/drop-missing [id cy ncy])
                   (tc/row-count)))
@@ -159,18 +169,15 @@
                        [id])
          (tc/map-columns ncy-imputation [ncy cy :ncy-ref :cy-ref]
                          (fn [ncy cy ncy-ref cy-ref]
-                           (when (and (nil? ncy) (some? cy) (some? ncy-ref) (some? cy-ref))
-                             (str "Imputed from NCY=" ncy-ref " in " cy-ref ))))
+                           (when (and (nil? ncy) cy ncy-ref cy-ref)
+                             {imputation-from-ncy ncy-ref
+                              imputation-from-cy   cy-ref})))
          (tc/map-columns ncy-imputed    [ncy cy :ncy-ref :cy-ref ncy-imputation]
                          (fn [ncy cy ncy-ref cy-ref ncy-imputation]
                            (if (and (nil? ncy) (some? ncy-imputation))
                              (- ncy-ref (- cy-ref cy))
                              ncy)))
          (tc/drop-columns #(= "_ref" %) :src-table-name)))))
-
-
-
-
 
 
 (comment
@@ -247,7 +254,6 @@
                    (tc/add-column :row-id (range)))]
    (impute-nil-ncy test-ds) := (tc/add-column test-ds :academic-year-imputation nil)))
 
-
 (rcf/tests
  "Rows with non-nil `ncy` should be returned as is save for addition
 of nil `ncy-imputation` column, regardless of other rows with nil `ncy`."
@@ -266,13 +272,11 @@ of nil `ncy-imputation` column, regardless of other rows with nil `ncy`."
        (impute-nil-ncy)
        (tc/select-rows #(test-rows (:row-id %)))
        (tc/order-by [:row-id]))
-   
    :=
    (-> test-ds
        (tc/select-rows test-rows)
        (tc/select-rows #(test-rows (:row-id %)))
        (tc/add-column :academic-year-imputation nil))))
-
 
 (rcf/tests
  "For a CYP with a reference row (with non-nil `ncy`), should impute
@@ -292,7 +296,6 @@ of nil `ncy-imputation` column, regardless of other rows with nil `ncy`."
                 (tc/dataset {:id  6 :calendar-year [2000 2001 2002] :academic-year [  0   1   2]})
                 (tc/dataset {:id  7 :calendar-year [2000 2001 2002] :academic-year [  0   1   2]}))))
 
-
 (rcf/tests
  "Note that `ncy` may be imputed outside the SEND range of -4 to 20"
  (-> (tc/concat (tc/dataset {:id  8 :calendar-year [2000 2001 2002] :academic-year [nil  -4 nil]})
@@ -303,35 +306,36 @@ of nil `ncy-imputation` column, regardless of other rows with nil `ncy`."
  (-> (tc/concat (tc/dataset {:id  8 :calendar-year [2000 2001 2002] :academic-year [ -5  -4  -3]})
                 (tc/dataset {:id  9 :calendar-year [2000 2001 2002] :academic-year [ 19  20  21]}))))
 
-
 (rcf/tests
  "Where imputation occurs the source should be described in the `:academic-year-imputation` column"
  (-> (tc/dataset {:id 10 :calendar-year [2000 2001] :academic-year [nil   1]})
      (impute-nil-ncy)) :=
- (-> (tc/dataset {:id 10 :calendar-year [2000 2001] :academic-year [  0   1] :academic-year-imputation ["Imputed from NCY=1 in 2001" nil]})))
-
+ (-> (tc/dataset {:id 10 :calendar-year [2000 2001] :academic-year [  0   1]
+                  :academic-year-imputation [{:from-calendar-year 2001
+                                              :from-academic-year 1}
+                                             nil]})))
 
 (rcf/tests
  "Where column names are specified they should be used, including
  specification of a separate column for the NCY after imputation."
  (-> (tc/dataset {:id 12 :cy [2000 2001] :ncy [nil   1]})
-     (impute-nil-ncy {:cy :cy :ncy :ncy :ncy-imputed :ncyi :ncy-imputation :ncyi-desc})) :=
- (-> (tc/dataset {:id 12 :cy [2000 2001] :ncy [nil   1]  :ncyi [  0   1] :ncyi-desc ["Imputed from NCY=1 in 2001" nil]})))
-
+     (impute-nil-ncy {:cy :cy :ncy :ncy
+                      :ncy-imputed :ncyi :ncy-imputation :ncyi-desc :imputation-from-cy :from-cy :imputation-from-ncy :from-ncy})) :=
+ (-> (tc/dataset {:id 12 :cy [2000 2001] :ncy [nil   1]  :ncyi [  0   1] :ncyi-desc [{:from-cy 2001 :from-ncy 1} nil]})))
 
 (rcf/tests
  "Should also be able to specify options as keyword parameters (rather than a map)."
  (-> (tc/dataset {:id 12 :cy [2000 2001] :ncy [nil   1]})
-     (impute-nil-ncy :cy :cy :ncy :ncy :ncy-imputed :ncyi :ncy-imputation :ncyi-desc)) :=
- (-> (tc/dataset {:id 12 :cy [2000 2001] :ncy [nil   1]  :ncyi [  0   1] :ncyi-desc ["Imputed from NCY=1 in 2001" nil]})))
-
+     (impute-nil-ncy :cy :cy :ncy :ncy
+                     :ncy-imputed :ncyi :ncy-imputation :ncyi-desc :imputation-from-cy :from-cy :imputation-from-ncy :from-ncy)) :=
+ (-> (tc/dataset {:id 12 :cy [2000 2001] :ncy [nil   1]  :ncyi [  0   1] :ncyi-desc [{:from-cy 2001 :from-ncy 1} nil]})))
 
 (rcf/tests
- "The algorithm should work with non-keyword column names"
+ "The algorithm should work with non-keyword column & key names"
  (-> (tc/dataset {'id 13 "SEN2 census year" [2000 2001] 'NCY [nil   1]})
-     (impute-nil-ncy :id 'id :cy "SEN2 census year" :ncy 'NCY :ncy-imputed 'NCY :ncy-imputation 'ncy-imputation-desc)) :=
- (-> (tc/dataset {'id 13 "SEN2 census year" [2000 2001] 'NCY [  0   1] 'ncy-imputation-desc ["Imputed from NCY=1 in 2001" nil]})))
-
+     (impute-nil-ncy :id 'id :cy "SEN2 census year" :ncy 'NCY
+                     :ncy-imputed 'NCY :ncy-imputation 'ncy-imputation-desc :imputation-from-cy 'from-cy :imputation-from-ncy "from NCY")) :=
+ (-> (tc/dataset {'id 13 "SEN2 census year" [2000 2001] 'NCY [  0   1] 'ncy-imputation-desc [{'from-cy 2001 "from NCY" 1} nil]})))
 
 (rcf/tests
  "With multiple possible ref. records, the one with lowest census/calendar-year should be used (:id 21 & 22).
@@ -343,9 +347,10 @@ of nil `ncy-imputation` column, regardless of other rows with nil `ncy`."
                 (tc/dataset {:id 23 :cy [2000 2001 2001     ] :ncy [nil   1   0    ]})
                 (tc/dataset {:id 24 :cy [2000 2001      2002] :ncy [  1   1     nil]})
                 (tc/dataset {:id 25 :cy [2000 2001      2002] :ncy [  1   0     nil]}))
-     (impute-nil-ncy :cy :cy :ncy :ncy :ncy-imputed :ncy :ncy-imputation :ncy-imputation)) :=
- (-> (tc/concat (tc/dataset {:id 21 :cy [2000 2001      2002] :ncy [  0   1       2] :ncy-imputation ["Imputed from NCY=1 in 2001" nil nil]})
-                (tc/dataset {:id 22 :cy [2000 2001      2002] :ncy [  0   1       1] :ncy-imputation ["Imputed from NCY=1 in 2001" nil nil]})
-                (tc/dataset {:id 23 :cy [2000 2001 2001     ] :ncy [ -1   1   0    ] :ncy-imputation ["Imputed from NCY=0 in 2001" nil nil]})
-                (tc/dataset {:id 24 :cy [2000 2001      2002] :ncy [  1   1       3] :ncy-imputation [nil nil "Imputed from NCY=1 in 2000"]})
-                (tc/dataset {:id 25 :cy [2000 2001      2002] :ncy [  1   0       3] :ncy-imputation [nil nil "Imputed from NCY=1 in 2000"]}))))
+     (impute-nil-ncy :cy :cy :ncy :ncy :ncy-imputed :ncy
+                     :ncy-imputation :ncy-imputation :imputation-from-cy :from-cy :imputation-from-ncy :from-ncy)) :=
+ (-> (tc/concat (tc/dataset {:id 21 :cy [2000 2001      2002] :ncy [  0   1       2] :ncy-imputation [{:from-cy 2001 :from-ncy 1} nil nil]})
+                (tc/dataset {:id 22 :cy [2000 2001      2002] :ncy [  0   1       1] :ncy-imputation [{:from-cy 2001 :from-ncy 1} nil nil]})
+                (tc/dataset {:id 23 :cy [2000 2001 2001     ] :ncy [ -1   1   0    ] :ncy-imputation [{:from-cy 2001 :from-ncy 0} nil nil]})
+                (tc/dataset {:id 24 :cy [2000 2001      2002] :ncy [  1   1       3] :ncy-imputation [nil nil {:from-cy 2000 :from-ncy 1}]})
+                (tc/dataset {:id 25 :cy [2000 2001      2002] :ncy [  1   0       3] :ncy-imputation [nil nil {:from-cy 2000 :from-ncy 1}]}))))
