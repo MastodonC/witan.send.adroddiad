@@ -45,7 +45,7 @@
                    need-analysis-map))
       (tc/select-columns [:calendar-year :transition-type :median])
       (tc/pivot->wider [:transition-type] [:median])
-      (tc/map-columns :next-year-total ["need-total" "need-joiners" "need-leavers"]
+      (tc/map-columns :next-year-total [:need-total :need-joiners :need-leavers]
                       (fn [total joiners leavers] (- (+ total joiners)
                                                      (+ leavers))))))
 
