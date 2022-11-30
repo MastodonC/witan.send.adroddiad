@@ -14,29 +14,34 @@
             [witan.send.adroddiad.transitions :as tr]))
 
 (defn need-analysis [simulated-transition-counts need]
-  (let [min-year (stc/min-calendar-year simulated-transition-counts)]
-    {:need-total (-> simulated-transition-counts
-                     (tr/transitions->census min-year)
-                     (tc/select-rows #(= need (:need %)))
-                     (tc/group-by [:simulation :calendar-year])
-                     (tc/aggregate {:transition-count #(dfn/sum (:transition-count %))})
-                     (summary/seven-number-summary [:calendar-year] :transition-count)
-                     (tc/order-by [:calendar-year]))
-     :need-joiners (-> simulated-transition-counts
-                       (tc/select-rows #(= need (:need-2 %)))
-                       (tr/joiners-to)
-                       (tr/transitions->census min-year)
-                       (tc/group-by [:simulation :calendar-year])
-                       (tc/aggregate {:transition-count #(dfn/sum (:transition-count %))})
-                       (summary/seven-number-summary [:calendar-year] :transition-count)
-                       (tc/order-by [:calendar-year]))
-     :need-leavers (-> simulated-transition-counts
-                       (tc/select-rows #(= need (:need-1 %)))
-                       (tr/leavers-from)
-                       (tc/group-by [:simulation :calendar-year])
-                       (tc/aggregate {:transition-count #(dfn/sum (:transition-count %))})
-                       (summary/seven-number-summary [:calendar-year] :transition-count)
-                       (tc/order-by [:calendar-year]))}))
+  (let [min-year (stc/min-calendar-year simulated-transition-counts)
+        need-analysis {:need-total (-> simulated-transition-counts
+                                       (tr/transitions->census min-year)
+                                       (tc/select-rows #(= need (:need %)))
+                                       (tc/group-by [:simulation :calendar-year])
+                                       (tc/aggregate {:transition-count #(dfn/sum (:transition-count %))})
+                                       (summary/seven-number-summary [:calendar-year] :transition-count)
+                                       (tc/order-by [:calendar-year]))
+                       :need-joiners (-> simulated-transition-counts
+                                         (tc/select-rows #(= need (:need-2 %)))
+                                         (tr/joiners-to)
+                                         (tr/transitions->census min-year)
+                                         (tc/group-by [:simulation :calendar-year])
+                                         (tc/aggregate {:transition-count #(dfn/sum (:transition-count %))})
+                                         (summary/seven-number-summary [:calendar-year] :transition-count)
+                                         (tc/order-by [:calendar-year]))
+                       :need-leavers (-> simulated-transition-counts
+                                         (tc/select-rows #(= need (:need-1 %)))
+                                         (tr/leavers-from)
+                                         (tc/group-by [:simulation :calendar-year])
+                                         (tc/aggregate {:transition-count #(dfn/sum (:transition-count %))})
+                                         (summary/seven-number-summary [:calendar-year] :transition-count)
+                                         (tc/order-by [:calendar-year]))}]
+    (tc/left-join (:need-joiners need-analysis) (:need-leavers need-analysis) [:calendar-year])))
+;; working on creating net change
+;; need to rename columns
+;; need to calculate net change for each row and each summary stat
+;; then drop all the old columns
 
 (defn need-analysis-summary [need-analysis-map]
   (-> (apply tc/concat-copying
