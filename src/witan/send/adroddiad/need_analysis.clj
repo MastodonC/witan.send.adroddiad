@@ -76,7 +76,7 @@
                                  title (str need " analysis")
                                  title-format {:font-size 36 :font "Open Sans Bold" :font-style :bold :margin 36}
                                  watermark (str need " analysis")}}]
-  (let [{:keys [need-total need-joiners need-movers-in need-leavers need-movers-out] :as _need-analysis} need-analysis-map
+  (let [{:keys [need-total need-joiners need-movers-in need-leavers need-movers-out need-net] :as _need-analysis} need-analysis-map
         _cfg (swap! cfg/configuration
                     (fn [c]
                       (-> c
@@ -84,7 +84,14 @@
                           (assoc-in [:legend :font-size] legend-font-size))))]
     (-> (into []
               cat
-              [(into [[:grid nil {:position [0 2]}]]
+              [(into [[:grid nil {:position [0 3]}]]
+                     (map (fn [s] (-> s
+                                      (update 2 assoc :position [0 3])
+                                      (update 2 assoc :label (str "Net change for " need)))))
+                     (series/ds->median-iqr-95-series
+                      need-net
+                      colors/mc-light-green \v))
+               (into [[:grid nil {:position [0 2]}]]
                      (map (fn [s] (-> s
                                       (update 2 assoc :position [0 2])
                                       (update 2 assoc :label (str "Joiners to " need)))))
@@ -133,6 +140,11 @@
                                                   [:shape (str "Leavers from " need)
                                                    {:color  colors/mc-orange
                                                     :shape  \V
+                                                    :size   15
+                                                    :stroke {:size 4.0}}]
+                                                  [:shape (str "Net change for " need)
+                                                   {:color  colors/mc-light-green
+                                                    :shape  \v
                                                     :size   15
                                                     :stroke {:size 4.0}}]])
         (plotr/render-lattice size)
