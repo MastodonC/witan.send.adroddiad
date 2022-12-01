@@ -13,6 +13,9 @@
             [witan.send.adroddiad.summary :as summary]
             [witan.send.adroddiad.transitions :as tr]))
 
+(defn delta-column [ds column-name]
+  (tc/map-columns ds column-name [(name column-name) (str "[:calendar-year]-aggregation." (name column-name))] (fn [a b] (- a b))))
+
 (defn need-analysis [simulated-transition-counts need]
   (let [min-year (stc/min-calendar-year simulated-transition-counts)
         need-analysis {:need-total (-> simulated-transition-counts
@@ -37,11 +40,17 @@
                                          (tc/aggregate {:transition-count #(dfn/sum (:transition-count %))})
                                          (summary/seven-number-summary [:calendar-year] :transition-count)
                                          (tc/order-by [:calendar-year]))}]
-    (tc/left-join (:need-joiners need-analysis) (:need-leavers need-analysis) [:calendar-year])))
-;; working on creating net change
-;; need to rename columns
-;; need to calculate net change for each row and each summary stat
-;; then drop all the old columns
+    (assoc need-analysis :need-net
+           (-> (tc/left-join (tc/rename-columns (:need-joiners need-analysis) (comp name))
+                             (tc/rename-columns (:need-leavers need-analysis) (comp name)) "calendar-year")
+               (delta-column :low-95)
+               (delta-column :min)
+               (delta-column :q1)
+               (delta-column :q3)
+               (delta-column :median)
+               (delta-column :max)
+               (delta-column :high-95)
+               (tc/select-columns [:low-95 :min :q1 :q3 :median :max :row-count :high-95 :calendar-year])))));; then drop all the old columns
 
 (defn need-analysis-summary [need-analysis-map]
   (-> (apply tc/concat-copying
