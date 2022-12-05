@@ -134,27 +134,43 @@
                           (assoc-in [:legend :font-size] legend-font-size))))]
     (-> (into []
               cat
-              [(into [[:grid nil {:position [0 3]}]]
+              [(into [[:grid nil {:position [0 5]}]]
                      (map (fn [s] (-> s
-                                      (update 2 assoc :position [0 3])
+                                      (update 2 assoc :position [0 5])
+                                      (update 2 assoc :label (str "Movers to " need)))))
+                     (series/ds->median-iqr-95-series
+                      (-> need-movers-in
+                          (tc/map-columns :calendar-year [:calendar-year] (fn [cy] (+ cy 0.5))))
+                      colors/mc-dark-blue \V))
+               (into [[:grid nil {:position [0 4]}]]
+                     (map (fn [s] (-> s
+                                      (update 2 assoc :position [0 4])
                                       (update 2 assoc :label (str "Joiners to " need)))))
                      (series/ds->median-iqr-95-series
                       (-> need-joiners
                           (tc/map-columns :calendar-year [:calendar-year] (fn [cy] (+ cy 0.5))))
                       colors/mc-dark-blue \V))
-               (into [[:grid nil {:position [0 2]}]]
+               (into [[:grid nil {:position [0 3]}]]
                      (map (fn [s] (-> s
-                                      (update 2 assoc :position [0 2])
+                                      (update 2 assoc :position [0 3])
                                       (update 2 assoc :label (str "Net change for " need)))))
                      (series/ds->median-iqr-95-series
                       need-net
                       colors/mc-light-green \v))
-               (into [[:grid nil {:position [0 1]}]]
+               (into [[:grid nil {:position [0 2]}]]
                      (map (fn [s] (-> s
-                                      (update 2 assoc :position [0 1])
+                                      (update 2 assoc :position [0 2])
                                       (update 2 assoc :label (str "Leavers from " need)))))
                      (series/ds->median-iqr-95-series
                       (-> need-leavers
+                          (tc/map-columns :calendar-year [:calendar-year] (fn [cy] (+ cy 0.5))))
+                      colors/mc-orange \A))
+               (into [[:grid nil {:position [0 1]}]]
+                     (map (fn [s] (-> s
+                                      (update 2 assoc :position [0 1])
+                                      (update 2 assoc :label (str "Movers from " need)))))
+                     (series/ds->median-iqr-95-series
+                      (-> need-movers-out
                           (tc/map-columns :calendar-year [:calendar-year] (fn [cy] (+ cy 0.5))))
                       colors/mc-orange \A))
                (into [[:grid nil {:position [0 0]}]]
@@ -177,14 +193,19 @@
                                                    {:color (colors/color :black 50)}]
                                                   [:rect "90% range"
                                                    {:color (colors/color :black 25)}]
+                                                  [:shape (str "Movers to " need)
+                                                   {:color  colors/mc-dark-blue
+                                                    :shape  \A
+                                                    :size   15
+                                                    :stroke {:size 4.0}}]
                                                   [:shape (str "Joiners to " need)
                                                    {:color  colors/mc-dark-blue
                                                     :shape  \A
                                                     :size   15
                                                     :stroke {:size 4.0}}]
-                                                  [:shape (str "Number of CYP in " need)
-                                                   {:color  colors/mc-dark-green
-                                                    :shape  \O
+                                                  [:shape (str "Net change for " need)
+                                                   {:color  colors/mc-light-green
+                                                    :shape  \v
                                                     :size   15
                                                     :stroke {:size 4.0}}]
                                                   [:shape (str "Leavers from " need)
@@ -192,9 +213,14 @@
                                                     :shape  \V
                                                     :size   15
                                                     :stroke {:size 4.0}}]
-                                                  [:shape (str "Net change for " need)
-                                                   {:color  colors/mc-light-green
-                                                    :shape  \v
+                                                  [:shape (str "Movers from " need)
+                                                   {:color  colors/mc-orange
+                                                    :shape  \V
+                                                    :size   15
+                                                    :stroke {:size 4.0}}]
+                                                  [:shape (str "Number of CYP in " need)
+                                                   {:color  colors/mc-dark-green
+                                                    :shape  \O
                                                     :size   15
                                                     :stroke {:size 4.0}}]])
         (plotr/render-lattice size)
