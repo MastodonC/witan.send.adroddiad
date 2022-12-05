@@ -18,48 +18,58 @@
 
 (defn need-analysis [simulated-transition-counts need]
   (let [min-year (stc/min-calendar-year simulated-transition-counts)
-        need-analysis {:need-total (-> simulated-transition-counts
-                                       (tr/transitions->census min-year)
-                                       (tc/select-rows #(= need (:need %)))
-                                       (tc/group-by [:simulation :calendar-year])
-                                       (tc/aggregate {:transition-count #(dfn/sum (:transition-count %))})
-                                       (summary/seven-number-summary [:calendar-year] :transition-count)
-                                       (tc/order-by [:calendar-year]))
-                       :need-joiners (-> simulated-transition-counts
-                                         (tc/select-rows #(= need (:need-2 %)))
-                                         (tr/joiners-to)
-                                         (tr/transitions->census min-year)
-                                         (tc/group-by [:simulation :calendar-year])
-                                         (tc/aggregate {:transition-count #(dfn/sum (:transition-count %))})
-                                         (summary/seven-number-summary [:calendar-year] :transition-count)
-                                         (tc/order-by [:calendar-year]))
-                       :need-leavers (-> simulated-transition-counts
-                                         (tc/select-rows #(= need (:need-1 %)))
-                                         (tr/leavers-from)
-                                         (tc/group-by [:simulation :calendar-year])
-                                         (tc/aggregate {:transition-count #(dfn/sum (:transition-count %))})
-                                         (summary/seven-number-summary [:calendar-year] :transition-count)
-                                         (tc/order-by [:calendar-year]))}
+        max-year (dfn/reduce-max (:calendar-year simulated-transition-counts))
+        year-range (into (sorted-set) (range min-year (+ max-year 1)))
+        need-analysis (try {:need-total (-> simulated-transition-counts
+                                            (tr/transitions->census min-year)
+                                            (tc/select-rows #(= need (:need %)))
+                                            (tc/group-by [:simulation :calendar-year])
+                                            (tc/aggregate {:transition-count #(dfn/sum (:transition-count %))})
+                                            (summary/seven-number-summary [:calendar-year] :transition-count)
+                                            (tc/order-by [:calendar-year]))
+                            :need-joiners (let [initial-ds(-> simulated-transition-counts
+                                                              (tc/select-rows #(= need (:need-2 %)))
+                                                              (tr/joiners-to)
+                                                              (tr/transitions->census min-year)
+                                                              (tc/group-by [:simulation :calendar-year])
+                                                              (tc/aggregate {:transition-count #(dfn/sum (:transition-count %))})
+                                                              (summary/seven-number-summary [:calendar-year] :transition-count)
+                                                              (tc/order-by [:calendar-year]))
+                                                years (into (sorted-set) (:calendar-year initial-ds))]
+                                            (-> (reduce #(tc/concat-copying %1 (tc/dataset {:low-95 0 :min 0 :q1 0 :q3 0 :median 0 :max 0 :row-count 1 :high-95 0 :calendar-year %2}))
+                                                        initial-ds (clojure.set/difference year-range years))
+                                                (tc/order-by [:calendar-year])))
+                            :need-leavers (let [initial-ds (-> simulated-transition-counts
+                                                               (tc/select-rows #(= need (:need-1 %)))
+                                                               (tr/leavers-from)
+                                                               (tc/group-by [:simulation :calendar-year])
+                                                               (tc/aggregate {:transition-count #(dfn/sum (:transition-count %))})
+                                                               (summary/seven-number-summary [:calendar-year] :transition-count)
+                                                               (tc/order-by [:calendar-year]))
+                                                years (into (sorted-set) (:calendar-year initial-ds))]
+                                            (-> (reduce #(tc/concat-copying %1 (tc/dataset {:low-95 0 :min 0 :q1 0 :q3 0 :median 0 :max 0 :row-count 1 :high-95 0 :calendar-year %2}))
+                                                        initial-ds (clojure.set/difference year-range years))
+                                                (tc/order-by [:calendar-year])))}
+                           (catch Exception ne
+                             (throw
+                              (ex-info
+                               (ex-message ne)
+                               {:message "Problem with Primary need provided"
+                                :causes #{:need need}}
+                               ne))))
         ]
-    (try (assoc need-analysis :need-net
-                (-> (tc/left-join (tc/rename-columns (:need-joiners need-analysis) (comp name))
-                                  (tc/rename-columns (:need-leavers need-analysis) (comp name)) "calendar-year")
-                    (delta-column :low-95)
-                    (delta-column :min)
-                    (delta-column :q1)
-                    (delta-column :q3)
-                    (delta-column :median)
-                    (delta-column :max)
-                    (delta-column :high-95)
-                    (tc/rename-columns {"row-count" :row-count "calendar-year" :calendar-year})
-                    (tc/select-columns [:low-95 :min :q1 :q3 :median :max :row-count :high-95 :calendar-year])))
-         (catch Exception ne
-           (throw
-            (ex-info
-             (ex-message ne)
-             {:message "need not in dataset"
-              :causes #{:need need}}
-             ne))))))
+    (assoc need-analysis :need-net
+           (-> (tc/left-join (tc/rename-columns (:need-joiners need-analysis) (comp name))
+                             (tc/rename-columns (:need-leavers need-analysis) (comp name)) "calendar-year")
+               (delta-column :low-95)
+               (delta-column :min)
+               (delta-column :q1)
+               (delta-column :q3)
+               (delta-column :median)
+               (delta-column :max)
+               (delta-column :high-95)
+               (tc/rename-columns {"row-count" :row-count "calendar-year" :calendar-year})
+               (tc/select-columns [:low-95 :min :q1 :q3 :median :max :row-count :high-95 :calendar-year])))))
 
 (defn need-analysis-summary [need-analysis-map]
   (-> (apply tc/concat-copying
