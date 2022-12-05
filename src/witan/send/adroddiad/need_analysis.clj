@@ -160,23 +160,26 @@
         (plot/add-watermark watermark))))
 
 
-(defn need-analysis-report [simulated-transitions file-name]
-  (let [needs (into (sorted-set)
-                    (-> simulated-transitions
-                        (tc/select-rows #(= -1 (:simulation %)))
-                        (tc/drop-rows #(= "NONSEND" (:need-1 %)))
-                        :need-1))]
-    (-> (into []
-              (comp
-               (map (fn [need]
-                      (let [sam (need-analysis simulated-transitions need)]
-                        (-> {::large/sheet-name need
-                             ::plot/canvas      (need-analysis-chart sam need {})
-                             ::large/data       (need-analysis-summary sam)}
-                            (chart-utils/->large-charts))))))
-              needs)
-        (large/create-workbook)
-        (large/save-workbook! file-name))))
+(defn need-analysis-report
+  ([simulated-transitions file-name]
+   (let [needs (into (sorted-set)
+                     (-> simulated-transitions
+                         (tc/select-rows #(= -1 (:simulation %)))
+                         (tc/drop-rows #(= "NONSEND" (:need-1 %)))
+                         :need-1))]
+     (need-analysis-report simulated-transitions file-name needs)))
+  ([simulated-transitions file-name needs]
+   (-> (into []
+             (comp
+              (map (fn [need]
+                     (let [sam (need-analysis simulated-transitions need)]
+                       (-> {::large/sheet-name need
+                            ::plot/canvas      (need-analysis-chart sam need {})
+                            ::large/data       (need-analysis-summary sam)}
+                           (chart-utils/->large-charts))))))
+             needs)
+       (large/create-workbook)
+       (large/save-workbook! file-name))))
 
 (comment
 
