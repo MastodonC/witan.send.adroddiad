@@ -39,19 +39,27 @@
                                          (tc/group-by [:simulation :calendar-year])
                                          (tc/aggregate {:transition-count #(dfn/sum (:transition-count %))})
                                          (summary/seven-number-summary [:calendar-year] :transition-count)
-                                         (tc/order-by [:calendar-year]))}]
-    (assoc need-analysis :need-net
-           (-> (tc/left-join (tc/rename-columns (:need-joiners need-analysis) (comp name))
-                             (tc/rename-columns (:need-leavers need-analysis) (comp name)) "calendar-year")
-               (delta-column :low-95)
-               (delta-column :min)
-               (delta-column :q1)
-               (delta-column :q3)
-               (delta-column :median)
-               (delta-column :max)
-               (delta-column :high-95)
-               (tc/rename-columns {"row-count" :row-count "calendar-year" :calendar-year})
-               (tc/select-columns [:low-95 :min :q1 :q3 :median :max :row-count :high-95 :calendar-year])))))
+                                         (tc/order-by [:calendar-year]))}
+        ]
+    (try (assoc need-analysis :need-net
+                (-> (tc/left-join (tc/rename-columns (:need-joiners need-analysis) (comp name))
+                                  (tc/rename-columns (:need-leavers need-analysis) (comp name)) "calendar-year")
+                    (delta-column :low-95)
+                    (delta-column :min)
+                    (delta-column :q1)
+                    (delta-column :q3)
+                    (delta-column :median)
+                    (delta-column :max)
+                    (delta-column :high-95)
+                    (tc/rename-columns {"row-count" :row-count "calendar-year" :calendar-year})
+                    (tc/select-columns [:low-95 :min :q1 :q3 :median :max :row-count :high-95 :calendar-year])))
+         (catch Exception ne
+           (throw
+            (ex-info
+             (ex-message ne)
+             {:message "need not in dataset"
+              :causes #{:need need}}
+             ne))))))
 
 (defn need-analysis-summary [need-analysis-map]
   (-> (apply tc/concat-copying
