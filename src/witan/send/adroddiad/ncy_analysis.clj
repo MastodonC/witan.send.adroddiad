@@ -103,32 +103,32 @@
               [(into [[:grid nil {:position [0 3]}]]
                      (map (fn [s] (-> s
                                       (update 2 assoc :position [0 3])
-                                      (update 2 assoc :label (str "Net change for " ncy)))))
-                     (series/ds->median-iqr-95-series
-                      ncy-net
-                      colors/mc-light-green \v))
-               (into [[:grid nil {:position [0 2]}]]
-                     (map (fn [s] (-> s
-                                      (update 2 assoc :position [0 2])
                                       (update 2 assoc :label (str "Joiners to " ncy)))))
                      (series/ds->median-iqr-95-series
                       (-> ncy-joiners
                           (tc/map-columns :calendar-year [:calendar-year] (fn [cy] (+ cy 0.5))))
                       colors/mc-dark-blue \V))
+               (into [[:grid nil {:position [0 2]}]]
+                     (map (fn [s] (-> s
+                                      (update 2 assoc :position [0 2])
+                                      (update 2 assoc :label (str "Net change for " ncy)))))
+                     (series/ds->median-iqr-95-series
+                      ncy-net
+                      colors/mc-light-green \v))
                (into [[:grid nil {:position [0 1]}]]
                      (map (fn [s] (-> s
                                       (update 2 assoc :position [0 1])
-                                      (update 2 assoc :label (str "Total Population for " ncy)))))
-                     (series/ds->median-iqr-95-series
-                      ncy-total colors/mc-dark-green \O))
-               (into [[:grid nil {:position [0 0]}]]
-                     (map (fn [s] (-> s
-                                      (update 2 assoc :position [0 0])
                                       (update 2 assoc :label (str "Leavers from " ncy)))))
                      (series/ds->median-iqr-95-series
                       (-> ncy-leavers
                           (tc/map-columns :calendar-year [:calendar-year] (fn [cy] (+ cy 0.5))))
-                      colors/mc-orange \A))])
+                      colors/mc-orange \A))
+               (into [[:grid nil {:position [0 0]}]]
+                     (map (fn [s] (-> s
+                                      (update 2 assoc :position [0 0])
+                                      (update 2 assoc :label (str "Total Population for " ncy)))))
+                     (series/ds->median-iqr-95-series
+                      ncy-total colors/mc-dark-green \O))])
         (plotb/preprocess-series)
         (plotb/update-scales :x :fmt (::tick-formatter x-axis))
         (plotb/update-scales :y :fmt (::tick-formatter y-axis))
