@@ -16,6 +16,11 @@
 (defn delta-column [ds column-name]
   (tc/map-columns ds column-name [(name column-name) (str "[:calendar-year]-aggregation." (name column-name))] (fn [a b] (- a b))))
 
+(defn fill-in-years [ds years-1 years-2]
+  (reduce #(tc/concat-copying %1 (tc/dataset {:low-95 0 :min 0 :q1 0 :q3 0 :median 0
+                                              :max 0 :row-count 1 :high-95 0 :calendar-year %2}))
+          ds (clojure.set/difference years-1 years-2)))
+
 (defn need-analysis [simulated-transition-counts need]
   (let [min-year (stc/min-calendar-year simulated-transition-counts)
         max-year (dfn/reduce-max (:calendar-year simulated-transition-counts))
@@ -36,8 +41,7 @@
                                                               (summary/seven-number-summary [:calendar-year] :transition-count)
                                                               (tc/order-by [:calendar-year]))
                                                 years (into (sorted-set) (:calendar-year initial-ds))]
-                                            (-> (reduce #(tc/concat-copying %1 (tc/dataset {:low-95 0 :min 0 :q1 0 :q3 0 :median 0 :max 0 :row-count 1 :high-95 0 :calendar-year %2}))
-                                                        initial-ds (clojure.set/difference year-range years))
+                                            (-> (fill-in-years initial-ds year-range years)
                                                 (tc/order-by [:calendar-year])))
                             :need-leavers (let [initial-ds (-> simulated-transition-counts
                                                                (tc/select-rows #(= need (:need-1 %)))
@@ -47,8 +51,7 @@
                                                                (summary/seven-number-summary [:calendar-year] :transition-count)
                                                                (tc/order-by [:calendar-year]))
                                                 years (into (sorted-set) (:calendar-year initial-ds))]
-                                            (-> (reduce #(tc/concat-copying %1 (tc/dataset {:low-95 0 :min 0 :q1 0 :q3 0 :median 0 :max 0 :row-count 1 :high-95 0 :calendar-year %2}))
-                                                        initial-ds (clojure.set/difference year-range years))
+                                            (-> (fill-in-years initial-ds year-range years)
                                                 (tc/order-by [:calendar-year])))}
                            (catch Exception ne
                              (throw
