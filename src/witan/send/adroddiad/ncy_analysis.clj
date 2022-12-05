@@ -16,6 +16,11 @@
 (defn delta-column [ds column-name]
   (tc/map-columns ds column-name [(name column-name) (str "[:calendar-year]-aggregation." (name column-name))] (fn [a b] (- a b))))
 
+(defn fill-in-years [ds years-1 years-2]
+  (reduce #(tc/concat-copying %1 (tc/dataset {:low-95 0 :min 0 :q1 0 :q3 0 :median 0
+                                              :max 0 :row-count 1 :high-95 0 :calendar-year %2}))
+          ds (clojure.set/difference years-1 years-2)))
+
 (defn ncy-analysis [simulated-transition-counts ncy]
   (let [min-year (stc/min-calendar-year simulated-transition-counts)
         max-year (dfn/reduce-max (:calendar-year simulated-transition-counts))
@@ -38,6 +43,15 @@
                                           (-> (reduce #(tc/concat-copying %1 (tc/dataset {:low-95 0 :min 0 :q1 0 :q3 0 :median 0 :max 0 :row-count 1 :high-95 0 :calendar-year %2}))
                                                       initial-ds (clojure.set/difference year-range years))
                                               (tc/order-by [:calendar-year])))
+                           :ncy-movers-in (let [initial-ds (-> simulated-transition-counts
+                                                               (tr/movers-to)
+                                                               (tc/group-by [:simulation :calendar-year])
+                                                               (tc/aggregate {:transition-count #(dfn/sum (:transition-count %))})
+                                                               (summary/seven-number-summary [:calendar-year] :transition-count)
+                                                               (tc/order-by [:calendar-year]))
+                                                years (into (sorted-set) (:calendar-year initial-ds))]
+                                            (-> (fill-in-years initial-ds year-range years)
+                                                (tc/order-by [:calendar-year])))
                            :ncy-leavers (let [initial-ds (-> simulated-transition-counts
                                                              (tc/select-rows #(= ncy (:academic-year-1 %)))
                                                              (tr/leavers-from)
@@ -47,7 +61,38 @@
                                               years (into (sorted-set) (:calendar-year initial-ds))]
                                           (-> (reduce #(tc/concat-copying %1 (tc/dataset {:low-95 0 :min 0 :q1 0 :q3 0 :median 0 :max 0 :row-count 1 :high-95 0 :calendar-year %2}))
                                                       initial-ds (clojure.set/difference year-range years))
-                                              (tc/order-by [:calendar-year])))}
+                                              (tc/order-by [:calendar-year])))
+                           :ncy-movers-out (let [initial-ds (-> simulated-transition-counts
+                                                                (tr/movers-from)
+                                                                (tc/group-by [:simulation :calendar-year])
+                                                                (tc/aggregate {:transition-count #(dfn/sum (:transition-count %))})
+                                                                (summary/seven-number-summary [:calendar-year] :transition-count)
+                                                                (tc/order-by [:calendar-year]))
+                                                 years (into (sorted-set) (:calendar-year initial-ds))]
+                                             (-> (fill-in-years initial-ds year-range years)
+                                                 (tc/order-by [:calendar-year])))
+                           :ncy-joiners-movers (let [initial-ds (-> simulated-transition-counts
+                                                                    (tc/select-rows #(= ncy (:academic-year-2 %)))
+                                                                    (tr/joiners-movers)
+                                                                    (tr/transitions->census min-year)
+                                                                    (tc/group-by [:simulation :calendar-year])
+                                                                    (tc/aggregate {:transition-count #(dfn/sum (:transition-count %))})
+                                                                    (summary/seven-number-summary [:calendar-year] :transition-count)
+                                                                    (tc/order-by [:calendar-year]))
+                                                     years (into (sorted-set) (:calendar-year initial-ds))]
+                                                 (-> (fill-in-years initial-ds year-range years)
+                                                     (tc/order-by [:calendar-year])))
+                           :ncy-leavers-movers (let [initial-ds (-> simulated-transition-counts
+                                                                    (tc/select-rows #(= ncy (:academic-year-2 %)))
+                                                                    (tr/leavers-movers)
+                                                                    (tr/transitions->census min-year)
+                                                                    (tc/group-by [:simulation :calendar-year])
+                                                                    (tc/aggregate {:transition-count #(dfn/sum (:transition-count %))})
+                                                                    (summary/seven-number-summary [:calendar-year] :transition-count)
+                                                                    (tc/order-by [:calendar-year]))
+                                                     years (into (sorted-set) (:calendar-year initial-ds))]
+                                                 (-> (fill-in-years initial-ds year-range years)
+                                                     (tc/order-by [:calendar-year])))}
                           (catch Exception ne
                             (throw
                              (ex-info
@@ -56,8 +101,8 @@
                                :causes #{:ncy ncy}}
                               ne))))]
     (assoc ncy-analysis :ncy-net
-           (-> (tc/left-join (tc/rename-columns (:ncy-joiners ncy-analysis) (comp name))
-                             (tc/rename-columns (:ncy-leavers ncy-analysis) (comp name)) "calendar-year")
+           (-> (tc/left-join (tc/rename-columns (:ncy-joiners-movers ncy-analysis) (comp name))
+                             (tc/rename-columns (:ncy-leavers-movers ncy-analysis) (comp name)) "calendar-year")
                (delta-column :low-95)
                (delta-column :min)
                (delta-column :q1)
@@ -75,9 +120,9 @@
                    ncy-analysis-map))
       (tc/select-columns [:calendar-year :transition-type :median])
       (tc/pivot->wider [:transition-type] [:median])
-      (tc/map-columns :next-year-total [:ncy-total :ncy-joiners :ncy-leavers]
-                      (fn [total joiners leavers] (- (+ total joiners)
-                                                     (+ leavers))))))
+      (tc/map-columns :next-year-total [:ncy-total :ncy-joiners :ncy-leavers :ncy-joiners-movers :ncy-leavers-movers]
+                      (fn [total joiners leavers in out] (- (+ total joiners in)
+                                                            (+ leavers out))))))
 
 (defn ncy-analysis-chart [ncy-analysis-map
                           ncy
@@ -89,10 +134,10 @@
                                       :background colors/white}
                                 legend-font "Open Sans Bold"
                                 legend-font-size 24
-                                title (str ncy " analysis")
+                                title (str "NCY " ncy " analysis")
                                 title-format {:font-size 36 :font "Open Sans Bold" :font-style :bold :margin 36}
                                 watermark (str ncy " analysis")}}]
-  (let [{:keys [ncy-total ncy-joiners ncy-movers-in ncy-leavers ncy-movers-out ncy-net] :as _ncy-analysis} ncy-analysis-map
+  (let [{:keys [ncy-total ncy-joiners ncy-joiners-movers ncy-leavers ncy-leavers-movers ncy-net] :as _ncy-analysis} ncy-analysis-map
         _cfg (swap! cfg/configuration
                     (fn [c]
                       (-> c
@@ -100,27 +145,43 @@
                           (assoc-in [:legend :font-size] legend-font-size))))]
     (-> (into []
               cat
-              [(into [[:grid nil {:position [0 3]}]]
+              [(into [[:grid nil {:position [0 5]}]]
                      (map (fn [s] (-> s
-                                      (update 2 assoc :position [0 3])
+                                      (update 2 assoc :position [0 5])
+                                      (update 2 assoc :label (str "Movers to " ncy)))))
+                     (series/ds->median-iqr-95-series
+                      (-> ncy-joiners-movers
+                          (tc/map-columns :calendar-year [:calendar-year] (fn [cy] (+ cy 0.5))))
+                      colors/mc-dark-blue \V))
+               (into [[:grid nil {:position [0 4]}]]
+                     (map (fn [s] (-> s
+                                      (update 2 assoc :position [0 4])
                                       (update 2 assoc :label (str "Joiners to " ncy)))))
                      (series/ds->median-iqr-95-series
                       (-> ncy-joiners
                           (tc/map-columns :calendar-year [:calendar-year] (fn [cy] (+ cy 0.5))))
                       colors/mc-dark-blue \V))
-               (into [[:grid nil {:position [0 2]}]]
+               (into [[:grid nil {:position [0 3]}]]
                      (map (fn [s] (-> s
-                                      (update 2 assoc :position [0 2])
+                                      (update 2 assoc :position [0 3])
                                       (update 2 assoc :label (str "Net change for " ncy)))))
                      (series/ds->median-iqr-95-series
                       ncy-net
                       colors/mc-light-green \v))
-               (into [[:grid nil {:position [0 1]}]]
+               (into [[:grid nil {:position [0 2]}]]
                      (map (fn [s] (-> s
-                                      (update 2 assoc :position [0 1])
+                                      (update 2 assoc :position [0 2])
                                       (update 2 assoc :label (str "Leavers from " ncy)))))
                      (series/ds->median-iqr-95-series
                       (-> ncy-leavers
+                          (tc/map-columns :calendar-year [:calendar-year] (fn [cy] (+ cy 0.5))))
+                      colors/mc-orange \A))
+               (into [[:grid nil {:position [0 1]}]]
+                     (map (fn [s] (-> s
+                                      (update 2 assoc :position [0 1])
+                                      (update 2 assoc :label (str "Movers from " ncy)))))
+                     (series/ds->median-iqr-95-series
+                      (-> ncy-leavers-movers
                           (tc/map-columns :calendar-year [:calendar-year] (fn [cy] (+ cy 0.5))))
                       colors/mc-orange \A))
                (into [[:grid nil {:position [0 0]}]]
@@ -143,14 +204,19 @@
                                                    {:color (colors/color :black 50)}]
                                                   [:rect "90% range"
                                                    {:color (colors/color :black 25)}]
+                                                  [:shape (str "Movers to " ncy)
+                                                   {:color  colors/mc-dark-blue
+                                                    :shape  \A
+                                                    :size   15
+                                                    :stroke {:size 4.0}}]
                                                   [:shape (str "Joiners to " ncy)
                                                    {:color  colors/mc-dark-blue
                                                     :shape  \A
                                                     :size   15
                                                     :stroke {:size 4.0}}]
-                                                  [:shape (str "Number of CYP in " ncy)
-                                                   {:color  colors/mc-dark-green
-                                                    :shape  \O
+                                                  [:shape (str "Net change for " ncy)
+                                                   {:color  colors/mc-light-green
+                                                    :shape  \v
                                                     :size   15
                                                     :stroke {:size 4.0}}]
                                                   [:shape (str "Leavers from " ncy)
@@ -158,9 +224,14 @@
                                                     :shape  \V
                                                     :size   15
                                                     :stroke {:size 4.0}}]
-                                                  [:shape (str "Net change for " ncy)
-                                                   {:color  colors/mc-light-green
-                                                    :shape  \v
+                                                  [:shape (str "Movers from " ncy)
+                                                   {:color  colors/mc-orange
+                                                    :shape  \V
+                                                    :size   15
+                                                    :stroke {:size 4.0}}]
+                                                  [:shape (str "Number of CYP in " ncy)
+                                                   {:color  colors/mc-dark-green
+                                                    :shape  \O
                                                     :size   15
                                                     :stroke {:size 4.0}}]])
         (plotr/render-lattice size)
