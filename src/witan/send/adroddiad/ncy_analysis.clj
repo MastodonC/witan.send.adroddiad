@@ -180,7 +180,7 @@
              (comp
               (map (fn [ncy]
                      (let [sam (ncy-analysis simulated-transitions ncy)]
-                       (-> {::large/sheet-name (str ncy)
+                       (-> {::large/sheet-name (str "NCY " ncy)
                             ::plot/canvas      (ncy-analysis-chart sam ncy {})
                             ::large/data       (ncy-analysis-summary sam)}
                            (chart-utils/->large-charts))))))
