@@ -50,7 +50,8 @@
                (delta-column :median)
                (delta-column :max)
                (delta-column :high-95)
-               (tc/select-columns [:low-95 :min :q1 :q3 :median :max :row-count :high-95 :calendar-year])))));; then drop all the old columns
+               (tc/rename-columns {"row-count" :row-count "calendar-year" :calendar-year})
+               (tc/select-columns [:low-95 :min :q1 :q3 :median :max :row-count :high-95 :calendar-year])))))
 
 (defn need-analysis-summary [need-analysis-map]
   (-> (apply tc/concat-copying
