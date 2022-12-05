@@ -73,7 +73,18 @@
                                                    (tc/order-by [:calendar-year])))
                             :need-joiners-movers (let [initial-ds (-> simulated-transition-counts
                                                                       (tc/select-rows #(= need (:need-2 %)))
-                                                                      (tr/joiners-to)
+                                                                      (tr/joiners-movers)
+                                                                      (tr/transitions->census min-year)
+                                                                      (tc/group-by [:simulation :calendar-year])
+                                                                      (tc/aggregate {:transition-count #(dfn/sum (:transition-count %))})
+                                                                      (summary/seven-number-summary [:calendar-year] :transition-count)
+                                                                      (tc/order-by [:calendar-year]))
+                                                       years (into (sorted-set) (:calendar-year initial-ds))]
+                                                   (-> (fill-in-years initial-ds year-range years)
+                                                       (tc/order-by [:calendar-year])))
+                            :need-leavers-movers (let [initial-ds (-> simulated-transition-counts
+                                                                      (tc/select-rows #(= need (:need-2 %)))
+                                                                      (tr/leavers-movers)
                                                                       (tr/transitions->census min-year)
                                                                       (tc/group-by [:simulation :calendar-year])
                                                                       (tc/aggregate {:transition-count #(dfn/sum (:transition-count %))})
@@ -90,8 +101,8 @@
                                 :causes #{:need need}}
                                ne))))]
     (assoc need-analysis :need-net
-           (-> (tc/left-join (tc/rename-columns (:need-joiners need-analysis) (comp name))
-                             (tc/rename-columns (:need-leavers need-analysis) (comp name)) "calendar-year")
+           (-> (tc/left-join (tc/rename-columns (:need-joiners-movers need-analysis) (comp name))
+                             (tc/rename-columns (:need-leavers-movers need-analysis) (comp name)) "calendar-year")
                (delta-column :low-95)
                (delta-column :min)
                (delta-column :q1)
