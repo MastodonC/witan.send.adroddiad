@@ -18,7 +18,7 @@
 
 (defn fill-in-years [ds years-1 years-2]
   (reduce #(tc/concat-copying %1 (tc/dataset {:low-95 0 :min 0 :q1 0 :q3 0 :median 0
-                                              :max 0 :row-count 1 :high-95 0 :calendar-year %2}))
+                                              :max 0 :row-count 0 :high-95 0 :calendar-year %2}))
           ds (clojure.set/difference years-1 years-2)))
 
 (defn ncy-analysis [simulated-transition-counts ncy]
