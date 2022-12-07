@@ -40,8 +40,7 @@
                                                              (tc/aggregate {:transition-count #(dfn/sum (:transition-count %))})
                                                              (summary/seven-number-summary [:calendar-year] :transition-count))
                                               years (into (sorted-set) (:calendar-year initial-ds))]
-                                          (-> (reduce #(tc/concat-copying %1 (tc/dataset {:low-95 0 :min 0 :q1 0 :q3 0 :median 0 :max 0 :row-count 1 :high-95 0 :calendar-year %2}))
-                                                      initial-ds (clojure.set/difference year-range years))
+                                          (-> (fill-in-years initial-ds year-range years)
                                               (tc/order-by [:calendar-year])))
                            :ncy-movers-in (let [initial-ds (-> simulated-transition-counts
                                                                (tr/movers-to)
@@ -59,8 +58,7 @@
                                                              (tc/aggregate {:transition-count #(dfn/sum (:transition-count %))})
                                                              (summary/seven-number-summary [:calendar-year] :transition-count))
                                               years (into (sorted-set) (:calendar-year initial-ds))]
-                                          (-> (reduce #(tc/concat-copying %1 (tc/dataset {:low-95 0 :min 0 :q1 0 :q3 0 :median 0 :max 0 :row-count 1 :high-95 0 :calendar-year %2}))
-                                                      initial-ds (clojure.set/difference year-range years))
+                                          (-> (fill-in-years initial-ds year-range years)
                                               (tc/order-by [:calendar-year])))
                            :ncy-movers-out (let [initial-ds (-> simulated-transition-counts
                                                                 (tr/movers-from)
