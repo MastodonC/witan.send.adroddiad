@@ -47,6 +47,7 @@
                                             (-> (fill-in-years initial-ds year-range years)
                                                 (tc/order-by [:calendar-year])))
                             :need-movers-in (let [initial-ds (-> simulated-transition-counts
+                                                                 (tc/select-rows #(= need (:need-2 %)))
                                                                  (tr/movers-to)
                                                                  (tc/group-by [:simulation :calendar-year])
                                                                  (tc/aggregate {:transition-count #(dfn/sum (:transition-count %))})
@@ -66,6 +67,7 @@
                                             (-> (fill-in-years initial-ds year-range years)
                                                 (tc/order-by [:calendar-year])))
                             :need-movers-out (let [initial-ds (-> simulated-transition-counts
+                                                                  (tc/select-rows #(= need (:need-1 %)))
                                                                   (tr/movers-from)
                                                                   (tc/group-by [:simulation :calendar-year])
                                                                   (tc/aggregate {:transition-count #(dfn/sum (:transition-count %))})
