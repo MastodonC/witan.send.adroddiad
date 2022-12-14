@@ -247,7 +247,7 @@
   ([simulated-transitions file-name]
    (let [needs (into (sorted-set)
                      (-> simulated-transitions
-                         (tc/select-rows #(= -1 (:simulation %)))
+                         (tc/select-rows #(= 1 (:simulation %)))
                          (tc/drop-rows #(= "NONSEND" (:need-1 %)))
                          :need-1))]
      (need-analysis-report simulated-transitions file-name needs)))
