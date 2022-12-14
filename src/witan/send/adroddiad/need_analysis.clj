@@ -25,13 +25,16 @@
   (let [min-year (stc/min-calendar-year simulated-transition-counts)
         max-year (dfn/reduce-max (:calendar-year simulated-transition-counts))
         year-range (into (sorted-set) (range min-year (+ max-year 1)))
-        need-analysis (try {:need-total (-> simulated-transition-counts
-                                            (tr/transitions->census min-year)
-                                            (tc/select-rows #(= need (:need %)))
-                                            (tc/group-by [:simulation :calendar-year])
-                                            (tc/aggregate {:transition-count #(dfn/sum (:transition-count %))})
-                                            (summary/seven-number-summary [:calendar-year] :transition-count)
-                                            (tc/order-by [:calendar-year]))
+        need-analysis (try {:need-total (let [initial-ds (-> simulated-transition-counts
+                                                             (tr/transitions->census min-year)
+                                                             (tc/select-rows #(= need (:need %)))
+                                                             (tc/group-by [:simulation :calendar-year])
+                                                             (tc/aggregate {:transition-count #(dfn/sum (:transition-count %))})
+                                                             (summary/seven-number-summary [:calendar-year] :transition-count)
+                                                             (tc/order-by [:calendar-year]))
+                                              years (into (sorted-set) (:calendar-year initial-ds))]
+                                          (-> (fill-in-years initial-ds year-range years)
+                                              (tc/order-by [:calendar-year])))
                             :need-joiners (let [initial-ds (-> simulated-transition-counts
                                                                (tc/select-rows #(= need (:need-2 %)))
                                                                (tr/joiners-to)
