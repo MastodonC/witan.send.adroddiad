@@ -25,28 +25,38 @@
   (let [min-year (stc/min-calendar-year simulated-transition-counts)
         max-year (dfn/reduce-max (:calendar-year simulated-transition-counts))
         year-range (into (sorted-set) (range min-year (+ max-year 1)))
-        need-analysis (try {:need-total (-> simulated-transition-counts
-                                            (tr/transitions->census min-year)
-                                            (tc/select-rows #(= need (:need %)))
-                                            (tc/group-by [:simulation :calendar-year])
-                                            (tc/aggregate {:transition-count #(dfn/sum (:transition-count %))})
-                                            (summary/seven-number-summary [:calendar-year] :transition-count)
-                                            (tc/order-by [:calendar-year]))
+        need-analysis (try {:need-total (let [initial-ds (-> simulated-transition-counts ;; still counting census record without ISS
+                                                             (tr/transitions->census min-year)
+                                                             (tc/select-rows #(= need (:need %)))
+                                                             (tc/group-by [:simulation :calendar-year])
+                                                             (tc/aggregate {:transition-count #(dfn/sum (:transition-count %))})
+                                                             (tc/complete :simulation :calendar-year)
+                                                             (tc/replace-missing [:transition-count] :value 0)
+                                                             (summary/seven-number-summary [:calendar-year] :transition-count)
+                                                             (tc/order-by [:calendar-year]))
+                                              years (into (sorted-set) (:calendar-year initial-ds))]
+                                          (-> (fill-in-years initial-ds year-range years)
+                                              (tc/order-by [:calendar-year])))
                             :need-joiners (let [initial-ds (-> simulated-transition-counts
                                                                (tc/select-rows #(= need (:need-2 %)))
                                                                (tr/joiners-to)
                                                                (tr/transitions->census min-year)
                                                                (tc/group-by [:simulation :calendar-year])
                                                                (tc/aggregate {:transition-count #(dfn/sum (:transition-count %))})
+                                                               (tc/complete :simulation :calendar-year)
+                                                               (tc/replace-missing [:transition-count] :value 0)
                                                                (summary/seven-number-summary [:calendar-year] :transition-count)
                                                                (tc/order-by [:calendar-year]))
                                                 years (into (sorted-set) (:calendar-year initial-ds))]
                                             (-> (fill-in-years initial-ds year-range years)
                                                 (tc/order-by [:calendar-year])))
                             :need-movers-in (let [initial-ds (-> simulated-transition-counts
+                                                                 (tc/select-rows #(= need (:need-2 %)))
                                                                  (tr/movers-to)
                                                                  (tc/group-by [:simulation :calendar-year])
                                                                  (tc/aggregate {:transition-count #(dfn/sum (:transition-count %))})
+                                                                 (tc/complete :simulation :calendar-year)
+                                                                 (tc/replace-missing [:transition-count] :value 0)
                                                                  (summary/seven-number-summary [:calendar-year] :transition-count)
                                                                  (tc/order-by [:calendar-year]))
                                                   years (into (sorted-set) (:calendar-year initial-ds))]
@@ -57,15 +67,20 @@
                                                                (tr/leavers-from)
                                                                (tc/group-by [:simulation :calendar-year])
                                                                (tc/aggregate {:transition-count #(dfn/sum (:transition-count %))})
+                                                               (tc/complete :simulation :calendar-year)
+                                                               (tc/replace-missing [:transition-count] :value 0)
                                                                (summary/seven-number-summary [:calendar-year] :transition-count)
                                                                (tc/order-by [:calendar-year]))
                                                 years (into (sorted-set) (:calendar-year initial-ds))]
                                             (-> (fill-in-years initial-ds year-range years)
                                                 (tc/order-by [:calendar-year])))
                             :need-movers-out (let [initial-ds (-> simulated-transition-counts
+                                                                  (tc/select-rows #(= need (:need-1 %)))
                                                                   (tr/movers-from)
                                                                   (tc/group-by [:simulation :calendar-year])
                                                                   (tc/aggregate {:transition-count #(dfn/sum (:transition-count %))})
+                                                                  (tc/complete :simulation :calendar-year)
+                                                                  (tc/replace-missing [:transition-count] :value 0)
                                                                   (summary/seven-number-summary [:calendar-year] :transition-count)
                                                                   (tc/order-by [:calendar-year]))
                                                    years (into (sorted-set) (:calendar-year initial-ds))]
@@ -77,6 +92,8 @@
                                                                       (tr/transitions->census min-year)
                                                                       (tc/group-by [:simulation :calendar-year])
                                                                       (tc/aggregate {:transition-count #(dfn/sum (:transition-count %))})
+                                                                      (tc/complete :simulation :calendar-year)
+                                                                      (tc/replace-missing [:transition-count] :value 0)
                                                                       (summary/seven-number-summary [:calendar-year] :transition-count)
                                                                       (tc/order-by [:calendar-year]))
                                                        years (into (sorted-set) (:calendar-year initial-ds))]
@@ -88,6 +105,8 @@
                                                                       (tr/transitions->census min-year)
                                                                       (tc/group-by [:simulation :calendar-year])
                                                                       (tc/aggregate {:transition-count #(dfn/sum (:transition-count %))})
+                                                                      (tc/complete :simulation :calendar-year)
+                                                                      (tc/replace-missing [:transition-count] :value 0)
                                                                       (summary/seven-number-summary [:calendar-year] :transition-count)
                                                                       (tc/order-by [:calendar-year]))
                                                        years (into (sorted-set) (:calendar-year initial-ds))]
@@ -242,7 +261,7 @@
   ([simulated-transitions file-name]
    (let [needs (into (sorted-set)
                      (-> simulated-transitions
-                         (tc/select-rows #(= -1 (:simulation %)))
+                         (tc/select-rows #(= 1 (:simulation %)))
                          (tc/drop-rows #(= "NONSEND" (:need-1 %)))
                          :need-1))]
      (need-analysis-report simulated-transitions file-name needs)))
