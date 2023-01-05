@@ -55,8 +55,8 @@
 (defn movers-to
   ([simulation-results setting]
    (-> simulation-results
+       (tc/select-rows #(= setting (:setting-2 %)))
        (tc/select-rows mover?)
-       (tc/select-rows #(= setting (:setting-2 %)))))
   ([simulation-results]
    (-> simulation-results
        (tc/select-rows mover?)
