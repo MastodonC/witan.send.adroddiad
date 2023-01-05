@@ -57,10 +57,12 @@
    (-> simulation-results
        (tc/select-rows #(= setting (:setting-2 %)))
        (tc/select-rows mover?)
+       (tc/map-columns :calendar-year [:calendar-year] #(dec %))))
   ([simulation-results]
    (-> simulation-results
        (tc/select-rows mover?)
-       (tc/select-rows #(= (:setting-2 %) (:setting-2 %))))))
+       (tc/select-rows #(= (:setting-2 %) (:setting-2 %)))
+       (tc/map-columns :calendar-year [:calendar-year] #(dec %)))))
 
 (defn movers-from
   ([simulation-results setting]
