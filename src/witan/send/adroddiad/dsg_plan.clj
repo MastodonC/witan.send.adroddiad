@@ -8,15 +8,21 @@
             [witan.send.adroddiad.summary.report :as summary-report]))
 
 
+(def dsg-category-columns
+  "Vector of names of DSG category columns"
+  [:dsg-placement-category :age-group :need])
+
+
 (def friendly-column-names
   "Map keyword column names to friendly names for display"
   {:calendar-year               "Calendar/census year"
    :dsg-placement-category      "DSG placement category abbreviation"
    :dsg-placement-category-name "DSG placement category"
-   :age-group "Age Group"
-   :need "ECHP Primary Need Abbreviation"})
+   :age-group                   "Age Group"
+   :need                        "ECHP Primary Need Abbreviation"})
 
 
+;;; Placement categories
 (def dsg-placement-category->order
   "Map DSG Management Plan placement category abbreviations to presentation order"
   (let [m (zipmap ["MmSoA" "RPSEN" "MdSSA" "NMISS" "HspAP" "P16FE" "OTHER"] (iterate inc 1))]
@@ -44,6 +50,7 @@
          "OTHER"	"Other Placements or Direct Payments"}))
 
 
+;;; Age groups 
 (def age-group->order
   "Map DSG Management Plan age groups to presentation order"
   (let [m {"Under 5"      0
@@ -90,6 +97,7 @@
              ncy/ncys)))
 
 
+;;; Needs
 (def dsg-need-order
   "Map EHCP Primary Need abbreviations to presentation order for DSG Management Plan"
   (let [m (zipmap ["ASD" "HI" "MLD" "MSI" "PD" "PMLD" "SEMH" "SLCN" "SLD" "SPLD" "VI" "OTH" "UKN"] (iterate inc 1))]
@@ -124,6 +132,7 @@
          "UKN"  "SEN support but no specialist assessment of type of need"}))
 
 
+;;; DSG category combinations
 (def dsg-categories-ds
   "Dataset containing the combinations of `:dsg-placement-category`
   `:age-group` and `:need` needed to complete the DSG Management Plan"
@@ -134,6 +143,134 @@
                           (nil? (#{"Age 16 to 19" "Age 20 to 25"} (:age-group %)))))
       (tc/set-dataset-name "DSG-Categories")))
 
+
+;;; Functions to assemble transitions (historical and simulated) for analysis
+(defn historical-transitions-file->ds
+  "Returns a dataset derived from the historical transitions read
+  from file `historical-transitions-file` processed into the form of
+  the simulated transitions."
+  [historical-transitions-file]
+  (summary-report/historical-transitions->simulated-counts historical-transitions-file))
+
+
+(defn simulated-transitions-files->seq
+  "Returns a lazy sequence of n datasets of simulated transitions read
+  from files (where n is the number of simulations). Each dataset
+  contains the transition-counts for a single simulation. It is a lazy
+  sequence and can be streamed to ds-reduce."
+  [simulated-transitions-files
+   & {:keys [cpu-pool]
+      :or   {cpu-pool (java.util.concurrent.ForkJoinPool/commonPool)}}]
+  (sequence cat (lazy/upmap cpu-pool (partial summary-report/read-and-split :simulation) simulated-transitions-files)))
+
+
+(defn transitions-seq
+  "Prepends `historical-transitions-ds` onto each dataset in (lazy)
+   sequence `simulated-transitions-seq`.  Note that the values of a
+   `:simulation` column in `historical-transitions-ds` are left as-is and
+   are not updated to match the value from the corresponding dataset from
+   `simulated-transitions-seq`."
+  [historical-transitions-ds simulated-transitions-seq]
+  (map (fn [ds] (tc/concat historical-transitions-ds ds)) simulated-transitions-seq))
+
+
+(defn transitions-files->transitions-seq
+  "Returns a lazy sequence of n datasets of historical and simulated
+  transitions read from files (where n is the number of simulations).
+  Each dataset contains the transition-counts for a single simulation
+  with the historical transitions prepended. It is a lazy sequence
+  and can be streamed to ds-reduce."
+  [historical-transitions-file simulated-transitions-files
+   & {:keys [cpu-pool]
+      :or   {cpu-pool (java.util.concurrent.ForkJoinPool/commonPool)}}]
+  (let [historical-transitions-ds (historical-transitions-file->ds  historical-transitions-file)
+        simulated-transitions-seq (simulated-transitions-files->seq simulated-transitions-files {:cpu-pool cpu-pool})]
+    (transitions-seq historical-transitions-ds simulated-transitions-seq)))
+
+;; FIXME: Remove if not used.
+(defn transitions-files->transitions-seq-with-separate-history
+  "Returns a lazy sequence of n+1 datasets of historical or simulated
+  transitions read from files (where n is the number of simulations):
+  The first contains the transition-counts for the history, the rest
+  contain the transition-counts from a single simulation. It is a lazy
+  sequence and can be streamed to ds-reduce."
+  [historical-transitions-file simulated-transitions-files
+   & {:keys [cpu-pool]
+      :or   {cpu-pool (java.util.concurrent.ForkJoinPool/commonPool)}}]
+  (let [historical-transitions-ds (summary-report/historical-transitions->simulated-counts historical-transitions-file)]
+    (as-> simulated-transitions-files $
+      (lazy/upmap cpu-pool (partial summary-report/read-and-split :simulation) $)
+      (sequence cat $)
+      (conj $ historical-transitions-ds))))
+
+
+;;; Functions to transform and summarise the individual simulation datasets
+(defn summarise-census
+  "Summarise `census` dataset for DSG plan.
+  Completion is not required at this point as only calculating sums. "
+  [census & {:keys [domain-keys
+                    value-key]
+             :or   {domain-keys [:calendar-year :dsg-placement-category :age-group :need]
+                    value-key   :transition-count}}]
+  (-> census
+      (tc/group-by domain-keys)
+      (tc/aggregate {value-key #(dfn/sum (value-key %))})))
+
+
+(defn transform-simulations
+  "Apply function specified as `:simulation-transform-f` value to each
+  dataset in lazy seq specified as `:simulations-seq` value, returning
+  a lazy seq of the processed datasets."
+  [simulations-seq simulation-transform-f & {:keys [cpu-pool]
+                                             :or   {cpu-pool (java.util.concurrent.ForkJoinPool/commonPool)}}]
+  (lazy/upmap cpu-pool simulation-transform-f simulations-seq))
+
+
+;;; Functions to calculate summary stats across simulations
+(defn summarise-simulations
+  "Summarise column specified as value of `:value-key` over lazy seq of
+  simulation datasets `simulations-seq` within groups specified (as
+  vector) value of `:domain-keys`. Returns a dataset.  Assumes that
+  each datast of `simulations-seq` is a simulation (possibly including
+  history but not just history) such that `(count simulations-seq)` is
+  the number of simulations." 
+  [simulations-seq & {:keys [domain-keys
+                             value-key]
+                      :or   {domain-keys [:calendar-year :dsg-placement-category :age-group :need]
+                             value-key   :transition-count}}]
+  (let [sim-count (count simulations-seq)]
+    (-> (ds-reduce/group-by-column-agg domain-keys
+                                       {:sum       (ds-reduce/sum value-key)
+                                        :row-count (ds-reduce/row-count)
+                                        ;; TODO: remove.
+                                        #_#_:mean-non-missing (ds-reduce/mean value-key)}
+                                       simulations-seq)
+        (tc/add-column :sim-count sim-count)
+        ;; FIXME: remove.
+        (tc/map-columns :mean [:sum] #(/ %1 sim-count))
+        )))
+
+
+(defn complete-dsg-category-stats
+  "Given dataset of `category-stats` with `:mean` for the
+   `:calendar-year` and DSG categories seen in the data, returns dataset
+   with :mean for the complete set of DSG categories and
+   `:calendar-year`s, with invalid category combinations dropped and rows
+   added for any missing DSG category combinations (for any
+   `:calendar-year`) with :mean of 0."
+  [category-stats]
+  (-> (tc/cross-join (tc/dataset [[:calendar-year ((comp sort distinct :calendar-year) category-stats)]])
+                     dsg-categories-ds)
+      (tc/left-join (-> category-stats
+                        (tc/select-columns (conj dsg-category-columns :calendar-year :mean))
+                        (tc/set-dataset-name "category-stats"))
+                    dsg-category-columns)
+      (tc/drop-columns #"^:category-stats\..*")
+      (tc/replace-missing :mean :value 0)
+      (tc/order-by [#(dsg-placement-category->order (:dsg-placement-category %))
+                    #(age-group->order (:age-group %))
+                    #(dsg-need-order (:need %))
+                    :calendar-year])))
 
 #_(defn summarise-setting-by-age-group [census]
     (-> census
@@ -154,128 +291,6 @@
         (tc/aggregate {:transition-count #(dfn/sum (:transition-count %))})
         (tc/complete :calendar-year :setting :need)
         (tc/replace-missing :transition-count :value 0)))
-
-
-(defn summarise-census
-  "Summarise `census` dataset for DSG plan.
-   Aggregates by: `:calendar-year` `:dsg-placement-category` `:age-group` `:need`.
-  `:dsg-placement-category` must be present in the census dataset.
-  `:age-group` is derived from the NCY in `:academic-year`."
-  [census]
-  (-> census
-      (tc/map-columns :age-group [:academic-year] #(ncy->age-group %))
-      (tc/group-by [:calendar-year :dsg-placement-category :age-group :need])
-      (tc/aggregate {:transition-count #(dfn/sum (:transition-count %))})
-      (tc/complete :calendar-year :dsg-placement-category :age-group :need)
-      (tc/replace-missing :transition-count :value 0)))
-
-
-(defn transform-simulations
-  "Apply function specified as `:simulation-transform-f` value to each
-  dataset in lazy seq specified as `:simulations-seq` value, returning
-  a lazy seq of the processed datasets."
-  [{:keys [simulations-seq
-           simulation-transform-f
-           cpu-pool]
-    :or   {cpu-pool (java.util.concurrent.ForkJoinPool/commonPool)}}]
-  (lazy/upmap cpu-pool simulation-transform-f simulations-seq))
-
-
-(defn summarise-simulations
-  "Summarise column specified as value of `:value-key` over lazy seq of
-  datasets specified as value of `:simulations-seq` grouped columns
-  specified (as vector) value of `:domain-keys`. Returns a dataset." 
-  [{:keys [simulations-seq
-           domain-keys
-           value-key]
-    :or   {domain-keys [:calendar-year :dsg-placement-category :age-group :need]
-           value-key   :transition-count}}]
-  (ds-reduce/group-by-column-agg domain-keys
-                                 {:sum       (ds-reduce/sum value-key)
-                                  :row-count (ds-reduce/row-count)
-                                  :mean      (ds-reduce/mean value-key)}
-                                 simulations-seq))
-
-
-(defn historical-transitions-file->ds
-  "Returns a dataset derived from the historical transitions read
-  from file `historical-transitions-file` processed into the form of
-  the simulated transitions."
-  [{:keys [historical-transitions-file]}]
-  (summary-report/historical-transitions->simulated-counts historical-transitions-file))
-
-
-(defn simulated-transitions-files->seq
-  "Returns a lazy sequence of n datasets of simulated transitions read
-  from files (where n is the number of simulations). Each dataset
-  contains the transition-counts for a single simulation. It is a lazy
-  sequence and can be streamed to ds-reduce."
-  [{:keys [simulated-transitions-files
-           cpu-pool]
-    :or   {cpu-pool (java.util.concurrent.ForkJoinPool/commonPool)}}]
-  (sequence cat (lazy/upmap cpu-pool (partial summary-report/read-and-split :simulation) simulated-transitions-files)))
-
-
-;; FIXME: Write docstring.
-(defn transitions-seq
-  [{:keys [historical-transitions-ds
-           simulated-transitions-seq]}]
-  (map (fn [ds] (tc/concat historical-transitions-ds ds)) simulated-transitions-seq))
-
-
-(defn transitions-files->transitions-seq
-  "Returns a lazy sequence of n datasets of historical and simulated
-  transitions read from files (where n is the number of simulations).
-  Each dataset contains the transition-counts for a single simulation
-  with the historical transitions concatenated. It is a lazy sequence
-  and can be streamed to ds-reduce."
-  [{:keys [historical-transitions-file
-           simulated-transitions-files
-           cpu-pool]
-    :or   {cpu-pool (java.util.concurrent.ForkJoinPool/commonPool)}}]
-  (let [historical-transitions-ds (historical-transitions-file->ds  {:historical-transitions-file historical-transitions-file})
-        simulated-transitions-seq (simulated-transitions-files->seq {:simulated-transitions-files simulated-transitions-files
-                                                                     :cpu-pool cpu-pool})]
-    #_(map (fn [ds] (tc/concat historical-transitions-ds ds)) simulated-transitions-seq)
-    (transitions-seq {:historical-transitions-ds historical-transitions-ds
-                      :simulated-transitions-seq simulated-transitions-seq})))
-
-
-(defn transitions-files->transitions-seq-old
-  "Returns a lazy sequence of n datasets of historical and simulated
-  transitions read from files (where n is the number of simulations).
-  Each dataset contains the transition-counts for a single simulation
-  with the historical transitions concatenated. It is a lazy sequence
-  and can be streamed to ds-reduce."
-  [{:keys [historical-transitions-file
-           simulated-transitions-files
-           cpu-pool]
-    :or   {cpu-pool (java.util.concurrent.ForkJoinPool/commonPool)}}]
-  (let [historical-transitions-ds (summary-report/historical-transitions->simulated-counts historical-transitions-file)]
-    (sequence
-     (comp
-      cat
-      (map (fn [ds] (tc/concat historical-transitions-ds ds))))
-     (lazy/upmap cpu-pool
-                 (partial summary-report/read-and-split :simulation)
-                 simulated-transitions-files))))
-
-;; FIXME: Remove if not used.
-(defn transitions-files->transitions-seq-with-separate-history
-  "Returns a lazy sequence of n+1 datasets of historical or simulated
-  transitions read from files (where n is the number of simulations):
-  The first contains the transition-counts for the history, the rest
-  contain the transition-counts from a single simulation. It is a lazy
-  sequence and can be streamed to ds-reduce."
-  [{:keys [historical-transitions-file
-           simulated-transitions-files
-           cpu-pool]
-    :or   {cpu-pool (java.util.concurrent.ForkJoinPool/commonPool)}}]
-  (let [historical-transitions-ds (summary-report/historical-transitions->simulated-counts historical-transitions-file)]
-    (as-> simulated-transitions-files $
-      (lazy/upmap cpu-pool (partial summary-report/read-and-split :simulation) $)
-      (sequence cat $)
-      (conj $ historical-transitions-ds))))
 
 
 
