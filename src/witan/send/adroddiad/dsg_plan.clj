@@ -1,11 +1,13 @@
 (ns witan.send.adroddiad.dsg-plan
   "Definitions and functions for completing the DSG Management Plan 2022-23 (Version 5)."
-  (:require [witan.send.adroddiad.ncy :as ncy]
+  (:require [clojure.math :as math]
             [com.climate.claypoole.lazy :as lazy]
             [tablecloth.api :as tc]
             [tech.v3.dataset.reductions :as ds-reduce]
             [tech.v3.datatype.functional :as dfn]
-            [witan.send.adroddiad.summary.report :as summary-report]))
+            [witan.send.adroddiad.ncy :as ncy]
+            [witan.send.adroddiad.summary.report :as summary-report]
+            [witan.send.adroddiad.transitions :as at]))
 
 
 (def dsg-category-columns
@@ -15,11 +17,15 @@
 
 (def friendly-column-names
   "Map keyword column names to friendly names for display"
-  {:calendar-year               "Calendar/census year"
-   :dsg-placement-category      "DSG placement category abbreviation"
+  {:dsg-placement-category      "DSG placement category abbreviation"
    :dsg-placement-category-name "DSG placement category"
    :age-group                   "Age Group"
-   :need                        "ECHP Primary Need Abbreviation"})
+   :need                        "ECHP Primary Need Abbreviation"
+   :need-name                   "ECHP Primary Need"
+   :calendar-year               "Calendar/census year"
+   :breakdown                   "Breakdown"
+   :num-ehcps                   "Number of EHCPs"
+   :composite-key               "Composite key"})
 
 
 ;;; Placement categories
@@ -48,6 +54,19 @@
          "HspAP"	"Hospital Schools or Alternative Provision"
          "P16FE"	"Post 16 and Further Education"
          "OTHER"	"Other Placements or Direct Payments"}))
+
+
+(def dsg-placement-category->sheet-title
+  "Map DSG Management Plan placement category abbreviation to corresponding sheet title"
+  (into (sorted-map-by (fn [k1 k2] (compare [(get dsg-placement-category->order k1) k1]
+                                            [(get dsg-placement-category->order k2) k2]))) 
+        {"MmSoA"	"Mainstream schools or academies placements"
+         "RPSEN"	"Resourced provision or SEN Units placements"
+         "MdSSA"	"Maintained special schools or special academies placements"
+         "NMISS"	"Non-maintained special schools or independent (NMSS or independent) placements"
+         "HspAP"	"Hospital schools or alternative provision (AP) placements"
+         "P16FE"	"Post 16 and further education (FE) placements"
+         "OTHER"	"Other placements or direct payments"}))
 
 
 ;;; Age groups 
@@ -98,7 +117,7 @@
 
 
 ;;; Needs
-(def dsg-need-order
+(def dsg-need->order
   "Map EHCP Primary Need abbreviations to presentation order for DSG Management Plan"
   (let [m (zipmap ["ASD" "HI" "MLD" "MSI" "PD" "PMLD" "SEMH" "SLCN" "SLD" "SPLD" "VI" "OTH" "UKN"] (iterate inc 1))]
     (into (sorted-map-by (fn [k1 k2] (compare [(get m k1) k1]
@@ -108,15 +127,15 @@
 (def needs
   "EHCP Primary Need abbreviations"
   (apply sorted-set-by
-         (fn [k1 k2] (compare [(get dsg-need-order k1) k1]
-                              [(get dsg-need-order k2) k2]))
-         (keys dsg-need-order)))
+         (fn [k1 k2] (compare [(get dsg-need->order k1) k1]
+                              [(get dsg-need->order k2) k2]))
+         (keys dsg-need->order)))
 
 
-(def dsg-need-names
+(def dsg-need->name
   "Map EHCP Primary Need abbreviations to names used in sheets of the DSG Management Plan"
-  (into (sorted-map-by  (fn [k1 k2] (compare [(get dsg-need-order k1) k1]
-                                             [(get dsg-need-order k2) k2])))
+  (into (sorted-map-by  (fn [k1 k2] (compare [(get dsg-need->order k1) k1]
+                                             [(get dsg-need->order k2) k2])))
         {"ASD"  "Autistic Spectrum Disorder"
          "HI"   "Hearing Impairment"
          "MLD"  "Moderate Learning Difficulty"
@@ -217,9 +236,21 @@
       (tc/aggregate {value-key #(dfn/sum (value-key %))})))
 
 
+(defn simulation-transform
+  "Transform function applied to `ds` of transitions (with `:transition-counts`) for a single simulation.
+  Must return a dataset with a single row per [`:calendar-year` `:dsg-placement-category` `:age-group` `:need`]."
+  [ds]
+  (-> ds
+      at/transitions->census       
+      ;; FIXME: Describe?
+      ;; (tc/map-columns :dsg-placement-category [:setting] #(setting->dsg-placement-category % nil))
+      (tc/map-columns :age-group [:academic-year] #(ncy->age-group %))
+      summarise-census))
+
+
 (defn transform-simulations
-  "Apply function specified as `:simulation-transform-f` value to each
-  dataset in lazy seq specified as `:simulations-seq` value, returning
+  "Apply function specified as `simulation-transform-f` value to each
+  dataset in lazy seq specified as `simulations-seq` value, returning
   a lazy seq of the processed datasets."
   [simulations-seq simulation-transform-f & {:keys [cpu-pool]
                                              :or   {cpu-pool (java.util.concurrent.ForkJoinPool/commonPool)}}]
@@ -246,10 +277,24 @@
                                         #_#_:mean-non-missing (ds-reduce/mean value-key)}
                                        simulations-seq)
         (tc/add-column :sim-count sim-count)
-        ;; FIXME: remove.
-        (tc/map-columns :mean [:sum] #(/ %1 sim-count))
-        )))
+        (tc/map-columns :mean [:sum] #(/ %1 sim-count)))))
 
+(defn category-stats
+  "Given `historical-transitions-file` `simulated-transitions-files`,
+  prepends history onto to each simulation, applies the
+  `simulation-transform-f` to each and then summarises across
+  simulations for each combination of [`:calendar-year`
+  `:dsg-placement-category` `:age-group` `:need`] present in the
+  historical/simulated data."
+  [historical-transitions-file simulated-transitions-files simulation-transform-f
+   & {:keys [cpu-pool]
+      :or   {cpu-pool (java.util.concurrent.ForkJoinPool/commonPool)}}]
+  (-> (transitions-files->transitions-seq historical-transitions-file
+                                          simulated-transitions-files
+                                          {:cpu-pool cpu-pool})
+      (transform-simulations simulation-transform-f {:cpu-pool cpu-pool})
+      (summarise-simulations)
+      (tc/set-dataset-name "category-stats")))
 
 (defn complete-dsg-category-stats
   "Given dataset of `category-stats` with `:mean` for the
@@ -257,20 +302,31 @@
    with :mean for the complete set of DSG categories and
    `:calendar-year`s, with invalid category combinations dropped and rows
    added for any missing DSG category combinations (for any
-   `:calendar-year`) with :mean of 0."
+   `:calendar-year`) with :mean of 0.
+
+  Since these complete DSG category stats are the basis from which
+  both the numbers of EHCPs by `:age-group` and by `:need` are
+  calculated (for each `:dsg-placement-category` and
+  `:calendar-year`), and since those numbers of EHCPs have to be
+  presented as integers and add up to the same totals, a
+  the rounded mean is mapped into column `:rounded-mean`, and this column should be
+  aggregated (summed) for the roll-ups."
   [category-stats]
   (-> (tc/cross-join (tc/dataset [[:calendar-year ((comp sort distinct :calendar-year) category-stats)]])
                      dsg-categories-ds)
       (tc/left-join (-> category-stats
                         (tc/select-columns (conj dsg-category-columns :calendar-year :mean))
                         (tc/set-dataset-name "category-stats"))
-                    dsg-category-columns)
+                    (conj dsg-category-columns :calendar-year))
       (tc/drop-columns #"^:category-stats\..*")
       (tc/replace-missing :mean :value 0)
+      ;; NOTE: Use of math/round here means that `:mean`s less than 0.5 will round to 0.
+      (tc/map-columns :rounded-mean [:mean] #(math/round %))
       (tc/order-by [#(dsg-placement-category->order (:dsg-placement-category %))
                     #(age-group->order (:age-group %))
-                    #(dsg-need-order (:need %))
+                    #(dsg-need->order (:need %))
                     :calendar-year])))
+
 
 #_(defn summarise-setting-by-age-group [census]
     (-> census
