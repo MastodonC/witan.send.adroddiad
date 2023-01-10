@@ -24,6 +24,7 @@
    :need-name                   "ECHP Primary Need"
    :calendar-year               "Calendar/census year"
    :breakdown                   "Breakdown"
+   :breakdown-description       "Breakdown description"
    :num-ehcps                   "Number of EHCPs"
    :composite-key               "Composite key"})
 
@@ -273,11 +274,13 @@
     (-> (ds-reduce/group-by-column-agg domain-keys
                                        {:sum       (ds-reduce/sum value-key)
                                         :row-count (ds-reduce/row-count)
-                                        ;; TODO: remove.
-                                        #_#_:mean-non-missing (ds-reduce/mean value-key)}
+                                        ;; Uncomment next line to include mean across sims with non-zero value-key
+                                        ;; :mean-non-missing (ds-reduce/mean value-key)
+                                        }
                                        simulations-seq)
         (tc/add-column :sim-count sim-count)
         (tc/map-columns :mean [:sum] #(/ %1 sim-count)))))
+
 
 (defn category-stats
   "Given `historical-transitions-file` `simulated-transitions-files`,
@@ -295,6 +298,7 @@
       (transform-simulations simulation-transform-f {:cpu-pool cpu-pool})
       (summarise-simulations)
       (tc/set-dataset-name "category-stats")))
+
 
 (defn complete-dsg-category-stats
   "Given dataset of `category-stats` with `:mean` for the
@@ -328,110 +332,120 @@
                     :calendar-year])))
 
 
-#_(defn summarise-setting-by-age-group [census]
-    (-> census
-        (tc/map-columns :age-group [:academic-year]
-                        (fn [ay]
-                          (-> ay
-                              ncy/ncy->age-at-start-of-school-year
-                              age-at-start-of-school-year->age-group)))
-        (tc/group-by [:calendar-year :setting :age-group])
-        (tc/aggregate {:transition-count #(dfn/sum (:transition-count %))})
-        (tc/complete :calendar-year :setting :age-group)
-        (tc/replace-missing :transition-count :value 0)))
+;; Proof that _the mean of the sum is the sum of the means_,
+;; when all are over a common denominator.
+;; (Using LaTeX mathematical notation.)
+;;
+;; Consider two categories X & Y with \# CYP $x_i$ & $y_i$ where
+;; $i=\{1,\ldots,n\}$ indexes the simulation
+;; and $n$ is the number of simulations.
+;; The mean \# CYP for X is $\bar{x}_\bullet = \frac{1}{n}\sum_{i=1}^{n} x_i$
+;; and for Y is $\bar{y}_\bullet = \frac{1}{n}\sum_{i=1}^{n} y_i$ .
+;; Now consider roll-up category Z consisting of X and Y together,
+;; with \# CYP $z_i = x_i + y_i$
+;; and mean $\frac{1}{n}\bar{z}_\bullet = \sum_{i=1}^{n} z_i$ .
+;; Substituting for $z_i$ we have:
+;; 
+;; $$
+;; \bar{z}_\bullet
+;; = \frac{1}{n}\sum_{i=1}^{n} z_i
+;; = \sum_{i=1}^{n} \frac{z_i}{n}
+;; = \sum_{i=1}^{n} \frac{\left(x_i+y_i\right)}{n} \\
+;; = \sum_{i=1}^{n} \left( \frac{x_i}{n} + \frac{y_i}{n} \right) \\
+;; = \left( \sum_{i=1}^{n} \frac{x_i}{n}  \right) + \left( \sum_{i=1}^{n} \frac{y_i}{n}  \right) \\
+;; = \left( \frac{1}{n}\sum_{i=1}^{n} x_i \right) + \left( \frac{1}{n}\sum_{i=1}^{n} y_i \right)
+;; = \left( \bar{x}_\bullet               \right) + \left( \bar{y}_\bullet               \right)
+;; = \bar{x}_\bullet + \bar{y}_\bullet
+;; $$
+;; 
+;; I.e. $\bar{z}_\bullet = \bar{x}_\bullet + \bar{y}_\bullet$
+;; The proof above only relies on the $n$ being the same for X & Y,
+;; and can be extended to combinations of any number of
+;; non-overlapping categories.
+;; 
+;; I.e. _the mean of the sum is the sum of the means_,
+;; when all are over the same denominator.
 
 
-#_(defn summarise-setting-by-need [census]
-    (-> census
-        (tc/group-by [:calendar-year :setting :need])
-        (tc/aggregate {:transition-count #(dfn/sum (:transition-count %))})
-        (tc/complete :calendar-year :setting :need)
-        (tc/replace-missing :transition-count :value 0)))
+(defn dsg-plan
+  "Given dataset of `complete-dsg-category-stats`, returns a dataset of the
+  by-age-group and by-need breakdowns (with totals) required to complete the
+  DSG Management Plan.
 
+   Input dataset `complete-dsg-category-stats` must have (only)
+  records for each `:dsg-placement-category` `:age-group` `:need`
+  combination required for the DSG Management Plan for each
+  `:calendar-year`, with the corresponding `:rounded-mean`.
 
+   Returned dataset has columns:
+   `:dsg-placement-category`
+   `:dsg-placement-category-name`
+   `:breakdown` - indicating whehter the row is for the by age-group or by need breakdown.
+   `:breakdown-description` - description of the breakdown matching that in the DSG Management Plan template.
+   `:age-group`
+   `:need`
+   `:need-name`
+   `:calendar-year`
+   `:composite-key` - Composite key to facilitate use of single column lookup functions in spreadsheet applications.
+   `:num-ehcps` - Number (whole number) of EHCPs.
 
-(comment
-  
-  (defn by-age-wide
-    ([summary metric]
-     (-> summary
-         (tc/select-columns [:calendar-year :setting :age-group metric])
-         (tc/order-by [:setting :age-group :calendar-year])
-         (tc/pivot->wider [:calendar-year] metric {:drop-missing? false})
-         (tc/order-by [:setting :age-group])
-         (tc/rename-columns {:setting "Placement"
-                             :age-group "Age Group"})))
-    ([summary]
-     (by-age-wide summary :mean)))
+   As all the `:mean`s are calculated over same denominator (number of
+   simulations), and as all the categories are non-overlapping, we can
+   calculate the `:mean`s for combinations (roll-ups) of categories by
+   summing the category `:mean`s, and will get the same answer as if we
+   rolled up the `:transition-counts` in each simulation and then
+   calculated the mean.
 
-  (defn by-need-wide
-    ([summary metric]
-     (-> summary
-         (tc/select-columns [:calendar-year :setting :need metric])
-         (tc/order-by [:setting :need :calendar-year])
-         (tc/pivot->wider [:calendar-year] metric {:drop-missing? false})
-         (tc/order-by [:setting :need])
-         (tc/rename-columns {:setting "Placement"
-                             :need "Primary Need"})))
-    ([summary]
-     (by-need-wide summary :mean)))
+   However - as have to present numbers of EHCPs as integers - to avoid
+   discrepancies between breakdowns and totals due to rounding, we will
+   sum the `:rounded-mean`s to calculate the `:num-ehcps`. "
+  [complete-dsg-category-stats]
+  (let [aggregate (fn [ds col] (tc/aggregate ds {:num-ehcps #(reduce + (% col))}))
+        age-total-label  "Total number by Age Group"
+        need-total-label "Total number of EHCPs by primary need"
+        by-age-group-breakdown (-> complete-dsg-category-stats
+                                   (tc/group-by [:dsg-placement-category :calendar-year :age-group])
+                                   (aggregate :rounded-mean))
+        by-age-group-totals    (-> by-age-group-breakdown
+                                   (tc/group-by [:dsg-placement-category :calendar-year])
+                                   (aggregate :num-ehcps)
+                                   (tc/add-column :age-group age-total-label))
+        by-age                 (-> (tc/concat by-age-group-breakdown by-age-group-totals)
+                                   (tc/add-column :breakdown :age-group)
+                                   (tc/add-column :breakdown-description "Number of EHCPs by age group")
+                                   )
+        by-need-breakdown      (-> complete-dsg-category-stats
+                                   (tc/group-by [:dsg-placement-category :calendar-year :need])
+                                   (aggregate :rounded-mean))
+        by-need-totals         (-> by-need-breakdown ; Should be the same as by-age-group-totals
+                                   (tc/group-by [:dsg-placement-category :calendar-year])
+                                   (aggregate :num-ehcps)
+                                   (tc/add-column :need need-total-label))
+        by-need                (-> (tc/concat by-need-breakdown by-need-totals)
+                                   (tc/add-column :breakdown :need)
+                                   (tc/add-column :breakdown-description "Number of EHCPs by primary need")
+                                   )]
+    (-> (tc/concat by-age by-need)
+        (tc/map-columns :dsg-placement-category-name [:dsg-placement-category] #(dsg-placement-category->name %))
+        (tc/map-columns :need-name [:need] #(dsg-need->name % %))
+        (tc/map-columns :composite-key
+                        [:dsg-placement-category :breakdown-description :age-group :need-name :calendar-year]
+                        (fn [dsg-placement-category breakdown age-group need-name calendar-year]
+                          (reduce #(str %1 ": " %2) [(dsg-placement-category->sheet-title dsg-placement-category)
+                                                     breakdown
+                                                     (or age-group need-name)
+                                                     calendar-year])))
+        (tc/order-by [#(dsg-placement-category->order (:dsg-placement-category %))
+                      :breakdown
+                      #((assoc age-group->order age-total-label  99) (:age-group %))
+                      #((assoc dsg-need->order  need-total-label 99) (:need      %))
+                      :calendar-year])
+        (tc/reorder-columns [:composite-key
+                             :num-ehcps
+                             :dsg-placement-category :dsg-placement-category-name
+                             :breakdown
+                             :breakdown-description
+                             :age-group
+                             :need :need-name
+                             :calendar-year]))))
 
-
-  )
-
-
-
-(comment
-
-  ;; by-age and by-need examples
-  (def cpu-pool (cp/threadpool (- (cp/ncpus) 2)))
-
-  @(def by-age
-     (->> {:historical-transitions-file (str in-dir "transitions.csv")
-           :simulated-transitions-files pqt-files
-           :cpu-pool cpu-pool}
-          (simulations-seq)
-          (assoc
-           {:simulations-transform-f (fn [simulation]
-                                       (-> simulation
-                                           at/transitions->census
-                                           (tc/map-columns :setting [:setting]
-                                                           (fn [s]
-                                                             (roll-up-names s)))
-                                           (tc/drop-rows #(< 20 (:academic-year %)))
-                                           summarise-setting-by-age-group))
-            :cpu-pool cpu-pool}
-           :simulations)
-          (transform-simulations)
-          (assoc
-           {:domain-keys [:calendar-year :setting :age-group]
-            :value-key :transition-count}
-           :simulations)
-          (summarise-simulations)))
-
-  @(def by-need
-     (->> {:historical-transitions-file (str in-dir "transitions.csv")
-           :simulated-transitions-files pqt-files
-           :cpu-pool cpu-pool}
-          (simulations-seq)
-          (assoc
-           {:simulations-transform-f (fn [simulation]
-                                       (-> simulation
-                                           at/transitions->census
-                                           (tc/map-columns :setting [:setting]
-                                                           (fn [s]
-                                                             (roll-up-names s)))
-                                           (tc/drop-rows #(< 20 (:academic-year %)))
-                                           summarise-setting-by-need))
-            :cpu-pool cpu-pool}
-           :simulations)
-          (transform-simulations)
-          (assoc
-           {:domain-keys [:calendar-year :setting :need]
-            :value-key :transition-count}
-           :simulations)
-          (summarise-simulations)))
-
-
-
-  )
