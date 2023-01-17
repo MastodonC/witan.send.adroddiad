@@ -208,20 +208,20 @@
     (transitions-seq historical-transitions-ds simulated-transitions-seq)))
 
 ;; FIXME: Remove if not used.
-(defn transitions-files->transitions-seq-with-separate-history
-  "Returns a lazy sequence of n+1 datasets of historical or simulated
+#_(defn transitions-files->transitions-seq-with-separate-history
+    "Returns a lazy sequence of n+1 datasets of historical or simulated
   transitions read from files (where n is the number of simulations):
   The first contains the transition-counts for the history, the rest
   contain the transition-counts from a single simulation. It is a lazy
   sequence and can be streamed to ds-reduce."
-  [historical-transitions-file simulated-transitions-files
-   & {:keys [cpu-pool]
-      :or   {cpu-pool (java.util.concurrent.ForkJoinPool/commonPool)}}]
-  (let [historical-transitions-ds (summary-report/historical-transitions->simulated-counts historical-transitions-file)]
-    (as-> simulated-transitions-files $
-      (lazy/upmap cpu-pool (partial summary-report/read-and-split :simulation) $)
-      (sequence cat $)
-      (conj $ historical-transitions-ds))))
+    [historical-transitions-file simulated-transitions-files
+     & {:keys [cpu-pool]
+        :or   {cpu-pool (java.util.concurrent.ForkJoinPool/commonPool)}}]
+    (let [historical-transitions-ds (summary-report/historical-transitions->simulated-counts historical-transitions-file)]
+      (as-> simulated-transitions-files $
+        (lazy/upmap cpu-pool (partial summary-report/read-and-split :simulation) $)
+        (sequence cat $)
+        (conj $ historical-transitions-ds))))
 
 
 ;;; Functions to transform and summarise the individual simulation datasets
@@ -238,15 +238,22 @@
 
 
 (defn simulation-transform
-  "Transform function applied to `ds` of transitions (with `:transition-counts`) for a single simulation.
-  Must return a dataset with a single row per [`:calendar-year` `:dsg-placement-category` `:age-group` `:need`]."
-  [ds]
-  (-> ds
-      at/transitions->census       
-      ;; FIXME: Describe?
-      ;; (tc/map-columns :dsg-placement-category [:setting] #(setting->dsg-placement-category % nil))
-      (tc/map-columns :age-group [:academic-year] #(ncy->age-group %))
-      summarise-census))
+  "Transform function applied to `ds` of transitions (with
+  `:transition-counts`) for a single simulation. Must return a dataset
+  with a single row per [`:calendar-year` `:dsg-placement-category`
+  `:age-group` `:need`].
+
+  Optional `census-transform` function can be supplied to process the
+  transitions after conversion to a census dataset to have the
+  required `:calendar-year`s, `:dsg-placement-category`s,
+  `:age-group`s, and `:need`s."
+  ([ds] (simulation-transform ds identity))
+  ([ds census-transform]
+   (-> ds
+       at/transitions->census
+       (census-transform)
+       (tc/map-columns :age-group [:academic-year] #(ncy->age-group %))
+       summarise-census)))
 
 
 (defn transform-simulations
@@ -272,14 +279,15 @@
                              value-key   :transition-count}}]
   (let [sim-count (count simulations-seq)]
     (-> (ds-reduce/group-by-column-agg domain-keys
-                                       {:sum       (ds-reduce/sum value-key)
-                                        :row-count (ds-reduce/row-count)
-                                        ;; Uncomment next line to include mean across sims with non-zero value-key
-                                        ;; :mean-non-missing (ds-reduce/mean value-key)
+                                       {:sum   (ds-reduce/sum value-key) ; Sum of observed `value-key`s.
+                                        :n-obs (ds-reduce/row-count) ; Number of sims with a record to observe.
+                                        ;; Uncomment next line to include mean across sims with observed `value-key`.
+                                        ;; :mean-obs (ds-reduce/mean value-key)
                                         }
                                        simulations-seq)
         (tc/add-column :sim-count sim-count)
-        (tc/map-columns :mean [:sum] #(/ %1 sim-count)))))
+        (tc/map-columns :mean [:sum] #(/ %1 sim-count)) ; Assumes that `value-key`s not observed would be 0.
+        )))
 
 
 (defn category-stats
@@ -312,9 +320,9 @@
   both the numbers of EHCPs by `:age-group` and by `:need` are
   calculated (for each `:dsg-placement-category` and
   `:calendar-year`), and since those numbers of EHCPs have to be
-  presented as integers and add up to the same totals, a
-  the rounded mean is mapped into column `:rounded-mean`, and this column should be
-  aggregated (summed) for the roll-ups."
+  presented as integers and add up to the same totals,
+  the rounded mean is mapped into column `:rounded-mean`, and this
+  column should be aggregated (summed) for the roll-ups."
   [category-stats]
   (-> (tc/cross-join (tc/dataset [[:calendar-year ((comp sort distinct :calendar-year) category-stats)]])
                      dsg-categories-ds)
@@ -448,4 +456,20 @@
                              :age-group
                              :need :need-name
                              :calendar-year]))))
+
+
+(defn extract-breakdown
+  "Extract DSG Management Plan table from `dsg-plan` dataset for specified
+   `dsg-placement-category` & `breakdown` (either `:age-group` or
+   `:need`) to be presented wide by `:calendar-year`. If `label-column`
+   is specified it is used to label the rows, otherwise the values of the
+   column specified in `breakdown` are used."
+  ([dsg-plan dsg-placement-category breakdown] (extract-breakdown dsg-plan dsg-placement-category breakdown breakdown))
+  ([dsg-plan dsg-placement-category breakdown label-column]
+   (-> dsg-plan
+       (tc/select-rows #(= dsg-placement-category (:dsg-placement-category %)))
+       (tc/select-rows #(= breakdown (:breakdown %)))
+       (tc/select-columns [label-column :calendar-year :num-ehcps])
+       (tc/pivot->wider [:calendar-year] [:num-ehcps])
+       (tc/rename-columns friendly-column-names))))
 
