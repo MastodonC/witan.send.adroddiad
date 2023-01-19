@@ -268,12 +268,24 @@
 
 ;;; Functions to calculate summary stats across simulations
 (defn summarise-simulations
-  "Summarise column specified as value of `:value-key` over lazy seq of
+  "Summarise column specified as value of `value-key` over lazy seq of
   simulation datasets `simulations-seq` within groups specified (as
-  vector) value of `:domain-keys`. Returns a dataset.  Assumes that
-  each datast of `simulations-seq` is a simulation (possibly including
-  history but not just history) such that `(count simulations-seq)` is
-  the number of simulations." 
+  vector) value of `domain-keys`.
+
+  Assumes that each datast of `simulations-seq` is a
+  simulation (possibly including history but not just history) such
+  that `(count simulations-seq)` is the number of simulations.
+
+  Returns a dataset with one record for each set of `domain-keys` seen
+  in the data (no completion), with summary stats columns:
+  - `:sum`    - sum of observed `value-key`
+  - `:n-obs`  - number of sims with a record for current `domain-keys`
+  - `:n-sims` - number of simulations (also added to dataset metadata)
+  - `:mean`   - calculated as `:sum`/`:n-sims`
+
+  Implicit in this approach to calculating the `:mean` is the
+  assumption that the (- `:n-sims` `:n-obs`) simulations without a
+  record have 0 `value-key`." 
   [simulations-seq & {:keys [domain-keys
                              value-key]
                       :or   {domain-keys [:calendar-year :dsg-placement-category :age-group :need]
@@ -314,7 +326,7 @@
   and stats [`:sum` `:n-obs` `:n-sims` `:mean`] for the
   `:calendar-year` and DSG categories seen in the data, returns
   dataset with stats for the complete set of DSG categories and
-  `:calendar-year`s, with invalid category combinations dropped and
+  `:calendar-year`s, with any non-DSG category combinations dropped and
   rows added for any missing DSG category combinations (for any
   `:calendar-year`) with [`:sum` `:n-obs` `:mean`] of 0 and `:n-sims`
   set from metadata."
@@ -468,17 +480,17 @@
   `:calendar-year`, with the corresponding `:rounded-mean`.
 
    Returned dataset has columns:
-   `:dsg-placement-category`
-   `:dsg-placement-category-name`
-   `:breakdown` - indicating whehter the row is for the by age-group or by need breakdown.
-   `:breakdown-description` - description of the breakdown matching that in the DSG Management Plan template.
-   `:age-group`
-   `:need`
-   `:need-name`
-   `:calendar-year`
-   `:composite-key` - Composite key to facilitate use of single column lookup functions in spreadsheet applications.
-   `:mean` - Estimated (rational) number of EHCPs, calculated as mean across simulations.
-   `:rounded-mean` - Estimated (whole) number of EHCPs, calculated by rounding `:mean`.
+   - `:dsg-placement-category`
+   - `:dsg-placement-category-name`
+   - `:breakdown` - indicating whehter the row is for the by age-group or by need breakdown.
+   - `:breakdown-description` - description of the breakdown matching that in the DSG Management Plan template.
+   - `:age-group`
+   - `:need`
+   - `:need-name`
+   - `:calendar-year`
+   - `:composite-key` - Composite key to facilitate use of single column lookup functions in spreadsheet applications.
+   - `:mean` - Estimated (rational) number of EHCPs, calculated as mean across simulations.
+   - `:rounded-mean` - Estimated (whole) number of EHCPs, calculated by rounding `:mean`.
 
    As all the `:mean`s are calculated over same denominator (number of
    simulations), and as all the categories are non-overlapping, we can
