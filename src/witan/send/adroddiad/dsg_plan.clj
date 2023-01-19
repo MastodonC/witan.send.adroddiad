@@ -25,8 +25,9 @@
    :calendar-year               "Calendar/census year"
    :breakdown                   "Breakdown"
    :breakdown-description       "Breakdown description"
-   :num-ehcps                   "Number of EHCPs"
-   :composite-key               "Composite key"})
+   :composite-key               "Composite key"
+   :mean                        "Estimated number of EHCPs (mean from simulations)"
+   :rounded-mean                "Estimated (whole) number of EHCPs (rounded mean from simulations)"})
 
 
 ;;; Placement categories
@@ -277,7 +278,7 @@
                              value-key]
                       :or   {domain-keys [:calendar-year :dsg-placement-category :age-group :need]
                              value-key   :transition-count}}]
-  (let [sim-count (count simulations-seq)]
+  (let [n-sims (count simulations-seq)]
     (-> (ds-reduce/group-by-column-agg domain-keys
                                        {:sum   (ds-reduce/sum value-key) ; Sum of observed `value-key`s.
                                         :n-obs (ds-reduce/row-count) ; Number of sims with a record to observe.
@@ -285,9 +286,9 @@
                                         ;; :mean-obs (ds-reduce/mean value-key)
                                         }
                                        simulations-seq)
-        (tc/add-column :sim-count sim-count)
-        (tc/map-columns :mean [:sum] #(/ %1 sim-count)) ; Assumes that `value-key`s not observed would be 0.
-        )))
+        (tc/add-column :n-sims n-sims)
+        (tc/map-columns :mean [:sum] #(/ %1 n-sims)) ; Assumes that `value-key`s not observed would be 0.
+        (vary-meta assoc :n-sims n-sims))))
 
 
 (defn category-stats
@@ -309,35 +310,31 @@
 
 
 (defn complete-dsg-category-stats
-  "Given dataset of `category-stats` with `:mean` for the
-   `:calendar-year` and DSG categories seen in the data, returns dataset
-   with :mean for the complete set of DSG categories and
-   `:calendar-year`s, with invalid category combinations dropped and rows
-   added for any missing DSG category combinations (for any
-   `:calendar-year`) with :mean of 0.
-
-  Since these complete DSG category stats are the basis from which
-  both the numbers of EHCPs by `:age-group` and by `:need` are
-  calculated (for each `:dsg-placement-category` and
-  `:calendar-year`), and since those numbers of EHCPs have to be
-  presented as integers and add up to the same totals,
-  the rounded mean is mapped into column `:rounded-mean`, and this
-  column should be aggregated (summed) for the roll-ups."
+  "Given dataset of `category-stats` with metadata including `:n-sims`
+  and stats [`:sum` `:n-obs` `:n-sims` `:mean`] for the
+  `:calendar-year` and DSG categories seen in the data, returns
+  dataset with stats for the complete set of DSG categories and
+  `:calendar-year`s, with invalid category combinations dropped and
+  rows added for any missing DSG category combinations (for any
+  `:calendar-year`) with [`:sum` `:n-obs` `:mean`] of 0 and `:n-sims`
+  set from metadata."
   [category-stats]
-  (-> (tc/cross-join (tc/dataset [[:calendar-year ((comp sort distinct :calendar-year) category-stats)]])
-                     dsg-categories-ds)
-      (tc/left-join (-> category-stats
-                        (tc/select-columns (conj dsg-category-columns :calendar-year :mean))
-                        (tc/set-dataset-name "category-stats"))
-                    (conj dsg-category-columns :calendar-year))
-      (tc/drop-columns #"^:category-stats\..*")
-      (tc/replace-missing :mean :value 0)
-      ;; NOTE: Use of math/round here means that `:mean`s less than 0.5 will round to 0.
-      (tc/map-columns :rounded-mean [:mean] #(math/round %))
-      (tc/order-by [#(dsg-placement-category->order (:dsg-placement-category %))
-                    #(age-group->order (:age-group %))
-                    #(dsg-need->order (:need %))
-                    :calendar-year])))
+  (let [n-sims (-> category-stats meta :n-sims)]
+    (-> (tc/cross-join (tc/dataset [[:calendar-year ((comp sort distinct :calendar-year) category-stats)]])
+                       dsg-categories-ds)
+        (tc/left-join (-> category-stats
+                          (tc/select-columns (conj dsg-category-columns :calendar-year :sum :n-obs :n-sims :mean))
+                          (tc/set-dataset-name "category-stats"))
+                      (conj dsg-category-columns :calendar-year))
+        (tc/drop-columns #"^:category-stats\..*")
+        (tc/replace-missing [:sum :n-obs :mean] :value 0)
+        (tc/replace-missing :n-sims :value n-sims)
+        (vary-meta assoc :n-sims n-sims)
+        (tc/order-by [#(dsg-placement-category->order (:dsg-placement-category %))
+                      #(age-group->order (:age-group %))
+                      #(dsg-need->order (:need %))
+                      :calendar-year])
+        (tc/set-dataset-name "complete-dsg-category-stats"))))
 
 
 ;; Proof that _the mean of the sum is the sum of the means_,
@@ -375,6 +372,91 @@
 ;; when all are over the same denominator.
 
 
+;; Rounding
+;; 
+;; Most readers of the DSG Management Plan will expect the "Number of
+;; EHCPs" to be a whole number, even for the "estimated future
+;; projections". Therefore we need to consider rounding.
+;; 
+;; There are three options:
+;; 
+;; 1. Calculate the by-age-group breakdown, the by-need breakdowns and
+;;    the marginal total for each `:calendar-year` directly as the mean of
+;;    the corresponding breakdown/total over the simulations and round to
+;;    the nearest whole number.
+;;    - This gives marginal totals by `:calendar-year` for the
+;;      by-age-group and by-need summaries that match up, BUT
+;;    - The rounded numbers for a breakdown by-age-group or by-need may not add up to the
+;;      rounded total presented for the `:calendar-year` (even though the
+;;      underlying unrounded means do add up).
+;; 
+;; 2. Calculate the by-age-group and by-need breakdowns for each
+;;    `:calendar-year` directly as the mean of
+;;    the corresponding breakdown over the simulations and round to the
+;;    nearest whole number, but calculate the marginal `:calendar-year`
+;;    totals for the by-age-group and by-need breakdowns separately as
+;;    the sum of the rounded numbers in the breakdown.
+;;    - This will result in the rounded figures presented in each
+;;      breakdown for a given `:calendar-year` adding up to the marginal
+;;      `:calendar-year` total given for that breakdown, BUT
+;;    - The marginal `:calendar-year` totals for the by-age-group table
+;;      may differ from those calculated for the by-need summary.
+;; 
+;; 3. Calculate the mean number of EHCPs for each of the
+;;    DSG Management Plan category combinations {`:calendar-year` x
+;;    `:dsg-placement-category` x `:age-group` x `:need`}, round those
+;;    and then calculate the by-age-group and by-need breakdowns and
+;;    their marginal totals as roll-ups of those.
+;;    - This will result in marginal by `:calendar-year` totals for the
+;;      by-age-group-breakdown and by-need summaries that match up and
+;;      which are the sum of the figures given in each breakdown, BUT
+;;    - The overall total number of EHCPs calculated from these rounded
+;;      values _will_ differ to the overall mean calciulated directly
+;;      from the simulations (without rounding). Given the skew
+;;      distribution of the simulated numbers of EHCPs this approach
+;;      will likely under-estimate the number of EHCPs slightly.
+;; 
+;; Since option 3 under-estimates the total number of EHCPs and option 2
+;; can result in differences in the by `:calendar-year` marginal totals,
+;; we proceed with option 1. If the resulting rounded figures for a
+;; breakdown do not add up to the rounded `:calendar-year` total
+;; presented, then we suggest including a note that the whole numbers
+;; presented are rounded versions of underlying rational numbers which do
+;; add up.  (An alternative would be to manually adjust the rounding of
+;; one or more of the values in the breakdown to make it add up, ideally
+;; considering rounding (unrounded) values close to .5 the other way.)
+
+(comment
+  ;; Assess impact on overall number of EHCPs of using rounded DSG category means.
+  (-> complete-dsg-category-stats
+      (tc/group-by [:calendar-year])
+      (tc/aggregate {:mean             #(reduce + (                :mean %))
+                     :sum-rounded-mean #(reduce + (map math/round (:mean %)))})
+      (tc/map-columns :difference [:mean :sum-rounded-mean]  #(- %1 %2))
+      (tc/reorder-columns [:calendar-year :mean :sum-rounded-mean :difference])
+      (tc/rename-columns (merge friendly-column-names
+                                {:mean             "Total number of EHCPs (from unrounded means)"
+                                 :sum-rounded-mean "Total number of EHCPs (from rounded category means)"
+                                 :difference       "Difference"})))
+
+  ;; Assess impact on overall number of EHCPs of summing category `:mean`s
+  ;; vs. summing the `:sum`s and dividing by `:n-sims` due to propagation
+  ;; of rounding errors in binary representation of category `:mean`s.
+  (let [n-sims (-> complete-dsg-category-stats meta :n-sims)]
+    (-> complete-dsg-category-stats
+        (tc/group-by [:calendar-year])
+        (tc/aggregate {:mean #(reduce + (:mean %))
+                       :sum  #(reduce + (:sum  %))})
+        (tc/map-columns :mean-from-sums [:sum] #(/ % n-sims))
+        (tc/map-columns :difference [:mean :mean-from-sums]  #(- %1 %2))
+        (tc/reorder-columns [:calendar-year :sum :mean :mean-from-sums :difference])
+        (tc/rename-columns (merge friendly-column-names
+                                  {:mean           "Total number of EHCPs"
+                                   :mean-from-sums "Total number of EHCPs"
+                                   :difference     "Difference"}))))
+  )
+
+
 (defn dsg-plan
   "Given dataset of `complete-dsg-category-stats`, returns a dataset of the
   by-age-group and by-need breakdowns (with totals) required to complete the
@@ -395,45 +477,41 @@
    `:need-name`
    `:calendar-year`
    `:composite-key` - Composite key to facilitate use of single column lookup functions in spreadsheet applications.
-   `:num-ehcps` - Number (whole number) of EHCPs.
+   `:mean` - Estimated (rational) number of EHCPs, calculated as mean across simulations.
+   `:rounded-mean` - Estimated (whole) number of EHCPs, calculated by rounding `:mean`.
 
    As all the `:mean`s are calculated over same denominator (number of
    simulations), and as all the categories are non-overlapping, we can
    calculate the `:mean`s for combinations (roll-ups) of categories by
    summing the category `:mean`s, and will get the same answer as if we
    rolled up the `:transition-counts` in each simulation and then
-   calculated the mean.
-
-   However - as have to present numbers of EHCPs as integers - to avoid
-   discrepancies between breakdowns and totals due to rounding, we will
-   sum the `:rounded-mean`s to calculate the `:num-ehcps`. "
+   calculated the mean."
   [complete-dsg-category-stats]
-  (let [aggregate (fn [ds col] (tc/aggregate ds {:num-ehcps #(reduce + (% col))}))
+  (let [aggregate-sum (fn [ds col] (tc/aggregate ds {col #(reduce + (% col))}))
         age-total-label  "Total number by Age Group"
         need-total-label "Total number of EHCPs by primary need"
         by-age-group-breakdown (-> complete-dsg-category-stats
                                    (tc/group-by [:dsg-placement-category :calendar-year :age-group])
-                                   (aggregate :rounded-mean))
+                                   (aggregate-sum :mean))
         by-age-group-totals    (-> by-age-group-breakdown
                                    (tc/group-by [:dsg-placement-category :calendar-year])
-                                   (aggregate :num-ehcps)
+                                   (aggregate-sum :mean)
                                    (tc/add-column :age-group age-total-label))
         by-age                 (-> (tc/concat by-age-group-breakdown by-age-group-totals)
                                    (tc/add-column :breakdown :age-group)
-                                   (tc/add-column :breakdown-description "Number of EHCPs by age group")
-                                   )
+                                   (tc/add-column :breakdown-description "Number of EHCPs by age group"))
         by-need-breakdown      (-> complete-dsg-category-stats
                                    (tc/group-by [:dsg-placement-category :calendar-year :need])
-                                   (aggregate :rounded-mean))
+                                   (aggregate-sum :mean))
         by-need-totals         (-> by-need-breakdown ; Should be the same as by-age-group-totals
                                    (tc/group-by [:dsg-placement-category :calendar-year])
-                                   (aggregate :num-ehcps)
+                                   (aggregate-sum :mean)
                                    (tc/add-column :need need-total-label))
         by-need                (-> (tc/concat by-need-breakdown by-need-totals)
                                    (tc/add-column :breakdown :need)
-                                   (tc/add-column :breakdown-description "Number of EHCPs by primary need")
-                                   )]
+                                   (tc/add-column :breakdown-description "Number of EHCPs by primary need"))]
     (-> (tc/concat by-age by-need)
+        (tc/map-columns :rounded-mean [:mean] #(math/round %))
         (tc/map-columns :dsg-placement-category-name [:dsg-placement-category] #(dsg-placement-category->name %))
         (tc/map-columns :need-name [:need] #(dsg-need->name % %))
         (tc/map-columns :composite-key
@@ -449,27 +527,29 @@
                       #((assoc dsg-need->order  need-total-label 99) (:need      %))
                       :calendar-year])
         (tc/reorder-columns [:composite-key
-                             :num-ehcps
                              :dsg-placement-category :dsg-placement-category-name
                              :breakdown
                              :breakdown-description
                              :age-group
                              :need :need-name
-                             :calendar-year]))))
+                             :calendar-year
+                             :mean
+                             :rounded-mean]))))
 
 
 (defn extract-breakdown
-  "Extract DSG Management Plan table from `dsg-plan` dataset for specified
-   `dsg-placement-category` & `breakdown` (either `:age-group` or
-   `:need`) to be presented wide by `:calendar-year`. If `label-column`
-   is specified it is used to label the rows, otherwise the values of the
-   column specified in `breakdown` are used."
-  ([dsg-plan dsg-placement-category breakdown] (extract-breakdown dsg-plan dsg-placement-category breakdown breakdown))
-  ([dsg-plan dsg-placement-category breakdown label-column]
+  "Extract DSG Management Plan table from `dsg-plan` dataset for
+  specified `dsg-placement-category` & `breakdown` (either
+  `:age-group` or `:need`) to be presented wide by `:calendar-year`
+  using values from column `value-key`. If `label-column` is specified
+  it is used to label the rows, otherwise the values of the column
+  specified in `breakdown` are used."
+  ([dsg-plan dsg-placement-category breakdown value-key] (extract-breakdown dsg-plan dsg-placement-category breakdown value-key breakdown))
+  ([dsg-plan dsg-placement-category breakdown value-key label-column]
    (-> dsg-plan
        (tc/select-rows #(= dsg-placement-category (:dsg-placement-category %)))
        (tc/select-rows #(= breakdown (:breakdown %)))
-       (tc/select-columns [label-column :calendar-year :num-ehcps])
-       (tc/pivot->wider [:calendar-year] [:num-ehcps])
+       (tc/select-columns [label-column :calendar-year value-key])
+       (tc/pivot->wider [:calendar-year] [value-key])
        (tc/rename-columns friendly-column-names))))
 
