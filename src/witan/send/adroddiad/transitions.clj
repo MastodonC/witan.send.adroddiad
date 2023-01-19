@@ -55,12 +55,14 @@
 (defn movers-to
   ([simulation-results setting]
    (-> simulation-results
+       (tc/select-rows #(= setting (:setting-2 %)))
        (tc/select-rows mover?)
-       (tc/select-rows #(= setting (:setting-2 %)))))
+       (tc/map-columns :calendar-year [:calendar-year] #(inc %))))
   ([simulation-results]
    (-> simulation-results
        (tc/select-rows mover?)
-       (tc/select-rows #(= (:setting-2 %) (:setting-2 %))))))
+       (tc/select-rows #(= (:setting-2 %) (:setting-2 %)))
+       (tc/map-columns :calendar-year [:calendar-year] #(inc %)))))
 
 (defn movers-from
   ([simulation-results setting]
@@ -77,34 +79,34 @@
    (-> simulation-results
        (tc/select-rows #(= setting (:setting-2 %)))
        (tc/select-rows joiner?)
-       (tc/map-columns :calendar-year [:calendar-year] #(dec %))))
+       (tc/map-columns :calendar-year [:calendar-year] #(inc %))))
   ([simulation-results]
    (-> simulation-results
        (tc/select-rows #(= (:setting-2 %) (:setting-2 %)))
        (tc/select-rows joiner?)
-       (tc/map-columns :calendar-year [:calendar-year] #(dec %)))))
+       (tc/map-columns :calendar-year [:calendar-year] #(inc %)))))
 
 (defn joiners-movers
   ([simulation-results setting]
    (-> simulation-results
        (tc/select-rows #(= setting (:setting-2 %)))
-       (tc/select-rows (or mover? joiner?))
-       (tc/map-columns :calendar-year [:calendar-year] #(dec %))))
+       (tc/select-rows #(or (mover? %) (joiner? %)))
+       (tc/map-columns :calendar-year [:calendar-year] #(inc %))))
   ([simulation-results]
    (-> simulation-results
        (tc/select-rows #(= (:setting-2 %) (:setting-2 %)))
-       (tc/select-rows (or mover? joiner?))
-       (tc/map-columns :calendar-year [:calendar-year] #(dec %)))))
+       (tc/select-rows #(or (mover? %) (joiner? %)))
+       (tc/map-columns :calendar-year [:calendar-year] #(inc %)))))
 
 (defn leavers-movers
   ([simulation-results setting]
    (-> simulation-results
        (tc/select-rows #(= setting (:setting-1 %)))
-       (tc/select-rows (or mover? leaver?))))
+       (tc/select-rows #(or (mover? %) (leaver? %)))))
   ([simulation-results]
    (-> simulation-results
        (tc/select-rows #(= (:setting-1 %) (:setting-1 %)))
-       (tc/select-rows (or mover? leaver?)))))
+       (tc/select-rows #(or (mover? %) (leaver? %))))))
 
 (defn min-calendar-year [transitions]
   (dfn/reduce-min (:calendar-year transitions)))
