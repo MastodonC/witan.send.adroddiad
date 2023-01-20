@@ -18,13 +18,14 @@
 (def friendly-column-names
   "Map keyword column names to friendly names for display"
   {:dsg-placement-category      "DSG placement category abbreviation"
-   :dsg-placement-category-name "DSG placement category"
-   :age-group                   "Age Group"
+   :dsg-placement-category-label "DSG placement category"
+   :age-group                   "Age Group Abbreviation"
+   :age-group-label             "Age Group"
    :need                        "ECHP Primary Need Abbreviation"
-   :need-name                   "ECHP Primary Need"
+   :need-label                  "ECHP Primary Need"
    :calendar-year               "Calendar/census year"
-   :breakdown                   "Breakdown"
-   :breakdown-description       "Breakdown description"
+   :breakdown                   "Breakdown abbreviation"
+   :breakdown-label             "Breakdown"
    :composite-key               "Composite key"
    :mean                        "Estimated number of EHCPs (mean from simulations)"
    :rounded-mean                "Estimated (whole) number of EHCPs (rounded mean from simulations)"})
@@ -45,8 +46,8 @@
          (keys dsg-placement-category->order)))
 
 
-(def dsg-placement-category->name
-  "Map DSG Management Plan placement category abbreviation to corresponding short name"
+(def dsg-placement-category->label
+  "Map DSG Management Plan placement category abbreviation to corresponding short label"
   (into (sorted-map-by (fn [k1 k2] (compare [(get dsg-placement-category->order k1) k1]
                                             [(get dsg-placement-category->order k2) k2]))) 
         {"MmSoA"	"Mainstream Schools or Academies"
@@ -73,7 +74,7 @@
 
 ;;; Age groups 
 (def age-group->order
-  "Map DSG Management Plan age groups to presentation order"
+  "Map DSG Management Plan age group abbreviations to presentation order"
   (let [m {"Under 5"      0
            "Age 5 to 10"  5
            "Age 11 to 15" 11
@@ -84,11 +85,22 @@
 
 
 (def age-groups
-  "DSG Management plan age groups."
+  "DSG Management Plan age group abbreviations."
   (apply sorted-set-by
          (fn [k1 k2] (compare [(get age-group->order k1) k1]
                               [(get age-group->order k2) k2]))
          (keys age-group->order)))
+
+
+(def age-group->label
+  "Map DSG Management Plan age group abbreviation to corresponding name"
+  (into (sorted-map-by (fn [k1 k2] (compare [(get age-group->order k1) k1]
+                                            [(get age-group->order k2) k2])))
+        {"Under 5"      "Under 5"
+         "Age 5 to 10"  "Age 5 to 10"
+         "Age 11 to 15" "Age 11 to 15"
+         "Age 16 to 19" "Age 16 to 19"
+         "Age 20 to 25" "Age 20 to 25"}))
 
 
 (defn age-at-start-of-school-year->age-group
@@ -134,8 +146,8 @@
          (keys dsg-need->order)))
 
 
-(def dsg-need->name
-  "Map EHCP Primary Need abbreviations to names used in sheets of the DSG Management Plan"
+(def dsg-need->label
+  "Map EHCP Primary Need abbreviations to labels used in sheets of the DSG Management Plan"
   (into (sorted-map-by  (fn [k1 k2] (compare [(get dsg-need->order k1) k1]
                                              [(get dsg-need->order k2) k2])))
         {"ASD"  "Autistic Spectrum Disorder"
@@ -481,12 +493,13 @@
 
    Returned dataset has columns:
    - `:dsg-placement-category`
-   - `:dsg-placement-category-name`
+   - `:dsg-placement-category-label`
    - `:breakdown` - indicating whehter the row is for the by age-group or by need breakdown.
-   - `:breakdown-description` - description of the breakdown matching that in the DSG Management Plan template.
+   - `:breakdown-label` - description of the breakdown matching that in the DSG Management Plan template.
    - `:age-group`
+   - `:age-group-label`
    - `:need`
-   - `:need-name`
+   - `:need-label`
    - `:calendar-year`
    - `:composite-key` - Composite key to facilitate use of single column lookup functions in spreadsheet applications.
    - `:mean` - Estimated (rational) number of EHCPs, calculated as mean across simulations.
@@ -499,69 +512,65 @@
    rolled up the `:transition-counts` in each simulation and then
    calculated the mean."
   [complete-dsg-category-stats]
-  (let [aggregate-sum (fn [ds col] (tc/aggregate ds {col #(reduce + (% col))}))
-        age-total-label  "Total number by Age Group"
-        need-total-label "Total number of EHCPs by primary need"
+  (let [aggregate-sum          (fn [ds col] (tc/aggregate ds {col #(reduce + (% col))}))
+        age-group-total-label  "Total number by Age Group"
+        need-total-label       "Total number of EHCPs by primary need"
         by-age-group-breakdown (-> complete-dsg-category-stats
                                    (tc/group-by [:dsg-placement-category :calendar-year :age-group])
                                    (aggregate-sum :mean))
         by-age-group-totals    (-> by-age-group-breakdown
                                    (tc/group-by [:dsg-placement-category :calendar-year])
                                    (aggregate-sum :mean)
-                                   (tc/add-column :age-group age-total-label))
+                                   (tc/add-column :age-group "TOTAL"))
         by-age                 (-> (tc/concat by-age-group-breakdown by-age-group-totals)
                                    (tc/add-column :breakdown :age-group)
-                                   (tc/add-column :breakdown-description "Number of EHCPs by age group"))
+                                   (tc/add-column :breakdown-label "Number of EHCPs by age group"))
         by-need-breakdown      (-> complete-dsg-category-stats
                                    (tc/group-by [:dsg-placement-category :calendar-year :need])
                                    (aggregate-sum :mean))
         by-need-totals         (-> by-need-breakdown ; Should be the same as by-age-group-totals
                                    (tc/group-by [:dsg-placement-category :calendar-year])
                                    (aggregate-sum :mean)
-                                   (tc/add-column :need need-total-label))
+                                   (tc/add-column :need "TOTAL"))
         by-need                (-> (tc/concat by-need-breakdown by-need-totals)
                                    (tc/add-column :breakdown :need)
-                                   (tc/add-column :breakdown-description "Number of EHCPs by primary need"))]
+                                   (tc/add-column :breakdown-label "Number of EHCPs by primary need"))]
     (-> (tc/concat by-age by-need)
         (tc/map-columns :rounded-mean [:mean] #(math/round %))
-        (tc/map-columns :dsg-placement-category-name [:dsg-placement-category] #(dsg-placement-category->name %))
-        (tc/map-columns :need-name [:need] #(dsg-need->name % %))
+        (tc/map-columns :dsg-placement-category-label [:dsg-placement-category] #(dsg-placement-category->label %))
+        (tc/map-columns :age-group-label [:age-group] #((assoc age-group->label "TOTAL" age-group-total-label) % %))
+        (tc/map-columns :need-label      [:need     ] #((assoc dsg-need->label  "TOTAL" need-total-label     ) % %))
         (tc/map-columns :composite-key
-                        [:dsg-placement-category :breakdown-description :age-group :need-name :calendar-year]
-                        (fn [dsg-placement-category breakdown age-group need-name calendar-year]
+                        [:dsg-placement-category :breakdown-label :age-group-label :need-label :calendar-year]
+                        (fn [dsg-placement-category breakdown age-group-label need-label calendar-year]
                           (reduce #(str %1 ": " %2) [(dsg-placement-category->sheet-title dsg-placement-category)
                                                      breakdown
-                                                     (or age-group need-name)
+                                                     (or age-group-label need-label)
                                                      calendar-year])))
         (tc/order-by [#(dsg-placement-category->order (:dsg-placement-category %))
                       :breakdown
-                      #((assoc age-group->order age-total-label  99) (:age-group %))
-                      #((assoc dsg-need->order  need-total-label 99) (:need      %))
+                      #((assoc age-group->order "TOTAL" 99) (:age-group %))
+                      #((assoc dsg-need->order  "TOTAL" 99) (:need      %))
                       :calendar-year])
         (tc/reorder-columns [:composite-key
-                             :dsg-placement-category :dsg-placement-category-name
-                             :breakdown
-                             :breakdown-description
-                             :age-group
-                             :need :need-name
+                             :dsg-placement-category :dsg-placement-category-label
+                             :breakdown :breakdown-label
+                             :age-group :age-group-label
+                             :need :need-label
                              :calendar-year
-                             :mean
-                             :rounded-mean]))))
+                             :mean :rounded-mean]))))
 
 
 (defn extract-breakdown
   "Extract DSG Management Plan table from `dsg-plan` dataset for
-  specified `dsg-placement-category` & `breakdown` (either
-  `:age-group` or `:need`) to be presented wide by `:calendar-year`
-  using values from column `value-key`. If `label-column` is specified
-  it is used to label the rows, otherwise the values of the column
-  specified in `breakdown` are used."
-  ([dsg-plan dsg-placement-category breakdown value-key] (extract-breakdown dsg-plan dsg-placement-category breakdown value-key breakdown))
-  ([dsg-plan dsg-placement-category breakdown value-key label-column]
-   (-> dsg-plan
-       (tc/select-rows #(= dsg-placement-category (:dsg-placement-category %)))
-       (tc/select-rows #(= breakdown (:breakdown %)))
-       (tc/select-columns [label-column :calendar-year value-key])
-       (tc/pivot->wider [:calendar-year] [value-key])
-       (tc/rename-columns friendly-column-names))))
+   specified `dsg-placement-category` & `breakdown` (either `:age-group`
+   or `:need`) to be presented wide by `:calendar-year` using labels from
+   `label-column` and values from column `value-key`."
+  [dsg-plan dsg-placement-category breakdown value-key label-column]
+  (-> dsg-plan
+      (tc/select-rows #(= dsg-placement-category (:dsg-placement-category %)))
+      (tc/select-rows #(= breakdown (:breakdown %)))
+      (tc/select-columns [label-column :calendar-year value-key])
+      (tc/pivot->wider [:calendar-year] [value-key])
+      (tc/rename-columns friendly-column-names)))
 
