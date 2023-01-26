@@ -10,9 +10,19 @@
                       (apply str))]
     (-> census-data
         (tc/select-columns [:setting :academic-year])
-        (tc/group-by [:setting])
+        (tc/group-by (fn [row] (-> (:setting row)
+                                   (clojure.string/split #"_")
+                                   first)))
         (tc/aggregate {:min-academic-year #(reduce min (:academic-year %))
                        :max-academic-year #(reduce max (:academic-year %))})
+        (tc/rename-columns {:$group-name :simple-setting})
+        (tc/left-join (-> census-data
+                          (tc/select-columns [:setting])
+                          (tc/map-columns :simple-setting [:setting] #(-> %
+                                                                          (clojure.string/split #"_")
+                                                                          first))) :simple-setting)
+        (tc/select-columns [:setting :min-academic-year :max-academic-year])
+        (tc/unique-by)
         (tc/add-column :setting-group "All Settings")
         (tc/add-column :needs needs)
         (tc/add-column :setting->setting settings)
