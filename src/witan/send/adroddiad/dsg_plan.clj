@@ -131,7 +131,7 @@
 
 
 ;;; Needs
-(def dsg-need->order
+(def need->order
   "Map EHCP Primary Need abbreviations to presentation order for DSG Management Plan"
   (let [m (zipmap ["ASD" "HI" "MLD" "MSI" "PD" "PMLD" "SEMH" "SLCN" "SLD" "SPLD" "VI" "OTH" "UKN"] (iterate inc 1))]
     (into (sorted-map-by (fn [k1 k2] (compare [(get m k1) k1]
@@ -141,15 +141,15 @@
 (def needs
   "EHCP Primary Need abbreviations"
   (apply sorted-set-by
-         (fn [k1 k2] (compare [(get dsg-need->order k1) k1]
-                              [(get dsg-need->order k2) k2]))
-         (keys dsg-need->order)))
+         (fn [k1 k2] (compare [(get need->order k1) k1]
+                              [(get need->order k2) k2]))
+         (keys need->order)))
 
 
-(def dsg-need->label
+(def need->label
   "Map EHCP Primary Need abbreviations to labels used in sheets of the DSG Management Plan"
-  (into (sorted-map-by  (fn [k1 k2] (compare [(get dsg-need->order k1) k1]
-                                             [(get dsg-need->order k2) k2])))
+  (into (sorted-map-by  (fn [k1 k2] (compare [(get need->order k1) k1]
+                                             [(get need->order k2) k2])))
         {"ASD"  "Autistic Spectrum Disorder"
          "HI"   "Hearing Impairment"
          "MLD"  "Moderate Learning Difficulty"
@@ -356,7 +356,7 @@
         (vary-meta assoc :n-sims n-sims)
         (tc/order-by [#(dsg-placement-category->order (:dsg-placement-category %))
                       #(age-group->order (:age-group %))
-                      #(dsg-need->order (:need %))
+                      #(need->order      (:need      %))
                       :calendar-year])
         (tc/set-dataset-name "complete-dsg-category-stats"))))
 
@@ -539,7 +539,7 @@
         (tc/map-columns :rounded-mean [:mean] #(math/round %))
         (tc/map-columns :dsg-placement-category-label [:dsg-placement-category] #(dsg-placement-category->label %))
         (tc/map-columns :age-group-label [:age-group] #((assoc age-group->label "TOTAL" age-group-total-label) % %))
-        (tc/map-columns :need-label      [:need     ] #((assoc dsg-need->label  "TOTAL" need-total-label     ) % %))
+        (tc/map-columns :need-label      [:need     ] #((assoc need->label      "TOTAL" need-total-label     ) % %))
         (tc/map-columns :composite-key
                         [:dsg-placement-category :breakdown-label :age-group-label :need-label :calendar-year]
                         (fn [dsg-placement-category breakdown age-group-label need-label calendar-year]
@@ -550,7 +550,7 @@
         (tc/order-by [#(dsg-placement-category->order (:dsg-placement-category %))
                       :breakdown
                       #((assoc age-group->order "TOTAL" 99) (:age-group %))
-                      #((assoc dsg-need->order  "TOTAL" 99) (:need      %))
+                      #((assoc need->order      "TOTAL" 99) (:need      %))
                       :calendar-year])
         (tc/reorder-columns [:composite-key
                              :dsg-placement-category :dsg-placement-category-label
@@ -569,7 +569,7 @@
   [dsg-plan dsg-placement-category breakdown value-key label-column]
   (-> dsg-plan
       (tc/select-rows #(= dsg-placement-category (:dsg-placement-category %)))
-      (tc/select-rows #(= breakdown (:breakdown %)))
+      (tc/select-rows #(= breakdown              (:breakdown              %)))
       (tc/select-columns [label-column :calendar-year value-key])
       (tc/pivot->wider [:calendar-year] [value-key])
       (tc/rename-columns friendly-column-names)))
