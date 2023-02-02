@@ -287,7 +287,7 @@
   Must return a dataset with a single row per
   [`:calendar-year` `:dsg-placement-category` `:age-group` `:need`].
 
-  Supplied `census-transform` function can be supplied to process the
+  Supplied `census-transform` function is used to process the
   transitions after conversion to a census dataset to have the
   required `:calendar-year`s, `:dsg-placement-category`s,
   `:age-group`s, and `:need`s."
@@ -298,8 +298,9 @@
       (tc/map-columns :age-group [:academic-year] #(ncy->age-group %))
       summarise-census)) 
 
+
 (defn transform-simulations
-  "Apply function specified as `simulation-transform-f` value to each
+  "Apply function specified as `simulation-transform` to each
   dataset in lazy seq specified as `simulations-seq` value, returning
   a lazy seq of the processed datasets."
   [simulations-seq simulation-transform & {:keys [cpu-pool]
@@ -612,7 +613,7 @@
   (def cpu-pool (cp/threadpool (- (cp/ncpus) 2))) 
 
   ;;; Historical and simulated transitions
-  (def in-dir "Relative path to directory containing census and projections" "../output")
+  (def in-dir "Relative path to directory containing census and projections" "../input")
   (def historical-transitions-file (str in-dir "transitions.csv"))
   (def simulated-transitions-files (summary-report/simulated-transitions-files "baseline-results" in-dir))
 
