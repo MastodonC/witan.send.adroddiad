@@ -250,32 +250,31 @@
       (tc/aggregate {value-key #(dfn/sum (value-key %))})))
 
 
-(defn simulation-transform
+(defn simulation-transform-fn
   "Transform function applied to `ds` of transitions (with
-  `:transition-counts`) for a single simulation. Must return a dataset
-  with a single row per [`:calendar-year` `:dsg-placement-category`
-  `:age-group` `:need`].
+  `:transition-counts`) for a single simulation.
 
-  Optional `census-transform` function can be supplied to process the
+  Must return a dataset with a single row per
+  [`:calendar-year` `:dsg-placement-category` `:age-group` `:need`].
+
+  Supplied `census-transform` function can be supplied to process the
   transitions after conversion to a census dataset to have the
   required `:calendar-year`s, `:dsg-placement-category`s,
   `:age-group`s, and `:need`s."
-  ([ds] (simulation-transform ds identity))
-  ([ds census-transform]
-   (-> ds
-       at/transitions->census
-       (census-transform)
-       (tc/map-columns :age-group [:academic-year] #(ncy->age-group %))
-       summarise-census)))
-
+  [census-transform ds]
+  (-> ds
+      at/transitions->census
+      (census-transform)
+      (tc/map-columns :age-group [:academic-year] #(ncy->age-group %))
+      summarise-census)) 
 
 (defn transform-simulations
   "Apply function specified as `simulation-transform-f` value to each
   dataset in lazy seq specified as `simulations-seq` value, returning
   a lazy seq of the processed datasets."
-  [simulations-seq simulation-transform-f & {:keys [cpu-pool]
-                                             :or   {cpu-pool (java.util.concurrent.ForkJoinPool/commonPool)}}]
-  (lazy/upmap cpu-pool simulation-transform-f simulations-seq))
+  [simulations-seq simulation-transform & {:keys [cpu-pool]
+                                           :or   {cpu-pool (java.util.concurrent.ForkJoinPool/commonPool)}}]
+  (lazy/upmap cpu-pool simulation-transform simulations-seq))
 
 
 ;;; Functions to calculate summary stats across simulations
@@ -315,7 +314,7 @@
         (vary-meta assoc :n-sims n-sims))))
 
 
-(defn category-stats
+(defn transitions-files->category-stats
   "Given `historical-transitions-file` `simulated-transitions-files`,
   prepends history onto to each simulation, applies the
   `simulation-transform-f` to each and then summarises across
@@ -333,7 +332,7 @@
       (tc/set-dataset-name "category-stats")))
 
 
-(defn complete-dsg-category-stats
+(defn category-stats->complete-dsg-category-stats
   "Given dataset of `category-stats` with metadata including `:n-sims`
   and stats [`:sum` `:n-obs` `:n-sims` `:mean`] for the
   `:calendar-year` and DSG categories seen in the data, returns
@@ -481,7 +480,7 @@
   )
 
 
-(defn dsg-plan
+(defn complete-dsg-category-stats->dsg-plan
   "Given dataset of `complete-dsg-category-stats`, returns a dataset of the
   by-age-group and by-need breakdowns (with totals) required to complete the
   DSG Management Plan.
@@ -561,7 +560,7 @@
                              :mean :rounded-mean]))))
 
 
-(defn extract-breakdown
+(defn extract-dsg-plan-breakdown
   "Extract DSG Management Plan table from `dsg-plan` dataset for
    specified `dsg-placement-category` & `breakdown` (either `:age-group`
    or `:need`) to be presented wide by `:calendar-year` using labels from
@@ -574,3 +573,73 @@
       (tc/pivot->wider [:calendar-year] [value-key])
       (tc/rename-columns friendly-column-names)))
 
+
+(comment ; Example usage
+
+  ;;; CPU pool to use
+  (def cpu-pool (cp/threadpool (- (cp/ncpus) 2))) 
+
+  ;;; Historical and simulated transitions
+  (def in-dir "Relative path to directory containing census and projections" "../output")
+  (def historical-transitions-file (str in-dir "transitions.csv"))
+  (def simulated-transitions-files (summary-report/simulated-transitions-files "baseline-results" in-dir))
+
+  ;;; Setup census-transform
+  (def setting-category->dsg-placement-category
+    "Map LA specific setting category code to corresponding Mastodon C DSG
+     Management Plan 2022-23 (Version 5) placement category code"
+    {"Mm"       "MmSoA"
+     "MmI"      "MmSoA"
+     "AC"       "RPSEN"
+     "RBP"      "RPSEN"
+     "MdSS"     "MdSSA"
+     "EYS"      "NMISS"
+     "InSS"     "NMISS"
+     "Hosp"     "HspAP"
+     "PRU"      "HspAP"
+     "GFE"      "P16FE"
+     "P16OTHER" "P16FE"
+     "SP16"     "P16FE"
+     "T"        "P16FE"
+     "AWP"      "OTHER"
+     "EHE"      "OTHER"
+     "EOTAS"    "OTHER"
+     "NEET"     "OTHER"
+     "OTHER"    "OTHER"})
+
+  (defn census-transform
+    "Function to process the transitions for a single
+     simulation (including history), after conversion to a census
+     dataset, to have the required `:calendar-year`s,
+     `:dsg-placement-category`s, `:age-group`s, and `:need`s."
+    [ds]
+    (-> ds
+        (tc/map-columns :setting-category [:setting] #(re-find #"^[^_]+" %))
+        (tc/map-columns :dsg-placement-category [:setting-category] #(setting-category->dsg-placement-category % nil))
+        (tc/drop-rows (fn [row] (< 20 (:academic-year row))))))
+
+  ;;; Calculate category stats, complete for dsg-categories and summarise to dsg-plan dataset
+  (def category-stats
+    "Stats ([`:sum` `:n-obs` `:n-sims` `:mean`] of `:transition-count`)
+  for the [`:calendar-year` `:dsg-placement-category` `:age-group` `:need`]
+  groups seen in the historical & simulated data."
+    (transitions-files->category-stats historical-transitions-file
+                                       simulated-transitions-files
+                                       (partial simulation-transform-fn census-transform)
+                                       {:cpu-pool cpu-pool}))
+
+  (def complete-dsg-category-stats
+    "Stats ([`:sum` `:n-obs` `:n-sims` `:mean`] of `:transition-count`)
+  for the complete set of `:calendar-year`s and DSG categories
+  [`:dsg-placement-category` `:age-group` `:need`], required to
+  complete the DSG Management Plan.
+  Any non-DSG category combinations are dropped."
+    (category-stats->complete-dsg-category-stats category-stats))
+
+  (def dsg-plan
+    (complete-dsg-category-stats->dsg-plan complete-dsg-category-stats))
+
+  ;;; Extract individual breakdowns for display
+  (extract-dsg-plan-breakdown dsg-plan "MmSoA" :age-group :rounded-mean :age-group-label)
+
+  )
