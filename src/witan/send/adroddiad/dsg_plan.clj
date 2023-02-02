@@ -39,9 +39,9 @@
                                             "breakdown the row is for) and `calendar-year` "
                                             "(separated by ': ') to facilitate use of single column "
                                             "lookup functions in spreadsheet applications.")
-   :dsg-placement-category             "Mastodon C abbreviation for DSG placement category."
-   :dsg-placement-category-label       "Short label for DSG placement category."
-   :dsg-placement-category-sheet-title "DSG Management Plan template placement category sheet title."
+   :dsg-placement-category             "Mastodon C abbreviation for the DSG placement category."
+   :dsg-placement-category-label       "Short label for the DSG placement category."
+   :dsg-placement-category-sheet-title "DSG Management Plan template sheet title for this placement category."
    :breakdown                          "Indicates whether the row is for the 'age-group' or 'need' breakdown."
    :breakdown-label                    "Title of breakdown sub-table in the DSG Management Plan template."
    :age-group                          (str "Age group abbreviation, indicating the age group summarised in this row, "
@@ -59,6 +59,7 @@
                                             "January of academic-year YYYY-1 to YYYY.")
    :mean                               "Estimated number of EHCPs (mean from simulations)"
    :rounded-mean                       "Estimated (whole) number of EHCPs (rounded mean from simulations)"})
+
 
 ;;; Placement categories
 (def dsg-placement-category->order
