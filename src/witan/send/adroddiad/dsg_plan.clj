@@ -15,21 +15,50 @@
   [:dsg-placement-category :age-group :need])
 
 
-(def friendly-column-names
-  "Map keyword column names to friendly names for display"
-  {:dsg-placement-category      "DSG placement category abbreviation"
-   :dsg-placement-category-label "DSG placement category"
-   :age-group                   "Age Group Abbreviation"
-   :age-group-label             "Age Group"
-   :need                        "ECHP Primary Need Abbreviation"
-   :need-label                  "ECHP Primary Need"
-   :calendar-year               "Calendar/census year"
-   :breakdown                   "Breakdown abbreviation"
-   :breakdown-label             "Breakdown"
-   :composite-key               "Composite key"
-   :mean                        "Estimated number of EHCPs (mean from simulations)"
-   :rounded-mean                "Estimated (whole) number of EHCPs (rounded mean from simulations)"})
+(def column-names->labels
+  "Map keyword column names to labels for display"
+  {:composite-key                      "Composite key"
+   :dsg-placement-category             "DSG placement category abbreviation"
+   :dsg-placement-category-label       "DSG placement category"
+   :dsg-placement-category-sheet-title "DSG Management Plan template placement category sheet title"
+   :breakdown                          "Breakdown abbreviation"
+   :breakdown-label                    "Breakdown"
+   :age-group                          "Age group abbreviation"
+   :age-group-label                    "Age group"
+   :need                               "ECHP primary need abbreviation"
+   :need-label                         "ECHP primary need"
+   :calendar-year                      "Calendar/census year"
+   :mean                               "Estimated number of EHCPs (mean)"
+   :rounded-mean                       "Estimated number of EHCPs (rounded mean)"})
 
+(def column-names->descriptions
+  "Map keyword column names to descriptions"
+  {:composite-key                      (str "Composite key formed as concatenation of "
+                                            "`dsg-placement-category-sheet-title`, `breakdown-label`, "
+                                            "`age-group-label` or `need-label` (depending on which "
+                                            "breakdown the row is for) and `calendar-year` "
+                                            "(separated by ': ') to facilitate use of single column "
+                                            "lookup functions in spreadsheet applications.")
+   :dsg-placement-category             "Mastodon C abbreviation for DSG placement category."
+   :dsg-placement-category-label       "Short label for DSG placement category."
+   :dsg-placement-category-sheet-title "DSG Management Plan template placement category sheet title."
+   :breakdown                          "Indicates whether the row is for the 'age-group' or 'need' breakdown."
+   :breakdown-label                    "Title of breakdown sub-table in the DSG Management Plan template."
+   :age-group                          (str "Age group abbreviation, indicating the age group summarised in this row, "
+                                            "with 'TOTAL' for the row containing the total over all age groups. "
+                                            "Only populated for rows in the age-group breakdown.")
+   :age-group-label                    (str "Age group (and total), as labelled in the DSG Management Plan template. "
+                                            "Only populated for rows in the age-group breakdown.")
+   :need                               (str "ECHP Primary Need abbreviation, indicating the Need summarised in this row, "
+                                            "with 'TOTAL' for the row containing the total over all needs. "
+                                            "Only populated for rows in the need breakdown.")
+   :need-label                         (str "ECHP Primary Need (and total) as labelled in the DSG Management Plan template. "
+                                            "Only populated for rows in the need breakdown.")
+   :calendar-year                      (str "Calendar/census year: Projections are from SEN2 returns "
+                                            "which are made in January, so year YYYY corresponds to "
+                                            "January of academic-year YYYY-1 to YYYY.")
+   :mean                               "Estimated number of EHCPs (mean from simulations)"
+   :rounded-mean                       "Estimated (whole) number of EHCPs (rounded mean from simulations)"})
 
 ;;; Placement categories
 (def dsg-placement-category->order
@@ -457,7 +486,7 @@
                      :sum-rounded-mean #(reduce + (map math/round (:mean %)))})
       (tc/map-columns :difference [:mean :sum-rounded-mean]  #(- %1 %2))
       (tc/reorder-columns [:calendar-year :mean :sum-rounded-mean :difference])
-      (tc/rename-columns (merge friendly-column-names
+      (tc/rename-columns (merge column-names->labels
                                 {:mean             "Total number of EHCPs (from unrounded means)"
                                  :sum-rounded-mean "Total number of EHCPs (from rounded category means)"
                                  :difference       "Difference"})))
@@ -473,7 +502,7 @@
         (tc/map-columns :mean-from-sums [:sum] #(/ % n-sims))
         (tc/map-columns :difference [:mean :mean-from-sums]  #(- %1 %2))
         (tc/reorder-columns [:calendar-year :sum :mean :mean-from-sums :difference])
-        (tc/rename-columns (merge friendly-column-names
+        (tc/rename-columns (merge column-names->labels
                                   {:mean           "Total number of EHCPs"
                                    :mean-from-sums "Total number of EHCPs"
                                    :difference     "Difference"}))))
@@ -491,16 +520,17 @@
   `:calendar-year`, with the corresponding `:rounded-mean`.
 
    Returned dataset has columns:
+   - `:composite-key` - Composite key to facilitate use of single column lookup functions in spreadsheet applications.
    - `:dsg-placement-category`
    - `:dsg-placement-category-label`
-   - `:breakdown` - indicating whehter the row is for the by age-group or by need breakdown.
+   - `:dsg-placement-category-sheet-title`
+   - `:breakdown` - indicating whether the row is for the by age-group or by need breakdown.
    - `:breakdown-label` - description of the breakdown matching that in the DSG Management Plan template.
    - `:age-group`
    - `:age-group-label`
    - `:need`
    - `:need-label`
    - `:calendar-year`
-   - `:composite-key` - Composite key to facilitate use of single column lookup functions in spreadsheet applications.
    - `:mean` - Estimated (rational) number of EHCPs, calculated as mean across simulations.
    - `:rounded-mean` - Estimated (whole) number of EHCPs, calculated by rounding `:mean`.
 
@@ -536,13 +566,14 @@
                                    (tc/add-column :breakdown-label "Number of EHCPs by primary need"))]
     (-> (tc/concat by-age by-need)
         (tc/map-columns :rounded-mean [:mean] #(math/round %))
-        (tc/map-columns :dsg-placement-category-label [:dsg-placement-category] #(dsg-placement-category->label %))
+        (tc/map-columns :dsg-placement-category-label       [:dsg-placement-category] #(dsg-placement-category->label %))
+        (tc/map-columns :dsg-placement-category-sheet-title [:dsg-placement-category] #(dsg-placement-category->sheet-title %))
         (tc/map-columns :age-group-label [:age-group] #((assoc age-group->label "TOTAL" age-group-total-label) % %))
         (tc/map-columns :need-label      [:need     ] #((assoc need->label      "TOTAL" need-total-label     ) % %))
         (tc/map-columns :composite-key
-                        [:dsg-placement-category :breakdown-label :age-group-label :need-label :calendar-year]
-                        (fn [dsg-placement-category breakdown age-group-label need-label calendar-year]
-                          (reduce #(str %1 ": " %2) [(dsg-placement-category->sheet-title dsg-placement-category)
+                        [:dsg-placement-category-sheet-title :breakdown-label :age-group-label :need-label :calendar-year]
+                        (fn [dsg-placement-category-sheet-title breakdown age-group-label need-label calendar-year]
+                          (reduce #(str %1 ": " %2) [dsg-placement-category-sheet-title
                                                      breakdown
                                                      (or age-group-label need-label)
                                                      calendar-year])))
@@ -552,7 +583,7 @@
                       #((assoc need->order      "TOTAL" 99) (:need      %))
                       :calendar-year])
         (tc/reorder-columns [:composite-key
-                             :dsg-placement-category :dsg-placement-category-label
+                             :dsg-placement-category :dsg-placement-category-label :dsg-placement-category-sheet-title
                              :breakdown :breakdown-label
                              :age-group :age-group-label
                              :need :need-label
@@ -571,7 +602,7 @@
       (tc/select-rows #(= breakdown              (:breakdown              %)))
       (tc/select-columns [label-column :calendar-year value-key])
       (tc/pivot->wider [:calendar-year] [value-key])
-      (tc/rename-columns friendly-column-names)))
+      (tc/rename-columns column-names->labels)))
 
 
 (comment ; Example usage
