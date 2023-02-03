@@ -10,10 +10,10 @@
             [witan.send.adroddiad.transitions :as at]))
 
 
+;;; # dsg-plan dataset columns, labels and descriptions
 (def dsg-category-columns
   "Vector of names of DSG category columns"
   [:dsg-placement-category :age-group :need])
-
 
 (def column-names->labels
   "Map keyword column names to labels for display"
@@ -61,20 +61,19 @@
    :rounded-mean                       "Estimated (whole) number of EHCPs (rounded mean from simulations)"})
 
 
-;;; Placement categories
+;;; # Category definitions
+;;; ## Placement categories
 (def dsg-placement-category->order
   "Map DSG Management Plan placement category abbreviations to presentation order"
   (let [m (zipmap ["MmSoA" "RPSEN" "MdSSA" "NMISS" "HspAP" "P16FE" "OTHER"] (iterate inc 1))]
     (into (sorted-map-by (fn [k1 k2] (compare [(get m k1) k1]
                                               [(get m k2) k2]))) m)))
 
-
 (def dsg-placement-categories
   (apply sorted-set-by
          (fn [k1 k2] (compare [(get dsg-placement-category->order k1) k1]
                               [(get dsg-placement-category->order k2) k2]))
          (keys dsg-placement-category->order)))
-
 
 (def dsg-placement-category->label
   "Map DSG Management Plan placement category abbreviation to corresponding short label"
@@ -88,7 +87,6 @@
          "P16FE"	"Post 16 and Further Education"
          "OTHER"	"Other Placements or Direct Payments"}))
 
-
 (def dsg-placement-category->sheet-title
   "Map DSG Management Plan placement category abbreviation to corresponding sheet title"
   (into (sorted-map-by (fn [k1 k2] (compare [(get dsg-placement-category->order k1) k1]
@@ -101,8 +99,7 @@
          "P16FE"	"Post 16 and further education (FE) placements"
          "OTHER"	"Other placements or direct payments"}))
 
-
-;;; Age groups 
+;;; ## Age groups
 (def age-group->order
   "Map DSG Management Plan age group abbreviations to presentation order"
   (let [m {"Under 5"      0
@@ -113,14 +110,12 @@
     (into (sorted-map-by (fn [k1 k2] (compare [(get m k1) k1]
                                               [(get m k2) k2]))) m)))
 
-
 (def age-groups
   "DSG Management Plan age group abbreviations."
   (apply sorted-set-by
          (fn [k1 k2] (compare [(get age-group->order k1) k1]
                               [(get age-group->order k2) k2]))
          (keys age-group->order)))
-
 
 (def age-group->label
   "Map DSG Management Plan age group abbreviation to corresponding name"
@@ -131,7 +126,6 @@
          "Age 11 to 15" "Age 11 to 15"
          "Age 16 to 19" "Age 16 to 19"
          "Age 20 to 25" "Age 20 to 25"}))
-
 
 (defn age-at-start-of-school-year->age-group
   "Age groups for DSG management plan
@@ -150,7 +144,6 @@
     (<= 20 age 25) "Age 20 to 25"
     :else          nil))
 
-
 (def ncy->age-group
   "Map National Curriculum Year to DSG Management Plan age group."
   (into (sorted-map)
@@ -160,13 +153,12 @@
              ncy/ncys)))
 
 
-;;; Needs
+;;; ## Needs
 (def need->order
   "Map EHCP Primary Need abbreviations to presentation order for DSG Management Plan"
   (let [m (zipmap ["ASD" "HI" "MLD" "MSI" "PD" "PMLD" "SEMH" "SLCN" "SLD" "SPLD" "VI" "OTH" "UKN"] (iterate inc 1))]
     (into (sorted-map-by (fn [k1 k2] (compare [(get m k1) k1]
                                               [(get m k2) k2]))) m)))
-
 
 (def needs
   "EHCP Primary Need abbreviations"
@@ -174,7 +166,6 @@
          (fn [k1 k2] (compare [(get need->order k1) k1]
                               [(get need->order k2) k2]))
          (keys need->order)))
-
 
 (def need->label
   "Map EHCP Primary Need abbreviations to labels used in sheets of the DSG Management Plan"
@@ -195,7 +186,7 @@
          "UKN"  "SEN support but no specialist assessment of type of need"}))
 
 
-;;; DSG category combinations
+;;; ## DSG category combinations
 (def dsg-categories-ds
   "Dataset containing the combinations of `:dsg-placement-category`
   `:age-group` and `:need` needed to complete the DSG Management Plan"
@@ -207,14 +198,13 @@
       (tc/set-dataset-name "DSG-Categories")))
 
 
-;;; Functions to assemble transitions (historical and simulated) for analysis
+;;; # Functions to assemble transitions (historical and simulated) for analysis
 (defn historical-transitions-file->ds
   "Returns a dataset derived from the historical transitions read
   from file `historical-transitions-file` processed into the form of
   the simulated transitions."
   [historical-transitions-file]
   (summary-report/historical-transitions->simulated-counts historical-transitions-file))
-
 
 (defn simulated-transitions-files->seq
   "Returns a lazy sequence of n datasets of simulated transitions read
@@ -226,7 +216,6 @@
       :or   {cpu-pool (java.util.concurrent.ForkJoinPool/commonPool)}}]
   (sequence cat (lazy/upmap cpu-pool (partial summary-report/read-and-split :simulation) simulated-transitions-files)))
 
-
 (defn transitions-seq
   "Prepends `historical-transitions-ds` onto each dataset in (lazy)
    sequence `simulated-transitions-seq`.  Note that the values of a
@@ -235,7 +224,6 @@
    `simulated-transitions-seq`."
   [historical-transitions-ds simulated-transitions-seq]
   (map (fn [ds] (tc/concat historical-transitions-ds ds)) simulated-transitions-seq))
-
 
 (defn transitions-files->transitions-seq
   "Returns a lazy sequence of n datasets of historical and simulated
@@ -267,7 +255,7 @@
         (conj $ historical-transitions-ds))))
 
 
-;;; Functions to transform and summarise the individual simulation datasets
+;;; # Functions to transform and summarise the individual simulation datasets
 (defn summarise-census
   "Summarise `census` dataset for DSG plan.
   Completion is not required at this point as only calculating sums. "
@@ -279,25 +267,23 @@
       (tc/group-by domain-keys)
       (tc/aggregate {value-key #(dfn/sum (value-key %))})))
 
-
-(defn simulation-transform-fn
+(defn simulation-transform-f
   "Transform function applied to `ds` of transitions (with
   `:transition-counts`) for a single simulation.
 
   Must return a dataset with a single row per
   [`:calendar-year` `:dsg-placement-category` `:age-group` `:need`].
 
-  Supplied `census-transform` function is used to process the
+  Supplied `census-transform-f` function is used to process the
   transitions after conversion to a census dataset to have the
   required `:calendar-year`s, `:dsg-placement-category`s,
   `:age-group`s, and `:need`s."
-  [census-transform ds]
+  [census-transform-f ds]
   (-> ds
       at/transitions->census
-      (census-transform)
+      (census-transform-f)
       (tc/map-columns :age-group [:academic-year] #(ncy->age-group %))
       summarise-census)) 
-
 
 (defn transform-simulations
   "Apply function specified as `simulation-transform` to each
@@ -308,7 +294,7 @@
   (lazy/upmap cpu-pool simulation-transform simulations-seq))
 
 
-;;; Functions to calculate summary stats across simulations
+;;; # Functions to calculate summary stats across simulations
 (defn summarise-simulations
   "Summarise column specified as value of `value-key` over lazy seq of
   simulation datasets `simulations-seq` within groups specified (as
@@ -344,7 +330,6 @@
         (tc/map-columns :mean [:sum] #(/ %1 n-sims)) ; Assumes that `value-key`s not observed would be 0.
         (vary-meta assoc :n-sims n-sims))))
 
-
 (defn transitions-files->category-stats
   "Given `historical-transitions-file` `simulated-transitions-files`,
   prepends history onto to each simulation, applies the
@@ -361,7 +346,6 @@
       (transform-simulations simulation-transform-f {:cpu-pool cpu-pool})
       (summarise-simulations)
       (tc/set-dataset-name "category-stats")))
-
 
 (defn category-stats->complete-dsg-category-stats
   "Given dataset of `category-stats` with metadata including `:n-sims`
@@ -391,8 +375,9 @@
         (tc/set-dataset-name "complete-dsg-category-stats"))))
 
 
-;; Proof that _the mean of the sum is the sum of the means_,
-;; when all are over a common denominator.
+;;; # Functions to roll-up the complete-dsg-category-stats to the age-group and need breakdowns of the dsg-plan
+
+;;; ## Proof that _the mean of the sum is the sum of the means_, when all are over a common denominator.
 ;; (Using LaTeX mathematical notation.)
 ;;
 ;; Consider two categories X & Y with \# CYP $x_i$ & $y_i$ where
@@ -426,7 +411,7 @@
 ;; when all are over the same denominator.
 
 
-;; Rounding
+;;; ## Rounding
 ;; 
 ;; Most readers of the DSG Management Plan will expect the "Number of
 ;; EHCPs" to be a whole number, even for the "estimated future
@@ -510,7 +495,6 @@
                                    :difference     "Difference"}))))
   )
 
-
 (defn complete-dsg-category-stats->dsg-plan
   "Given dataset of `complete-dsg-category-stats`, returns a dataset of the
   by-age-group and by-need breakdowns (with totals) required to complete the
@@ -593,6 +577,7 @@
                              :mean :rounded-mean]))))
 
 
+;;; # Functions to manipulate the dsg-plan dataset for display
 (defn extract-dsg-plan-breakdown
   "Extract DSG Management Plan table from `dsg-plan` dataset for
    specified `dsg-placement-category` & `breakdown` (either `:age-group`
@@ -607,6 +592,7 @@
       (tc/rename-columns column-names->labels)))
 
 
+;;; # Example usage
 (comment ; Example usage
 
   ;;; CPU pool to use
@@ -617,7 +603,7 @@
   (def historical-transitions-file (str in-dir "transitions.csv"))
   (def simulated-transitions-files (summary-report/simulated-transitions-files "baseline-results" in-dir))
 
-  ;;; Setup census-transform
+  ;;; Setup census-transform-f
   (def setting-category->dsg-placement-category
     "Map LA specific setting category code to corresponding Mastodon C DSG
      Management Plan 2022-23 (Version 5) placement category code"
@@ -640,7 +626,7 @@
      "NEET"     "OTHER"
      "OTHER"    "OTHER"})
 
-  (defn census-transform
+  (defn census-transform-f
     "Function to process the transitions for a single
      simulation (including history), after conversion to a census
      dataset, to have the required `:calendar-year`s,
@@ -658,7 +644,7 @@
   groups seen in the historical & simulated data."
     (transitions-files->category-stats historical-transitions-file
                                        simulated-transitions-files
-                                       (partial simulation-transform-fn census-transform)
+                                       (partial simulation-transform-f census-transform-f)
                                        {:cpu-pool cpu-pool}))
 
   (def complete-dsg-category-stats
