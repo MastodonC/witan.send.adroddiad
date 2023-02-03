@@ -61,7 +61,10 @@
       (parquet/parquet->ds {:key-fn keyword})
       (tc/group-by [ds-split-key] {:result-type :as-seq})))
 
-(defn historical-transitions->simulated-counts [transition-file]
+(defn historical-transitions->simulated-counts
+  "Aggregate historical transitions from `transition-file` into dataset
+  of the form used for simulated transitions, with `:transition-counts`"
+  [transition-file]
   (-> transition-file
       (tc/dataset {:key-fn keyword})
       (tc/group-by [:calendar-year
