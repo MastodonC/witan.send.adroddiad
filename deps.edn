@@ -1,5 +1,7 @@
 {:paths ["src" "resources"]
  :deps  {org.clojure/clojure                        {:mvn/version "1.11.1"}
+         mastodonc/gias                             {:git/url "https://github.com/MastodonC/witan.gias.git"
+                                                     :sha     "2875096f1b1bd8b9de2d92962a44e842436eca9c"}
          mastodonc/kixi.plot                        {:git/url "https://github.com/MastodonC/kixi.plot.git"
                                                      :sha     "0ff3ef59a584a337883f165b57785c65815a49db"}
          mastodonc/kixi.large                       {:git/url "https://github.com/MastodonC/kixi.large.git"
