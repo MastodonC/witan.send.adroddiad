@@ -20,7 +20,8 @@
     (ay/key-stage-3 y) (apply max ay/key-stage-3)
     (ay/key-stage-4 y) (apply max ay/key-stage-4)
     (ay/key-stage-5 y) (apply max ay/key-stage-5)
-    (ay/ncy-15+ y) (apply max ay/ncy-15+)))
+    (ay/ncy-15+ y) (apply max ay/ncy-15+)
+    (< (apply max ay/ncy-15+) y) (apply max ay/ncy-15+)))
 
 (defn candidate-valid-states [census-data]
   (let [needs (->> (into (sorted-set) (:need census-data))
