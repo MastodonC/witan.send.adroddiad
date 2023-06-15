@@ -29,14 +29,15 @@
                    (apply str))
         settings (->> (into (sorted-set) (:setting census-data))
                       (interpose \,)
-                      (apply str))]
+                      (apply str))
+        ncys (into (sorted-set) (:academic-year census-data))]
     (-> census-data
         (tc/select-columns [:setting :academic-year])
         (tc/group-by (fn [row] (-> (:setting row)
                                    (clojure.string/split #"_")
                                    first)))
-        (tc/aggregate {:min-academic-year #(keystage-min-ay (reduce min (:academic-year %)))
-                       :max-academic-year #(keystage-max-ay (reduce max (:academic-year %)))})
+        (tc/aggregate {:min-academic-year #(max (apply min ncys) (keystage-min-ay (reduce min (:academic-year %))))
+                       :max-academic-year #(min (apply max ncys) (keystage-max-ay (reduce max (:academic-year %))))})
         (tc/rename-columns {:$group-name :simple-setting})
         (tc/left-join (-> census-data
                           (tc/select-columns [:setting])
