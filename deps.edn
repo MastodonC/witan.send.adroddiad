@@ -1,7 +1,8 @@
 {:paths ["src" "resources"]
  :deps  {org.clojure/clojure                        {:mvn/version "1.11.1"}
-         mastodonc/gias                             {:git/url "https://github.com/MastodonC/witan.gias.git"
-                                                     :sha     "2875096f1b1bd8b9de2d92962a44e842436eca9c"}
+         mastodonc/gias                             {:git/url    "https://github.com/MastodonC/witan.gias.git"
+                                                     :sha        "2875096f1b1bd8b9de2d92962a44e842436eca9c"
+                                                     :exclusions [techascent/tech.ml.dataset scicloj/tablecloth]}
          mastodonc/kixi.plot                        {:git/url "https://github.com/MastodonC/kixi.plot.git"
                                                      :sha     "e1c744daddd248ad01c673eab4bfa6fb01d5f7e6"}
          mastodonc/kixi.large                       {:git/url "https://github.com/MastodonC/kixi.large.git"
