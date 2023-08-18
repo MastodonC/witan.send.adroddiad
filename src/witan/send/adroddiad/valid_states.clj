@@ -2,25 +2,21 @@
   (:require [tablecloth.api :as tc]
             [witan.send.domain.academic-years :as ay]))
 
-(defn keystage-min-ay [y]
+(defn phase-min-ay [y]
   (cond
-    (ay/early-years y) (apply min ay/early-years)
-    (ay/key-stage-1 y) (apply min ay/key-stage-1)
-    (ay/key-stage-2 y) (apply min ay/key-stage-2)
-    (ay/key-stage-3 y) (apply min ay/key-stage-3)
-    (ay/key-stage-4 y) (apply min ay/key-stage-4)
-    (ay/key-stage-5 y) (apply min ay/key-stage-5)
-    (ay/ncy-15+ y) (apply min ay/ncy-15+)))
+    (ay/nursery y) (apply min ay/nursery)
+    (ay/primary-school y) (apply min ay/primary-school)
+    (ay/secondary-school y) (apply min ay/secondary-school)
+    (ay/post-16 y) (apply min ay/post-16)
+    (ay/post-19 y) (apply min ay/post-19)))
 
-(defn keystage-max-ay [y]
+(defn phase-max-ay [y]
   (cond
-    (ay/early-years y) (apply max ay/early-years)
-    (ay/key-stage-1 y) (apply max ay/key-stage-1)
-    (ay/key-stage-2 y) (apply max ay/key-stage-2)
-    (ay/key-stage-3 y) (apply max ay/key-stage-3)
-    (ay/key-stage-4 y) (apply max ay/key-stage-4)
-    (ay/key-stage-5 y) (apply max ay/key-stage-5)
-    (ay/ncy-15+ y) (apply max ay/ncy-15+)))
+    (ay/nursery y) (apply max ay/nursery)
+    (ay/primary-school y) (apply max ay/primary-school)
+    (ay/secondary-school y) (apply max ay/secondary-school)
+    (ay/post-16 y) (apply max ay/post-16)
+    (ay/post-19 y) (apply max ay/post-19)))
 
 (defn candidate-valid-states [census-data]
   (let [needs (->> (into (sorted-set) (:need census-data))
@@ -34,8 +30,8 @@
         (tc/group-by (fn [row] (-> (:setting row)
                                    (clojure.string/split #"_")
                                    first)))
-        (tc/aggregate {:min-academic-year #(keystage-min-ay (reduce min (:academic-year %)))
-                       :max-academic-year #(keystage-max-ay (reduce max (:academic-year %)))})
+        (tc/aggregate {:min-academic-year #(phase-min-ay (reduce min (:academic-year %)))
+                       :max-academic-year #(phase-max-ay (reduce max (:academic-year %)))})
         (tc/rename-columns {:$group-name :simple-setting})
         (tc/left-join (-> census-data
                           (tc/select-columns [:setting])
