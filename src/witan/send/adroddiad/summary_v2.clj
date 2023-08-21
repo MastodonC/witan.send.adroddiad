@@ -1,73 +1,18 @@
 (ns witan.send.adroddiad.summary-v2
   (:require
-   [clojure.java.io :as io]
    [clojure.math :as maths]
    [net.cgrand.xforms :as x]
    [tablecloth.api :as tc]
-   [tech.v3.datatype.functional :as dfn]
    [ham-fisted.api :as hf]
    [ham-fisted.reduce :as hf-reduce]
-   [tech.v3.dataset.reductions :as ds-reduce]
-   [tech.v3.libs.parquet :as parquet]))
-
-
-(defn sorted-file-list [directory]
-  (-> directory
-      io/file
-      .listFiles
-      sort))
-
-(defn simulated-transitions-files [prefix directory]
-  (into []
-        (comp
-         (filter #(re-find (re-pattern (format "%s-[0-9]+\\.parquet$" prefix)) (.getName %)))
-         (map #(.getPath %)))
-        (sorted-file-list directory)))
-
-(defn read-and-split [ds-split-key file]
-  (-> file
-      (parquet/parquet->ds {:key-fn keyword})
-      (tc/group-by [ds-split-key] {:result-type :as-seq})))
-
-(defn files->ds-vec [file-names]
-  (hf-reduce/preduce
-   ;; init-val-fn
-   (fn [] [])
-   ;; rfn
-   (fn [acc pqt-file]
-     (into acc (read-and-split :simulation pqt-file)))
-   ;; merge-fn
-   (fn [m1 m2]
-     (into m1 m2))
-   {:min-n 2 :ordered? false}
-   (hf/vec file-names)))
-
-(defn min-calendar-year [transitions]
-  (dfn/reduce-min (:calendar-year transitions)))
-
-(defn transitions->census
-  ([transitions start-year]
-   (let [year-1-census (-> transitions
-                           (tc/select-rows #(= (:calendar-year %) start-year))
-                           (tc/drop-columns [:setting-2 :need-2 :academic-year-2])
-                           (tc/rename-columns {:setting-1 :setting
-                                               :need-1 :need
-                                               :academic-year-1 :academic-year}))]
-     (-> transitions
-         (tc/map-columns :calendar-year-2 [:calendar-year] #(inc %))
-         (tc/drop-columns [:calendar-year :setting-1 :need-1 :academic-year-1])
-         (tc/rename-columns {:calendar-year-2 :calendar-year
-                             :setting-2 :setting
-                             :need-2 :need
-                             :academic-year-2 :academic-year})
-         (tc/concat year-1-census)
-         (tc/drop-columns [:calendar-year-2])
-         (tc/drop-rows #(= "NONSEND" (:setting %))))))
-  ([transitions]
-   (transitions->census transitions (min-calendar-year transitions))))
+   [tech.v3.dataset.reductions :as ds-reduce]))
 
 ;; FIXME: This should be merged with summarise-simulations in the rfn and merge-fn for v3
-(defn transform-simulations [{:keys [simulation-transform-fn]} ds-vec]
+(defn transform-simulations 
+  "This takes a simulation transformation fn and retuns a vector of
+  transformed simulation datasets with the maximum simulation number
+  as a piece of metadata"
+  [{:keys [simulation-transform-fn]} ds-vec]
   (hf-reduce/preduce
    ;; init-val-fn
    (fn [] (vary-meta [] assoc :simulation -1))
@@ -106,12 +51,6 @@
        ds-vec)
       (tc/separate-column :observations :infer identity)
       (vary-meta assoc :simulation (-> ds-vec meta :simulation))))
-
-(defn sketch-completed-simulation-stats [m observations]
-  (let [num-missing-0s (- (-> m :simulation inc) (count observations))]
-    (dfn/descriptive-statistics
-     #{:median :quartile-1 :quartile-3 :max :min :mean :standard-deviation :n-elems}
-     (into observations (repeat num-missing-0s 0)))))
 
 (defn quantile-for-sorted
   "Return `q`th quantile (q*100 th percentile) for a _complete_ & _sorted_
