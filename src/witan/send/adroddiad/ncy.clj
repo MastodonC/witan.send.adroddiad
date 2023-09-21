@@ -14,7 +14,8 @@
 
 ;;; # Age at the start of the school year
 (defn age-at-start-of-school-year-for-census-year
-  "Age on 31st August on year prior to `cy`, in completed years, for child born in month `dob-month` of year `dob-year`.
+  "Age on 31st August on year prior to `cy`, in completed years,
+  for child with date of birth `dob` or year & month of birth `dob-year` & `dob-month`.
 
   NOTE: Age is on 31st August *prior* to `cy`:
         - E.g. for `cy`=2020, age is calculated on 31-Aug-2019, i.e. at the start of the 2019/20 school year.
@@ -37,8 +38,34 @@
   the January 2022 SEN2 return) that age for SEN2 breakdowns is as of
   31-AUG prior to starting the school year.
   "
-  [cy dob-year dob-month]
-  (- cy 1 dob-year (if (< 8 dob-month) 1 0)))
+  ([cy dob] (age-at-start-of-school-year-for-census-year cy (.getYear dob) (.getMonthValue dob)))
+  ([cy dob-year dob-month] (- cy 1 dob-year (if (< 8 dob-month) 1 0))))
+
+(defn age-at-start-of-school-year-for-date
+  "Age on 31st August prior to `date` for child with date of birth `dob`.
+
+  `dob` & `date` should be java.time.LocalDate objects
+
+  Age at the start of the school/academic year is the age on 31st August
+  prior to the school/academic year, per:
+
+  - The [gov.uk website](https://www.gov.uk/schools-admissions/school-starting-age),
+  which (as of 23-NOV-2022) states:
+  \"Most children start school full-time in the September after their
+  fourth birthday. This means they’ll turn 5 during their first school
+  year. For example, if your child’s fourth birthday is between 1
+  September 2021 and 31 August 2022 they will usually start school in
+  September 2022.\".
+
+  - The [2022 SEN2 guide](https://assets.publishing.service.gov.uk/government/uploads/system/uploads/attachment_data/file/1013751/SEN2_2022_Guide.pdf),
+  which states in section 2, part 1, item 1.1 that: \"age breakdown
+  refers to age as at 31 August 2021\", implying (since this is for
+  the January 2022 SEN2 return) that age for SEN2 breakdowns is as of
+  31-AUG prior to starting the school year."
+  [date dob]
+  (- (- (.getYear date) (if (< (.getMonthValue date) 9) 1 0))
+     (- (.getYear dob)  (if (< (.getMonthValue dob)  9) 1 0))
+     1))
 
 
 ;;; ## Tests for age
@@ -49,12 +76,32 @@
 (comment
   ;; A child born on 01-Sep-2016 would be 3 at the start of the 2020/21 school year.
   (age-at-start-of-school-year-for-census-year 2021 2016 9) ;=> 3
-  ;; A child born on 31-Aug-2016 would be 4 at the start of the 2020/21 school year.
+  (age-at-start-of-school-year-for-census-year 2021
+                                               (java.time.LocalDate/parse "2016-09-01")) ;=> 3
+  (age-at-start-of-school-year-for-date (java.time.LocalDate/parse "2020-09-01")
+                                        (java.time.LocalDate/parse "2016-09-01")) ; => 3
+  (age-at-start-of-school-year-for-date (java.time.LocalDate/parse "2021-01-14")
+                                        (java.time.LocalDate/parse "2016-09-01")) ; => 3
+  (age-at-start-of-school-year-for-date (java.time.LocalDate/parse "2021-08-31")
+                                        (java.time.LocalDate/parse "2016-09-01")) ; => 3
+  ;; but a child born on 31-Aug-2016 would be 4 at the start of the 2020/21 school year.
   (age-at-start-of-school-year-for-census-year 2021 2016 8) ;=> 4
+  (age-at-start-of-school-year-for-census-year 2021
+                                               (java.time.LocalDate/parse "2016-08-31")) ;=> 4
+  (age-at-start-of-school-year-for-date (java.time.LocalDate/parse "2020-09-01")
+                                        (java.time.LocalDate/parse "2016-08-31")) ; => 4
   ;; A child born on 31-Aug-2016 would be 0 at the start of the 2016/17 school year.
   (age-at-start-of-school-year-for-census-year 2017 2016 8) ;=> 0
+  (age-at-start-of-school-year-for-census-year 2017
+                                               (java.time.LocalDate/parse "2016-08-31")) ;=> 0
+  (age-at-start-of-school-year-for-date (java.time.LocalDate/parse "2016-09-01")
+                                        (java.time.LocalDate/parse "2016-08-31")) ; => 0
   ;; Note that the algorithm will return -ve ages:
   (age-at-start-of-school-year-for-census-year 2017 2016 9) ;=> -1
+  (age-at-start-of-school-year-for-census-year 2017
+                                               (java.time.LocalDate/parse "2016-09-01")) ;=> -1
+  (age-at-start-of-school-year-for-date (java.time.LocalDate/parse "2016-09-01")
+                                        (java.time.LocalDate/parse "2016-09-01")) ; => -1
   )
 
 
@@ -269,8 +316,8 @@
   ;; Where all `ncy` are nil (so no reference rows), should not blow up and should return input
   ;; dataset (including any other columns - here :row-id) with add nil `ncy-imputation` column added.
   (def test-impute-01-ds
-    (-> (tc/concat (tc/dataset {:id  1 :calendar-year [2000 2001 2002] :academic-year      nil     })
-                   (tc/dataset {:id  2 :calendar-year [2000 2001 2002] :academic-year      nil     }))
+    (-> (tc/concat (tc/dataset {:id  1 :calendar-year [2000 2001 2002] :academic-year [    nil    ]})
+                   (tc/dataset {:id  2 :calendar-year [2000 2001 2002] :academic-year [    nil    ]}))
         (tc/add-column :row-id (range))))
   (impute-nil-ncy test-impute-01-ds)
                                         ;=>>
