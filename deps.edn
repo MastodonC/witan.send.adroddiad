@@ -1,13 +1,23 @@
-{:paths ["src" "resources"]
+{:paths ["src" "resources" "notebooks"]
  :deps  {org.clojure/clojure                        {:mvn/version "1.11.1"}
-         mastodonc/kixi.plot                        {:git/url "https://github.com/MastodonC/kixi.plot.git"
-                                                     :sha     "e1c744daddd248ad01c673eab4bfa6fb01d5f7e6"}
-         mastodonc/kixi.large                       {:git/url "https://github.com/MastodonC/kixi.large.git"
-                                                     :sha     "c593467394c7007b565fbd395afe00920c6d334d"}
+         mastodonc/kixi.plot                        {:git/url     "https://github.com/MastodonC/kixi.plot.git"
+                                                     :sha         "e1c744daddd248ad01c673eab4bfa6fb01d5f7e6"}
+         mastodonc/kixi.large                       {:git/url     "https://github.com/MastodonC/kixi.large.git"
+                                                     :sha         "c593467394c7007b565fbd395afe00920c6d334d"}
          reducibles/reducibles                      {:mvn/version "0.3.0"}
          com.cognitect/transit-clj                  {:mvn/version "1.0.324"}
          org.clojure/core.async                     {:mvn/version "1.5.648"}
-         io.github.matthewdowney/rich-comment-tests {:git/tag "v1.0.3" :git/sha "a8711e9"}}
+         io.github.matthewdowney/rich-comment-tests {:git/tag     "v1.0.3"
+                                                     :git/sha     "a8711e9"}
+         io.github.nextjournal/clerk                {;; :mvn/version "0.14.919"
+                                                     :git/url     "https://github.com/nextjournal/clerk"
+                                                     :sha         "fbc5d8d9fb413e53a68e76a952ac744acfc8e00c"}
+         nextjournal/clerk-slideshow                {:git/url     "https://github.com/nextjournal/clerk-slideshow"
+                                                     :git/sha     "977003e581d78f4f554bb8ae73f877f4070925c3"
+                                                     :exclusions  [techascent/tech.ml.dataset io.github.nextjournal/clerk]}
+         scicloj/tablecloth                         {:mvn/version "7.007"
+                                                     :exclusions  [techascent/tech.ml.dataset]}
+         techascent/tech.ml.dataset                 {:mvn/version "7.007"}}
  :aliases
  {:test    {:extra-paths ["test"]
             :extra-deps  {org.clojure/test.check {:mvn/version "1.1.0"}}}

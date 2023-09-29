@@ -15,3 +15,4 @@
 .hg/
 /.clj-kondo/
 /.lsp/
+/.clerk
