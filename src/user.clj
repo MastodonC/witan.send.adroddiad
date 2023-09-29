@@ -1,4 +1,4 @@
 (ns user
-  (:require [hyperfiddle.rcf]))
+  (:require [nextjournal.clerk :as clerk]))
 
-(hyperfiddle.rcf/enable!)
+(clerk/serve! {:browse? true})
