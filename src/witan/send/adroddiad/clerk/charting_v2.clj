@@ -151,6 +151,56 @@
                           :shape (shape-map data group colors-and-shapes)
                           :tooltip tooltip}}]})))
 
+(def field-descriptions
+  {:setting :setting-label
+   :setting-1 :setting-1-label
+   :setting-2 :setting-2-label
+   :need :need-label
+   :need-1 :need-1-label
+   :need-2 :need-2-label
+   :academic-year :academic-year-label
+   :academic-year-1 :academic-year-1-label
+   :academic-year-2 :academic-year-2-label})
+
+(def sweet-column-names
+  {:calendar-year         "Calendar Year"
+   :diff                  "Count"
+   :row-count             "Row Count"
+   :pct-change            "% Change"
+   :setting-label         "Setting"
+   :need-label            "Need"
+   :academic-year         "NCY"
+   :academic-year-label   "NCY"
+   :setting-label-1       "Setting 1"
+   :need-label-1          "Need 1"
+   :academic-year-1       "NCY 1"
+   :academic-year-1-label "NCY 1"
+   :setting-label-2       "Setting 2"
+   :need-label-2          "Need 2"
+   :academic-year-2-label "NCY 2"
+   :setting-1             "Setting 1"
+   :setting-2             "Setting 2"})
+
+(def axis-labels
+  {:setting "Setting"
+   :need "Need"
+   :calendar-year "Calendar Year"
+   :setting-1 "Setting 1"
+   :setting-2 "Setting 2"
+   :academic-year-1 "NCY 1"
+   :academic-year-2 "NCY 2"})
+
+(def sort-field
+  {:setting :setting-order
+   :setting-1 :setting-1-order
+   :setting-2 :setting-2-order
+   :need :need-order
+   :need-1 :need-1-order
+   :need-2 :need-2-order
+   :academic-year :academic-year-order
+   :academic-year-1 :academic-year-1-order
+   :academic-year-2 :academic-year-2-order})
+
 (defn heatmap-desc
   "Creates a map that is a description of a heatmap to pass to clerk/vl"
   [{:keys [title
