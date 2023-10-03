@@ -7,7 +7,12 @@
    {:image "https://www.mastodonc.com/wp-content/themes/MastodonC-2018/dist/images/favicon.png"}}
   (:require [nextjournal.clerk :as clerk]
             [nextjournal.clerk-slideshow :as slideshow]
-            [tablecloth.api :as tc]))
+            [tablecloth.api :as tc]
+            [witan.send.adroddiad.clerk.html :as chtml]))
+
+(
+ ;; Template input section
+ )
 
 {:nextjournal.clerk/visibility {:result :hide}}
 (def client-name nil)
