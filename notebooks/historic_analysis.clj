@@ -8,13 +8,14 @@
   (:require [nextjournal.clerk :as clerk]
             [nextjournal.clerk-slideshow :as slideshow]
             [tablecloth.api :as tc]
-            [witan.send.adroddiad.clerk.html :as chtml]))
+            [witan.send.adroddiad.clerk.html :as chtml]
+            [witan.send.adroddiad.dataset :as ds]))
 
+{:nextjournal.clerk/visibility {:result :hide}}
 (
  ;; Template input section
  )
 
-{:nextjournal.clerk/visibility {:result :hide}}
 (def client-name nil)
 (def sen2-calendar-year nil)
 (def date-string nil)
