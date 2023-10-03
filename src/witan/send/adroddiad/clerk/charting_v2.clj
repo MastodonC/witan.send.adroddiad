@@ -2,8 +2,14 @@
   (:require
    [clojure2d.color :as color]
    [nextjournal.clerk :as clerk]
-   [tablecloth.api :as tc]))
+   [tablecloth.api :as tc]
+   [tech.v3.datatype.functional :as dfn]
+   [witan.send.adroddiad.dataset :as ds]))
 
+(def full-height 600)
+(def two-rows 200)
+(def half-width 600)
+(def full-width 1420)
 
 (defn color-and-shape-lookup [domain]
   (tc/dataset
@@ -41,8 +47,8 @@
            y y-title y-format y-zero
            group group-title
            colors-and-shapes]
-    :or {chart-height 500
-         chart-width 500
+    :or {chart-height full-height
+         chart-width full-width
          clerk-width :full
          y-zero true}}]
   (let [tooltip [{:field group, :title group-title},
@@ -90,8 +96,8 @@
            range-format-f
            group group-title
            colors-and-shapes]
-    :or {chart-height 640
-         chart-width 824
+    :or {chart-height full-height
+         chart-width full-width
          clerk-width :full
          range-format-f (fn [lower upper]
                           (format "%,f - %,1f" lower upper))
