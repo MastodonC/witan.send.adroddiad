@@ -241,3 +241,227 @@
                          :text {:field color-field :type "quantitative"}
                          :tooltip tooltip}
               :mark "text"}]}))
+
+(defn ehcps-by-setting-per-year
+  [census]
+  (clerk/vl
+   {::clerk/width :full}
+   (let [color-field     "Row Count"
+         x-field         :setting
+         x-order-field   :setting-order
+         y-field         :calendar-year
+         data            (-> census
+                             (tc/group-by [x-field y-field])
+                             (tc/aggregate {color-field tc/row-count})
+                             (tc/complete x-field y-field)
+                             (tc/replace-missing color-field :value 0)
+                             (tc/map-columns :setting-label [:setting]
+                                             (fn [s] s))
+                             (tc/order-by [:setting-label :calendar-year])
+                             (tc/add-column :order (range)))
+         white-text-test (format "datum['%s'] > %d"
+                                 (name color-field)
+                                 (int (+ (reduce dfn/min (data color-field))
+                                         (* 0.450 (- (reduce dfn/max (data color-field))
+                                                     (reduce dfn/min (data color-field)))))))
+         ]
+     (heatmap-desc
+      {:data            (-> data
+                            (tc/rows :as-maps))
+       :height          150
+       :width           full-width
+       :y-field         (sweet-column-names y-field y-field)
+       :y-field-desc    (field-descriptions y-field y-field)
+       :y-field-label   (axis-labels y-field)
+       :x-field         (sweet-column-names x-field x-field)
+       :x-field-desc    (field-descriptions x-field x-field)
+       :x-field-label   (axis-labels x-field)
+       :x-sort-field    x-order-field
+       :color-field     color-field
+       :title           "# EHCPs for Settings by Year"
+       :white-text-test white-text-test
+       }))))
+
+(defn ehcp-yoy-count-change
+  [census]
+  (clerk/vl {:data {:values (as-> census $
+                              (tc/group-by $ [:setting :calendar-year])
+                              (tc/aggregate $ {:count tc/row-count})
+                              (tc/order-by $ [:setting :calendar-year])
+                              (tc/group-by $ [:setting] {:result-type :as-map})
+                              (map #(ds/add-diff-and-pct-diff (val %) :count) $)
+                              (apply tc/concat $)
+                              (tc/replace-missing $ :diff :value 0)
+                              (tc/select-rows $ #(= 2023 (:calendar-year %)))
+                              (tc/map-columns $ :setting-label [:setting]
+                                              (fn [s] s))
+                              (tc/order-by $ [:setting-label :calendar-year])
+                              (tc/rename-columns $ {:diff "Count"})
+                              (tc/add-column $ :order (range))
+                              (tc/rows $ :as-maps))}
+             :title {:text  "YoY EHCP Count Change"
+                     :fontsize 24}
+             :height full-height
+             :width half-width
+             :encoding {:x {:field "Count" :type "quantitative"}
+                        :y {:field :setting :type "nominal"}
+                        :tooltip [{:field :setting, :type "nominal", :title "Setting"},
+                                  {:field "Count", :title "Count"}]}
+             :mark "bar"}))
+
+(defn ehcp-yoy-pct-change
+  [census]
+  (clerk/vl {:data {:values (as-> census $
+                              (tc/group-by $ [:setting :calendar-year])
+                              (tc/aggregate $ {:count tc/row-count})
+                              (tc/order-by $ [:setting :calendar-year])
+                              (tc/group-by $ [:setting] {:result-type :as-map})
+                              (map #(ds/add-diff-and-pct-diff (val %) :count) $)
+                              (apply tc/concat $)
+                              (tc/replace-missing $ :pct-change)
+                              (tc/select-rows $ #(= 2023 (:calendar-year %)))
+                              (tc/map-columns $ :setting-label [:setting]
+                                              (fn [s] s))
+                              (tc/order-by $ [:setting-label :calendar-year])
+                              (tc/rename-columns $ {:pct-change "% Change"})
+                              (tc/add-column $ :order (range))
+                              (tc/rows $ :as-maps))}
+             :title {:text  "EHCP YoY Percentage Change"
+                     :fontsize 24}
+             :height full-height
+             :width half-width
+             :encoding {:x {:field "% Change" :type "quantitative"}
+                        :y {:field :setting :type "nominal"}
+                        :tooltip [{:field :setting, :type "nominal", :title "Setting"},
+                                  {:field "% Change", :title "% Change"}]}
+             :mark "bar"}))
+
+(defn ehcp-by-need-by-year
+  [census]
+  (clerk/vl
+   {::clerk/width :full}
+   (let [color-field     "Row Count"
+         x-field         :need
+         x-order-field   :need-order
+         y-field         :calendar-year
+         data            (-> census
+                             (tc/group-by [x-field y-field])
+                             (tc/aggregate {color-field tc/row-count})
+                             (tc/complete x-field y-field)
+                             (tc/replace-missing color-field :value 0)
+                             (tc/map-columns :need-label [:need]
+                                             (fn [s] s))
+                             (tc/order-by [:need-label :calendar-year])
+                             (tc/add-column :order (range)))
+         white-text-test (format "datum['%s'] > %d"
+                                 (name color-field)
+                                 (int (+ (reduce dfn/min (data color-field))
+                                         (* 0.450 (- (reduce dfn/max (data color-field))
+                                                     (reduce dfn/min (data color-field)))))))]
+     (heatmap-desc
+      {:data            (-> data
+                            (tc/rows :as-maps))
+       :height          two-rows
+       :width           full-width
+       :y-field         (sweet-column-names y-field y-field)
+       :y-field-desc    (field-descriptions y-field y-field)
+       :y-field-label   (axis-labels y-field)
+       :x-field         (sweet-column-names x-field x-field)
+       :x-field-desc    (field-descriptions x-field x-field)
+       :x-field-label   (axis-labels x-field)
+       :x-sort-field    x-order-field
+       :color-field     color-field
+       :title           "# EHCPs for Needs by Year"
+       :white-text-test white-text-test}))))
+
+(defn ehcp-yoy-count-change-needs
+  [census]
+  (clerk/vl {:data {:values (as-> census $
+                              (tc/group-by $ [:need :calendar-year])
+                              (tc/aggregate $ {:count tc/row-count})
+                              (tc/order-by $ [:need :calendar-year])
+                              (tc/group-by $ [:need] {:result-type :as-map})
+                              (map #(ds/add-diff-and-pct-diff (val %) :count) $)
+                              (apply tc/concat $)
+                              (tc/replace-missing $ :diff :value 0)
+                              (tc/select-rows $ #(= 2023 (:calendar-year %)))
+                              (tc/map-columns $ :need-label [:need]
+                                              (fn [s] s))
+                              (tc/order-by $ [:need-label :calendar-year])
+                              (tc/rename-columns $ {:diff "Count"})
+                              (tc/add-column $ :order (range))
+                              (tc/rows $ :as-maps))}
+             :title {:text  "YoY EHCP Count Change"
+                     :fontsize 24}
+             :height full-height
+             :width half-width
+             :encoding {:x {:field "Count" :type "quantitative"}
+                        :y {:field :need :type "nominal"}
+                        :tooltip [{:field :need, :type "nominal", :title "Need"},
+                                  {:field "Count", :title "Count"}]}
+             :mark "bar"}))
+
+(defn ehcp-yoy-pct-change-needs
+  [census]
+  (clerk/vl {:data {:values (as-> census $
+                              (tc/group-by $ [:need :calendar-year])
+                              (tc/aggregate $ {:count tc/row-count})
+                              (tc/order-by $ [:need :calendar-year])
+                              (tc/group-by $ [:need] {:result-type :as-map})
+                              (map #(ds/add-diff-and-pct-diff (val %) :count) $)
+                              (apply tc/concat $)
+                              (tc/replace-missing $ :pct-change)
+                              (tc/select-rows $ #(= 2023 (:calendar-year %)))
+                              (tc/map-columns $ :need-label [:need]
+                                              (fn [s] s))
+                              (tc/order-by $ [:need-label :calendar-year])
+                              (tc/rename-columns $ {:pct-change "% Change"})
+                              (tc/add-column $ :order (range))
+                              (tc/rows $ :as-maps))}
+             :title {:text  "EHCP YoY Percentage Change"
+                     :fontsize 24}
+             :height full-height
+             :width half-width
+             :encoding {:x {:field "% Change" :type "quantitative"}
+                        :y {:field :need :type "nominal"}
+                        :tooltip [{:field :need, :type "nominal", :title "Need"},
+                                  {:field "% Change", :title "% Change"}]}
+             :mark "bar"}))
+
+(defn ehcps-by-ncy-per-year
+  [census]
+  (clerk/vl
+   {::clerk/width :full}
+   (let [color-field     "Row Count"
+         x-field         :academic-year
+         x-order-field   :academic-year-order
+         y-field         :calendar-year
+         data            (-> census
+                             (tc/group-by [x-field y-field])
+                             (tc/aggregate {color-field tc/row-count})
+                             (tc/complete x-field y-field)
+                             (tc/replace-missing color-field :value 0)
+                             (tc/map-columns :academic-year-label [:academic-year]
+                                             (fn [s] s))
+                             (tc/order-by [:academic-year-label :calendar-year])
+                             (tc/add-column :order (range)))
+         white-text-test (format "datum['%s'] > %d"
+                                 (name color-field)
+                                 (int (+ (reduce dfn/min (data color-field))
+                                         (* 0.450 (- (reduce dfn/max (data color-field))
+                                                     (reduce dfn/min (data color-field)))))))]
+     (heatmap-desc
+      {:data            (-> data
+                            (tc/rows :as-maps))
+       :height          two-rows
+       :width           full-width
+       :y-field         (sweet-column-names y-field y-field)
+       :y-field-desc    (field-descriptions y-field y-field)
+       :y-field-label   (axis-labels y-field)
+       :x-field         (sweet-column-names x-field x-field)
+       :x-field-desc    (field-descriptions x-field x-field)
+       :x-field-label   (axis-labels x-field)
+       :x-sort-field    x-order-field
+       :color-field     color-field
+       :title           "# EHCPs for NCY by Year"
+       :white-text-test white-text-test}))))
