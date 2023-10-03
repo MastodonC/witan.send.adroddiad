@@ -8,7 +8,7 @@
 (defn color-and-shape-lookup [domain]
   (tc/dataset
    {:domain-value domain
-    :color (cycle 
+    :color (cycle
             ;; I’d like to eventually do something based on these colours in v3
             ;; ["#fa814c" "#256cc6" "#fbe44c" "#50b938" "#59c4b8" "#29733c"]
             (into []
@@ -145,3 +145,43 @@
                           :shape (shape-map data group colors-and-shapes)
                           :tooltip tooltip}}]})))
 
+(defn heatmap-desc
+  "Creates a map that is a description of a heatmap to pass to clerk/vl"
+  [{:keys [title
+           x-field x-sort-field x-field-label x-field-desc
+           y-field y-sort-field y-field-label y-field-desc
+           color-field white-text-test data height width
+           color-scheme color-type color-domain]
+    :or {height 100
+         width 550
+         white-text-test "datum['% change'] > 10 || datum['% change'] < -10"
+         color-scheme "viridis"
+         color-type "gradient"}}]
+  (let [tooltip [{:field y-field-desc :type "ordinal" :title y-field-label}
+                 {:field x-field-desc :type "ordinal" :title x-field-label}
+                 {:field color-field :type "quantitative"}]]
+    {:data {:values data}
+     :encoding {:x {:field (or x-field-desc x-field) :type "ordinal" :sort (or x-sort-field x-field) :title (or x-field-label x-field)}
+                :y {:field (or y-field-desc y-field) :type "ordinal" :sort (or y-sort-field y-field) :title (or y-field-label y-field)}}
+     :config {:axis {:grid true
+                     :tickBand "extent"
+                     :titleFontSize 16
+                     :labelFontSize 12}}
+     :title {:text title
+             :fontSize 24}
+     :height height
+     :width width
+     :layer [{:encoding {:color {:field color-field
+                                 :legend {:gradientLength 200}
+                                 :scale {:domainMid 0
+                                         :scheme "blueorange"}
+                                 :title color-field
+                                 :type "quantitative"}
+                         :tooltip tooltip}
+              :mark "rect"}
+             {:encoding {:color {:condition {:test white-text-test
+                                             :value "white"}
+                                 :value "black"}
+                         :text {:field color-field :type "quantitative"}
+                         :tooltip tooltip}
+              :mark "text"}]}))
