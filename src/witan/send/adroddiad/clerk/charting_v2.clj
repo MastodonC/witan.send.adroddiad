@@ -587,3 +587,58 @@
        :color-field     color-field
        :title           (str most-recent-year "-" (+ most-recent-year 1) " Setting to Setting Movers")
        :white-text-test white-text-test}))))
+
+(defn joiners-by-two-domains
+  [transitions x-field y-field]
+  (clerk/vl
+   {::clerk/width :full}
+   (let [color-field      "Row Count"
+         most-recent-year (reduce dfn/max (:calendar-year transitions))
+         x-order-field   (sort-field x-field)
+         y-order-field   (sort-field y-field)
+         x-field-label   (sweet-column-names (transitions-labels->census-labels x-field x-field))
+         y-field-label   (sweet-column-names (transitions-labels->census-labels y-field y-field))
+         ay-order        (-> transitions
+                             (tc/unique-by x-field)
+                             (tc/order-by x-field)
+                             (tc/add-column x-order-field (range))
+                             (tc/select-columns [x-field x-order-field]))
+         setting-order   (-> transitions
+                             (tc/unique-by y-field)
+                             (tc/order-by y-field)
+                             (tc/add-column y-order-field (range))
+                             (tc/select-columns [y-field y-order-field]))
+         data            (-> transitions
+                             (tc/select-rows #(and (= "NONSEND" (:setting-1 %))
+                                                   (= most-recent-year (% :calendar-year))))
+                             (tc/group-by [x-field y-field])
+                             (tc/aggregate {color-field tc/row-count})
+                             (tc/complete x-field y-field)
+                             (tc/replace-missing color-field :value 0)
+                             (tc/inner-join ay-order [x-field])
+                             (tc/inner-join setting-order [y-field]))
+         white-text-test (format "datum['%s'] > %d"
+                                 (name color-field)
+                                 (int (+ (reduce dfn/min (data color-field))
+                                         (* 0.450 (- (reduce dfn/max (data color-field))
+                                                     (reduce dfn/min (data color-field)))))))]
+     (heatmap-desc
+      {:data            (-> data
+                            (tc/rows :as-maps))
+       :height          full-height
+       :width           full-width
+       :y-field         (sweet-column-names y-field y-field)
+       :y-field-desc    y-field
+       :y-field-label   y-field-label
+       :x-field         (sweet-column-names x-field x-field)
+       :x-field-desc    x-field
+       :x-field-label   x-field-label
+       :x-sort-field    x-order-field
+       :y-sort-field    y-order-field
+       :color-field     color-field
+       :title           (str "New EHCPs by " y-field-label " and " x-field-label)
+       :white-text-test white-text-test}))))
+
+(defn joiners-by-setting-and-ncy
+  [transitions]
+  (joiners-by-two-domains transitions :academic-year-2 :setting-2))
