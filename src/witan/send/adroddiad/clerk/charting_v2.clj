@@ -319,7 +319,7 @@
 (defn ehcps-yoy-change
   [census domain]
   (let [domain-label (sweet-column-names (field-descriptions domain))
-        most-recent-year (reduce dfn/min (:calendar-year census))]
+        most-recent-year (reduce dfn/max (:calendar-year census))]
     (clerk/vl
      {:data {:values (as-> census $
                        (tc/group-by $ [domain :calendar-year])
@@ -361,7 +361,7 @@
 (defn ehcp-yoy-pct-change
   [census domain]
   (let [domain-label (sweet-column-names (field-descriptions domain))
-        most-recent-year (reduce dfn/min (:calendar-year census))]
+        most-recent-year (reduce dfn/max (:calendar-year census))]
     (clerk/vl {:data {:values (as-> census $
                                 (tc/group-by $ [domain :calendar-year])
                                 (tc/aggregate $ {:count tc/row-count})
