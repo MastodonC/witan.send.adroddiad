@@ -74,7 +74,8 @@
   [:p.text-7xl.font-extrabold.-mb-8.-mt-8 (format "%1s Historical Analysis for %2s" workpackage-name sen2-calendar-year)]
   [:p.text-3xl.italic date-string]
   [:p.text-5xl.font-bold.-mb-8 (format "For %s" client-name)]
-  [:p.text-4xl.font-bold.italic "Presented by Mastodon C"]])
+  [:p.text-4xl.font-bold.italic "Presented by Mastodon C"]
+  [:p.text-3xl "Use ⬅️➡️ keys to navigate and ESC to see an overview."]])
 
 ;; ---
 ;; ## TBD Conclusion
