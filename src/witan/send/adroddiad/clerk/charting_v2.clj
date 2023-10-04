@@ -537,3 +537,53 @@
        :title           (str most-recent-year "-" (+ most-recent-year 1) " Setting to Setting Transitions")
        :white-text-test white-text-test}))))
 
+(defn setting-mover-heatmap
+  [transitions]
+  (clerk/vl
+   {::clerk/width :full}
+   (let [color-field      "Row Count"
+         most-recent-year (reduce dfn/max (:calendar-year transitions))
+         y-field          :setting-1
+         x-field          :setting-2
+         x-order-field    :setting-2-order
+         y-order-field    :setting-1-order
+         setting-1-order  (-> transitions
+                              (tc/unique-by :setting-1)
+                              (tc/order-by :setting-1)
+                              (tc/add-column :setting-1-order (range))
+                              (tc/select-columns [:setting-1 :setting-1-order]))
+         setting-2-order  (-> transitions
+                              (tc/unique-by :setting-2)
+                              (tc/order-by :setting-2)
+                              (tc/add-column :setting-2-order (range))
+                              (tc/select-columns [:setting-2 :setting-2-order]))
+         data             (-> transitions
+                              (tc/select-rows #(= most-recent-year (% :calendar-year)))
+                              (tc/select-rows tr/mover?)
+                              (tc/group-by [x-field y-field])
+                              (tc/aggregate {color-field tc/row-count})
+                              (tc/complete x-field y-field)
+                              (tc/replace-missing color-field :value 0)
+                              (tc/inner-join setting-1-order [y-field])
+                              (tc/inner-join setting-2-order [x-field]))
+         white-text-test  (format "datum['%s'] > %d"
+                                  (name color-field)
+                                  (int (+ (reduce dfn/min (data color-field))
+                                          (* 0.450 (- (reduce dfn/max (data color-field))
+                                                      (reduce dfn/min (data color-field)))))))]
+     (heatmap-desc
+      {:data            (-> data
+                            (tc/rows :as-maps))
+       :height          full-height
+       :width           full-width
+       :y-field         (sweet-column-names y-field y-field)
+       :y-field-desc    y-field
+       :y-field-label   (axis-labels y-field)
+       :x-field         (sweet-column-names x-field x-field)
+       :x-field-desc    x-field
+       :x-field-label   (axis-labels x-field)
+       :x-sort-field    x-order-field
+       :y-sort-field    y-order-field
+       :color-field     color-field
+       :title           (str most-recent-year "-" (+ most-recent-year 1) " Setting to Setting Movers")
+       :white-text-test white-text-test}))))
