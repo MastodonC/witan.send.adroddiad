@@ -152,15 +152,16 @@
                           :tooltip tooltip}}]})))
 
 (def field-descriptions
-  {:setting :setting-label
-   :setting-1 :setting-1-label
-   :setting-2 :setting-2-label
-   :need :need-label
-   :need-1 :need-1-label
-   :need-2 :need-2-label
-   :academic-year :academic-year-label
+  {:setting         :setting-label
+   :setting-1       :setting-1-label
+   :setting-2       :setting-2-label
+   :need            :need-label
+   :need-1          :need-1-label
+   :need-2          :need-2-label
+   :academic-year   :academic-year-label
    :academic-year-1 :academic-year-1-label
-   :academic-year-2 :academic-year-2-label})
+   :academic-year-2 :academic-year-2-label
+   :scenario        :scenario-label})
 
 (def sweet-column-names
   {:calendar-year         "Calendar Year"
@@ -179,7 +180,8 @@
    :need-label-2          "Need 2"
    :academic-year-2-label "NCY 2"
    :setting-1             "Setting 1"
-   :setting-2             "Setting 2"})
+   :setting-2             "Setting 2"
+   :scenario-label        "Scenario"})
 
 (def axis-labels
   {:setting "Setting"
