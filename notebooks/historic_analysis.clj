@@ -23,8 +23,8 @@
 (def out-dir nil)
 (def workpackage-name nil)
 (def in-dir nil)
-(def census (tc/dataset (str in-dir nil) (:key-fn keyword))) ;; consider defaulting to filename
-(def transitions (tc/dataset (str in-dir nil) {:key-fn keyword})) ;; consider defaulting to filename
+(def census (tc/dataset (str in-dir nil) {:key-fn keyword}))
+(def transitions (tc/dataset (str in-dir nil) {:key-fn keyword}))
 
 (
  ;; Supporting functions and defs
@@ -75,3 +75,102 @@
   [:p.text-3xl.italic date-string]
   [:p.text-5xl.font-bold.-mb-8 (format "For %s" client-name)]
   [:p.text-4xl.font-bold.italic "Presented by Mastodon C"]])
+
+;; ---
+;;; ## TBD Conclusion
+
+(chart/ehcps-total-by-year census) ;; need a % change too
+
+;; ---
+;; ## TBD Conclusion
+
+(chart/ehcps-by-setting-per-year census)
+
+;; ---
+;; ## TBD Conclusion
+
+(chart/ehcp-by-need-by-year census)
+
+;; ---
+;; ## TBD Conclusion
+
+(chart/ehcps-by-ncy-per-year census)
+
+;; ---
+;; ## TBD Conclusion
+
+(clerk/row
+ {::clerk/width :full}
+ (chart/ehcps-by-setting-yoy-change census)
+ (chart/ehcps-by-setting-yoy-pct-change census))
+
+;; ---
+;; ## TBD Conclusion
+
+(clerk/row
+ {::clerk/width :full}
+ (chart/ehcps-by-need-yoy-change census)
+ (chart/ehcps-by-need-yoy-pct-change census))
+
+;; ---
+;; ## TBD Conclusion
+
+(clerk/row
+ {::clerk/width :full}
+ (chart/ehcps-by-ncy-yoy-change census)
+ (chart/ehcps-by-ncy-yoy-pct-change census))
+
+;; ---
+;; ## TBD Conclusion
+
+(chart/joiners-by-ehcp-per-year transitions)
+
+;; ---
+;; ## TBD Conclusion
+
+(chart/joiners-by-ncy-per-year transitions)
+
+;; ---
+;; ## TBD Conclusion
+
+(chart/joiners-by-need-per-year transitions)
+
+;; ---
+;; ## TBD Conclusion
+
+(chart/joiners-by-setting-per-year transitions)
+
+;; ---
+;; ## TBD Conclusion
+
+(chart/leavers-by-ehcp-per-year transitions)
+
+;; ---
+;; ## TBD Conclusion
+
+(chart/leavers-by-ncy-per-year transitions)
+
+;; ---
+;; ## TBD Conclusion
+
+(chart/leavers-by-setting-per-year transitions)
+
+;; ---
+;; ## TBD Conclusion
+
+(chart/setting-to-setting-heatmap transitions)
+
+;; ---
+;; ## TBD Conclusion
+
+(chart/setting-mover-heatmap transitions)
+
+;; ---
+;; ## TBD Conclusion
+
+(chart/joiners-by-setting-and-ncy transitions)
+
+;; ---
+;; ## TBD Conclusion
+
+(chart/needs-by-designation census)
