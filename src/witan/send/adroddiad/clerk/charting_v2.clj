@@ -4,7 +4,8 @@
    [nextjournal.clerk :as clerk]
    [tablecloth.api :as tc]
    [tech.v3.datatype.functional :as dfn]
-   [witan.send.adroddiad.dataset :as ds]))
+   [witan.send.adroddiad.dataset :as ds]
+   [witan.send.adroddiad.transitions :as tr]))
 
 (def full-height 600)
 (def two-rows 200)
@@ -169,7 +170,9 @@
    :row-count             "Row Count"
    :pct-change            "% Change"
    :setting-label         "Setting"
+   :setting               "Setting"
    :need-label            "Need"
+   :need                  "Need"
    :academic-year         "NCY"
    :academic-year-label   "NCY"
    :setting-label-1       "Setting 1"
@@ -203,6 +206,14 @@
    :academic-year :academic-year-order
    :academic-year-1 :academic-year-1-order
    :academic-year-2 :academic-year-2-order})
+
+(def transitions-labels->census-labels
+  {:setting-1       :setting
+   :setting-2       :setting
+   :need-1          :need
+   :need-2          :need
+   :academic-year-1 :academic-year
+   :academic-year-2 :academic-year})
 
 (defn heatmap-desc
   "Creates a map that is a description of a heatmap to pass to clerk/vl"
@@ -386,3 +397,79 @@
 (defn ehcps-by-ncy-yoy-pct-change
   [census]
   (ehcp-yoy-pct-change census :academic-year))
+
+(defn transitions-heatmap-per-year
+  [transitions x-field predicate]
+  (clerk/vl
+   {::clerk/width :full}
+   (let [color-field     "Row Count"
+         x-order-field   (sort-field x-field)
+         y-field         :calendar-year
+         title           (str "# " (cond
+                                     (= predicate tr/joiner?)
+                                     "Joiners"
+                                     (= predicate tr/leaver?)
+                                     "Leavers") " by "
+                              (sweet-column-names (transitions-labels->census-labels x-field x-field))
+                              " by Year")
+         ay-order        (-> transitions
+                             (tc/unique-by x-field)
+                             (tc/order-by x-field)
+                             (tc/add-column x-order-field (range))
+                             (tc/select-columns [x-field x-order-field]))
+         data            (-> transitions
+                             (tc/select-rows predicate)
+                             (tc/group-by [x-field y-field])
+                             (tc/aggregate {color-field tc/row-count})
+                             (tc/complete x-field y-field)
+                             (tc/replace-missing color-field :value 0)
+                             (tc/map-columns :academic-year-label [x-field]
+                                             (fn [s] s))
+                             (tc/map-columns :calendar-year [:calendar-year] (fn [cy] (inc cy)))
+                             (tc/inner-join ay-order [x-field])
+                             (tc/order-by [:calendar-year x-field]))
+         white-text-test (format "datum['%s'] > %d"
+                                 (name color-field)
+                                 (int (+ (reduce dfn/min (data color-field))
+                                         (* 0.450 (- (reduce dfn/max (data color-field))
+                                                     (reduce dfn/min (data color-field)))))))]
+     (heatmap-desc
+      {:data            (-> data
+                            (tc/rows :as-maps))
+       :height          two-rows
+       :width           full-width
+       :y-field         (sweet-column-names y-field y-field)
+       :y-field-desc    (field-descriptions y-field y-field)
+       :y-field-label   (axis-labels y-field)
+       :x-field         (sweet-column-names x-field x-field)
+       :x-field-desc    x-field
+       :x-field-label   (sweet-column-names (transitions-labels->census-labels x-field x-field))
+       :x-sort-field    x-order-field
+       :y-sort-field    :calendar-year
+       :color-field     color-field
+       :title           title
+       :white-text-test white-text-test}))))
+
+(defn joiners-by-ncy-per-year
+  [transitions]
+  (transitions-heatmap-per-year transitions :academic-year-2 tr/joiner?))
+
+(defn joiners-by-need-per-year
+  [transitions]
+  (transitions-heatmap-per-year transitions :need-2 tr/joiner?))
+
+(defn joiners-by-setting-per-year
+  [transitions]
+  (transitions-heatmap-per-year transitions :setting-2 tr/joiner?))
+
+(defn leavers-by-ncy-per-year
+  [transitions]
+  (transitions-heatmap-per-year transitions :academic-year-1 tr/leaver?))
+
+(defn leavers-by-need-per-year
+  [transitions]
+  (transitions-heatmap-per-year transitions :need-1 tr/leaver?))
+
+(defn leavers-by-setting-per-year
+  [transitions]
+  (transitions-heatmap-per-year transitions :setting-1 tr/leaver?))
