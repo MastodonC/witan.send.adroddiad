@@ -306,7 +306,8 @@
 
 (defn ehcps-yoy-change
   [census domain]
-  (let [domain-label (sweet-column-names (field-descriptions domain))]
+  (let [domain-label (sweet-column-names (field-descriptions domain))
+        most-recent-year (reduce dfn/min (:calendar-year census))]
     (clerk/vl
      {:data {:values (as-> census $
                        (tc/group-by $ [domain :calendar-year])
@@ -316,7 +317,7 @@
                        (map #(ds/add-diff-and-pct-diff (val %) :count :calendar-year) $)
                        (apply tc/concat $)
                        (tc/replace-missing $ :diff :value 0)
-                       (tc/select-rows $ #(= 2023 (:calendar-year %)))
+                       (tc/select-rows $ #(= most-recent-year (:calendar-year %)))
                        (tc/map-columns $ domain-label [domain]
                                        (fn [s] s))
                        (tc/order-by $ [domain-label :calendar-year])
@@ -347,7 +348,8 @@
 
 (defn ehcp-yoy-pct-change
   [census domain]
-  (let [domain-label (sweet-column-names (field-descriptions domain))]
+  (let [domain-label (sweet-column-names (field-descriptions domain))
+        most-recent-year (reduce dfn/min (:calendar-year census))]
     (clerk/vl {:data {:values (as-> census $
                                 (tc/group-by $ [domain :calendar-year])
                                 (tc/aggregate $ {:count tc/row-count})
@@ -356,7 +358,7 @@
                                 (map #(ds/add-diff-and-pct-diff (val %) :count :calendar-year) $)
                                 (apply tc/concat $)
                                 (tc/replace-missing $ :pct-change)
-                                (tc/select-rows $ #(= 2023 (:calendar-year %)))
+                                (tc/select-rows $ #(= most-recent-year (:calendar-year %)))
                                 (tc/map-columns $ domain-label [domain]
                                                 (fn [s] s))
                                 (tc/order-by $ [domain-label :calendar-year])
