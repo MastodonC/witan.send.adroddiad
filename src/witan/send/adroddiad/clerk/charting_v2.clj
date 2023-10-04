@@ -184,7 +184,8 @@
    :academic-year-2-label "NCY 2"
    :setting-1             "Setting 1"
    :setting-2             "Setting 2"
-   :scenario-label        "Scenario"})
+   :scenario-label        "Scenario"
+   :scenario              "EHCP Count"})
 
 (def axis-labels
   {:setting "Setting"
@@ -450,6 +451,12 @@
        :title           title
        :white-text-test white-text-test}))))
 
+(defn joiners-by-ehcp-per-year
+  [transitions]
+  (-> transitions
+      (tc/add-column :scenario "Baseline")
+      (transitions-heatmap-per-year :scenario witan.send.adroddiad.transitions/joiner?)))
+
 (defn joiners-by-ncy-per-year
   [transitions]
   (transitions-heatmap-per-year transitions :academic-year-2 tr/joiner?))
@@ -461,6 +468,12 @@
 (defn joiners-by-setting-per-year
   [transitions]
   (transitions-heatmap-per-year transitions :setting-2 tr/joiner?))
+
+(defn leavers-by-ehcp-per-year
+  [transitions]
+  (-> transitions
+      (tc/add-column :scenario "Baseline")
+      (transitions-heatmap-per-year :scenario witan.send.adroddiad.transitions/leaver?)))
 
 (defn leavers-by-ncy-per-year
   [transitions]
