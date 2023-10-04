@@ -286,6 +286,11 @@
        :white-text-test white-text-test
        }))))
 
+(defn ehcps-total-by-year
+  [census]
+  (-> census
+      (tc/add-column :scenario "Baseline")
+      (ehcp-heatmap-per-year :scenario)))
 
 (defn ehcps-by-setting-per-year
   [census]
