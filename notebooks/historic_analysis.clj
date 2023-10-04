@@ -79,7 +79,11 @@
 ;; ---
 ;;; ## TBD Conclusion
 
-(chart/ehcps-total-by-year census) ;; need a % change too
+(clerk/row
+ {::clerk/width :full}
+ (chart/ehcps-total-by-year census) ;; need a % change too
+ (chart/echps-total-yoy-change census)
+ (chart/echps-total-yoy-pct-change census))
 
 ;; ---
 ;; ## TBD Conclusion

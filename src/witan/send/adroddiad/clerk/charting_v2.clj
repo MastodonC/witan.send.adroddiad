@@ -352,6 +352,34 @@
                            {:field "Count", :title "Count"}]}
       :mark "bar"})))
 
+(defn echps-total-yoy-change
+  [census]
+  (let [domain-label (sweet-column-names :calendar-year)
+        min-year (reduce dfn/min (:calendar-year census))]
+    (clerk/vl
+     {:data {:values (as-> census $
+                       (tc/group-by $ [:calendar-year])
+                       (tc/aggregate $ {:count tc/row-count})
+                       (tc/order-by $ [:calendar-year])
+                       (ds/add-diff-and-pct-diff $ :count :calendar-year)
+                       (tc/replace-missing $ :diff :value 0)
+                       (tc/map-columns $ domain-label [:calendar-year]
+                                       (fn [s] s))
+                       (tc/order-by $ [domain-label :calendar-year])
+                       (tc/rename-columns $ {:diff "Count"})
+                       (tc/add-column $ :order (range))
+                       (tc/drop-rows $ #(= min-year (:calendar-year %)))
+                       (tc/rows $ :as-maps))}
+      :title {:text  "YoY EHCP Count Change"
+              :fontsize 24}
+      :height full-height
+      :width 400
+      :encoding {:x {:field "Count" :type "quantitative"}
+                 :y {:field domain-label :type "nominal"}
+                 :tooltip [{:field :calendar-year, :type "nominal", :title domain-label},
+                           {:field "Count", :title "Count"}]}
+      :mark "bar"})))
+
 (defn ehcps-by-setting-yoy-change
   [census]
   (ehcps-yoy-change census :setting))
@@ -392,6 +420,34 @@
                           :tooltip [{:field domain, :type "nominal", :title domain-label},
                                     {:field "% Change", :title "% Change"}]}
                :mark "bar"})))
+
+(defn echps-total-yoy-pct-change
+  [census]
+  (let [domain-label (sweet-column-names :calendar-year)
+        min-year (reduce dfn/min (:calendar-year census))]
+    (clerk/vl
+     {:data {:values (as-> census $
+                       (tc/group-by $ [:calendar-year])
+                       (tc/aggregate $ {:count tc/row-count})
+                       (tc/order-by $ [:calendar-year])
+                       (ds/add-diff-and-pct-diff $ :count :calendar-year)
+                       (tc/replace-missing $ :pct-change :value 0)
+                       (tc/map-columns $ domain-label [:calendar-year]
+                                       (fn [s] s))
+                       (tc/order-by $ [domain-label :calendar-year])
+                       (tc/rename-columns $ {:pct-change "% Change"})
+                       (tc/add-column $ :order (range))
+                       (tc/drop-rows $ #(= min-year (:calendar-year %)))
+                       (tc/rows $ :as-maps))}
+      :title {:text  "YoY EHCP Percentage Change"
+              :fontsize 24}
+      :height full-height
+      :width 400
+      :encoding {:x {:field "% Change" :type "quantitative"}
+                 :y {:field domain-label :type "nominal"}
+                 :tooltip [{:field :calendar-year, :type "nominal", :title domain-label},
+                           {:field "% Change", :title "% Change"}]}
+      :mark "bar"})))
 
 (defn ehcps-by-setting-yoy-pct-change
   [census]
