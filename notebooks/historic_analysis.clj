@@ -9,7 +9,8 @@
             [nextjournal.clerk-slideshow :as slideshow]
             [tablecloth.api :as tc]
             [witan.send.adroddiad.clerk.html :as chtml]
-            [witan.send.adroddiad.dataset :as ds]))
+            [witan.send.adroddiad.dataset :as ds]
+            [witan.send.adroddiad.clerk.charting-v2 :as chart]))
 
 {:nextjournal.clerk/visibility {:result :hide}}
 (
