@@ -642,3 +642,52 @@
 (defn joiners-by-setting-and-ncy
   [transitions]
   (joiners-by-two-domains transitions :academic-year-2 :setting-2))
+
+(defn needs-by-designation
+  [census]
+  (clerk/fragment
+   (mapcat (fn [year]
+             (vector (clerk/vl
+                      {::clerk/width :full}
+                      (let [color-field     "Row Count"
+                            x-field         :need
+                            x-order-field   :need-order
+                            y-field         :designation
+                            data            (-> census
+                                                (tc/map-columns :designation [:setting]
+                                                                (fn [s] (cond
+                                                                          (clojure.string/includes? s "_")
+                                                                          (-> s
+                                                                              (clojure.string/split #"_")
+                                                                              second)
+                                                                          :else nil)))
+                                                (tc/drop-rows #(nil? (:designation %)))
+                                                (tc/select-rows #(= year (:calendar-year %)))
+                                                (tc/group-by [x-field y-field])
+                                                (tc/aggregate {"Row Count" tc/row-count})
+                                                (tc/complete x-field y-field)
+                                                (tc/replace-missing "Row Count" :value 0)
+                                                (tc/map-columns :need-label [:need]
+                                                                (fn [s] s))
+                                                (tc/order-by [:need-label :designation])
+                                                (tc/add-column :order (range)))
+                            white-text-test (format "datum['%s'] > %d"
+                                                    (name color-field)
+                                                    (int (+ (reduce dfn/min (data color-field))
+                                                            (* 0.450 (- (reduce dfn/max (data color-field))
+                                                                        (reduce dfn/min (data color-field)))))))]
+                        (heatmap-desc
+                         {:data            (-> data
+                                               (tc/rows :as-maps))
+                          :height          150
+                          :width           half-width
+                          :y-field         (sweet-column-names y-field y-field)
+                          :y-field-desc    (field-descriptions y-field y-field)
+                          :y-field-label   (axis-labels y-field)
+                          :x-field         (sweet-column-names x-field x-field)
+                          :x-field-desc    (field-descriptions x-field x-field)
+                          :x-field-label   (axis-labels x-field)
+                          :x-sort-field    x-order-field
+                          :color-field     color-field
+                          :title           (str "# EHCPs per Designation by Primary Need in " year)
+                          :white-text-test white-text-test}))))) [2022 2023])))
