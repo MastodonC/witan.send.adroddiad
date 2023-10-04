@@ -285,7 +285,13 @@
       {:data            (-> data
                             (tc/rows :as-maps))
        :height          150
-       :width           full-width
+       :width           (cond
+                          (= x-field :academic-year)
+                          full-width
+                          (= x-field :scenario)
+                          two-rows
+                          :else
+                          half-width)
        :y-field         (sweet-column-names y-field y-field)
        :y-field-desc    (field-descriptions y-field y-field)
        :y-field-label   (axis-labels y-field)
@@ -438,7 +444,14 @@
       {:data            (-> data
                             (tc/rows :as-maps))
        :height          two-rows
-       :width           full-width
+       :width           (cond
+                          (or (= x-field :academic-year-1)
+                              (= x-field :academic-year-2))
+                          full-width
+                          (= x-field :scenario)
+                          two-rows
+                          :else
+                          half-width)
        :y-field         (sweet-column-names y-field y-field)
        :y-field-desc    (field-descriptions y-field y-field)
        :y-field-label   (axis-labels y-field)
