@@ -77,11 +77,11 @@
   [:p.text-4xl.font-bold.italic "Presented by Mastodon C"]])
 
 ;; ---
-;;; ## TBD Conclusion
+;; ## TBD Conclusion
 
 (clerk/row
  {::clerk/width :full}
- (chart/ehcps-total-by-year census) ;; need a % change too
+ (chart/ehcps-total-by-year census)
  (chart/echps-total-yoy-change census)
  (chart/echps-total-yoy-pct-change census))
 
