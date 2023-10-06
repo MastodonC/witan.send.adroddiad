@@ -1,10 +1,7 @@
 ^{:nextjournal.clerk/toc true}
 (ns historic-analysis
-  {
-   :nextjournal.clerk/visibility           {:code   :hide
-                                            :result :show}
-   :nextjournal.clerk/open-graph
-   {:image "https://www.mastodonc.com/wp-content/themes/MastodonC-2018/dist/images/favicon.png"}}
+  {:nextjournal.clerk/visibility           {:code   :hide
+                                            :result :show}}
   (:require [nextjournal.clerk :as clerk]
             [nextjournal.clerk-slideshow :as slideshow]
             [tablecloth.api :as tc]
