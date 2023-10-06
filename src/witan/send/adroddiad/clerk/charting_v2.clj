@@ -305,10 +305,12 @@
        }))))
 
 (defn ehcps-total-by-year
-  [census]
-  (-> census
-      (tc/add-column :scenario "Baseline")
-      (ehcp-heatmap-per-year :scenario)))
+  ([census {:keys [scenario] :as opts :or {scenario "Baseline"}}]
+   (-> census
+       (tc/add-column :scenario scenario)
+       (ehcp-heatmap-per-year :scenario)))
+  ([census]
+   (ehcps-total-by-year census {})))
 
 (defn ehcps-by-setting-per-year
   [census]
@@ -521,10 +523,12 @@
        :white-text-test white-text-test}))))
 
 (defn joiners-by-ehcp-per-year
-  [transitions]
-  (-> transitions
-      (tc/add-column :scenario "Baseline")
-      (transitions-heatmap-per-year :scenario witan.send.adroddiad.transitions/joiner?)))
+  ([transitions {:keys [scenario] :as opts :or {scenario "Baseline"}}]
+   (-> transitions
+       (tc/add-column :scenario scenario)
+       (transitions-heatmap-per-year :scenario witan.send.adroddiad.transitions/joiner?)))
+  ([transitions]
+   (joiners-by-ehcp-per-year transitions {})))
 
 (defn joiners-by-ncy-per-year
   [transitions]
@@ -539,10 +543,12 @@
   (transitions-heatmap-per-year transitions :setting-2 tr/joiner?))
 
 (defn leavers-by-ehcp-per-year
-  [transitions]
-  (-> transitions
-      (tc/add-column :scenario "Baseline")
-      (transitions-heatmap-per-year :scenario witan.send.adroddiad.transitions/leaver?)))
+  ([transitions {:keys [scenario] :as opts :or {scenario "Baseline"}}]
+   (-> transitions
+       (tc/add-column :scenario scenario)
+       (transitions-heatmap-per-year :scenario witan.send.adroddiad.transitions/leaver?)))
+  ([transitions]
+   (leavers-by-ehcp-per-year transitions {})))
 
 (defn leavers-by-ncy-per-year
   [transitions]
