@@ -1,11 +1,13 @@
 (ns witan.send.adroddiad.summary-v2
   (:require
    [clojure.math :as maths]
-   [net.cgrand.xforms :as x]
-   [tablecloth.api :as tc]
    [ham-fisted.api :as hf]
    [ham-fisted.reduce :as hf-reduce]
-   [tech.v3.dataset.reductions :as ds-reduce]))
+   [net.cgrand.xforms :as x]
+   [tablecloth.api :as tc]
+   [tech.v3.dataset.reductions :as ds-reduce]
+   [tech.v3.datatype.functional :as dfn]
+   [witan.send.adroddiad.transitions :as tr]))
 
 ;; FIXME: This should be merged with summarise-simulations in the rfn and merge-fn for v3
 (defn transform-simulations 
@@ -106,3 +108,29 @@
      :mean             (double (/ (reduce + xs) simulation-count))
      :simulation-count simulation-count
      :observations     observations}))
+
+(defn summarise-census-by-keys [simulation-ds-seq {:keys [historical-transitions-counts ks extra-simulation-transform-f finalise-f]
+                                                   :or {finalise-f identity
+                                                        extra-simulation-transform-f identity}}]
+  (as-> simulation-ds-seq $
+    (transform-simulations
+     {:simulation-transform-fn
+      (fn [sim]
+        (-> sim
+            (tc/concat-copying historical-transitions-counts)
+            (tr/transitions->census)
+            (tc/drop-rows #(< 20 (% :academic-year)))
+            extra-simulation-transform-f
+            (tc/group-by ks)
+            (tc/aggregate {:transition-count #(dfn/sum (:transition-count %))})
+            (tc/order-by ks)))}
+     $)
+    (summarise-simulations
+     {:observation-key ks
+      :value-key :transition-count
+      :finaliser-fn completed-simulation-stats}
+     $)
+    (apply (partial tc/complete $) ks)
+    (tc/replace-missing $ [:min :p05 :q1 :median :q3 :p95 :max :mean :observations :simulation-count] :value 0)
+    (tc/order-by $ ks)
+    (finalise-f $)))
