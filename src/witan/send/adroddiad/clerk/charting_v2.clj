@@ -13,9 +13,9 @@
 (def full-width 1420)
 
 (defn color-and-shape-lookup [domain]
-  ;; Using Tableau 20 palette ordered with Tableau 10 shades first,
-  ;; then the lighter shades in the same order.
-  ;; With 20 colours and 8 shaps, this gives 40 distinct combinations.
+  ;; Using Tableau 20 palette, excluding the red, ordered with
+  ;; Tableau 10 shades first, then the lighter shades in the same order.
+  ;; With 19 colours and 8 shapes, this gives 152 distinct combinations.
   (tc/dataset
    {:domain-value domain
     ;; I’d like to eventually do something based on these colours in v3
@@ -25,7 +25,7 @@
                         [ 31 119 180 255]
                         [255 127  14 255]
                         [ 44 160  44 255]
-                        [214  39  40 255]
+                        #_[214  39  40 255]
                         [148 103 189 255]
                         [140  86  75 255]
                         [227 119 194 255]
