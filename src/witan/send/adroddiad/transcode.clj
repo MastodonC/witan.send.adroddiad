@@ -1,6 +1,10 @@
 (ns witan.send.adroddiad.transcode
+  (:require
+   [clojure.data.json :as json]
+   [applied-science.darkstar :as darkstar])
   (:import
    [java.awt RenderingHints]
+   [java.nio.charset StandardCharsets]
    [java.io File FileOutputStream ByteArrayInputStream ByteArrayOutputStream]
    [org.apache.batik.anim.dom SAXSVGDocumentFactory]
    [org.apache.batik.transcoder TranscoderInput TranscoderOutput]
@@ -16,6 +20,10 @@
 
 (defn svg-file->document [parser file-string]
   (.createDocument parser file-string))
+
+(defn svg-string->document [s]
+  (with-open [in (ByteArrayInputStream. (.getBytes s StandardCharsets/UTF_8))]
+    (.createDocument svg-parser "file:///fake.svg" in)))
 
 (defn- high-quality-png-transcoder []
   (proxy [PNGTranscoder] []
@@ -43,6 +51,13 @@
           out (TranscoderOutput. out-stream)
           trans (high-quality-png-transcoder)]
       (.transcode trans in out))))
+
+(defn vl-map->bytearray [vl-chart-map]
+  (-> vl-chart-map
+      json/json-str
+      darkstar/vega-lite-spec->svg
+      svg-string->document))
+
 (comment
 
   (def example-vega-lite-chart-map
