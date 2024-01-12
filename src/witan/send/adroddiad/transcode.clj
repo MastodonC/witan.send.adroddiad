@@ -131,4 +131,25 @@
                 :y {:field "b" :type "quantitative"}}
      :mark "bar"})
 
+  (def example-svg-file "file_example_SVG_20kB.svg")
+
+  ;; write vega-lite chart map to byte array
+  (-> example-vega-lite-chart-map
+      vl-map->bytearray
+      svg-document->png)
+
+  ;; write vega-lite chart map to png file
+  (-> example-vega-lite-chart-map
+      vl-map->bytearray
+      (svg-document->png {:filename "example-vega-lite-chart.png"}))
+
+  ;; write svg to png file
+  (-> example-svg-file
+      File.
+      .toURL
+      .toString
+      (svg-file->document (SAXSVGDocumentFactory. "org.apache.xerces.parsers.SAXParser"))
+      (svg-document->png {:filename "file_example_SVG_20kB.png"}))
+
+
   )
