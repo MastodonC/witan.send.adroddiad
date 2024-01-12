@@ -7,7 +7,7 @@
    [java.nio.charset StandardCharsets]
    [java.io File FileOutputStream ByteArrayInputStream ByteArrayOutputStream]
    [org.apache.batik.anim.dom SAXSVGDocumentFactory]
-   [org.apache.batik.transcoder TranscoderInput TranscoderOutput]
+   [org.apache.batik.transcoder TranscoderInput TranscoderOutput SVGAbstractTranscoder]
    [org.apache.batik.transcoder.image PNGTranscoder]))
 
 (defn file-str [filename]
@@ -18,7 +18,7 @@
 
 (def svg-parser (SAXSVGDocumentFactory. "org.apache.xerces.parsers.SAXParser"))
 
-(defn svg-file->document [parser file-string]
+(defn svg-file->document [file-string parser]
   (.createDocument parser file-string))
 
 (defn svg-string->document [s]
@@ -45,18 +45,75 @@
         (.setRenderingHints renderer hints)
         renderer))))
 
-(defn svg-document->png-file [svg-document filename]
-  (with-open [out-stream (FileOutputStream. filename)]
-    (let [in (TranscoderInput. svg-document)
-          out (TranscoderOutput. out-stream)
-          trans (high-quality-png-transcoder)]
-      (.transcode trans in out))))
+(defn- parse-double [x]
+  (when x
+    (try (Double/parseDouble x) (catch Exception _ nil))))
+
+(defn children [element]
+  (let [c (.getChildNodes element)]
+    (if (zero? (.getLength c))
+      nil
+      (map #(.item c %) (range (.getLength c))))))
+
+(defn ->xml
+  ([element]
+   (->xml element true))
+  ([element children?]
+   (if (instance? org.w3c.dom.Text element)
+     (.getWholeText element)
+     (let [attrs (.getAttributes element)]
+       (merge
+        {:tag (keyword (.getLocalName element))
+         :ns  (.getNamespaceURI element)}
+        (when (and attrs (not (zero? (.getLength attrs))))
+          {:attrs (into {}
+                        (map (fn [i] (let [attr (.item attrs i)]
+                                       [(keyword (.getName attr))
+                                        (.getNodeValue attr)]))
+                             (range (.getLength attrs))))})
+        (when children?
+          (when-let [c (children element)]
+            {:content (mapv #(->xml % children?) c)})))))))
+
+(defn- document-dimensions [doc]
+  (-> doc ->xml :content first :attrs
+      (select-keys [:width :height])
+      (update :width parse-double)
+      (update :height parse-double)))
+
+(def transcoder-keys
+  {:width      SVGAbstractTranscoder/KEY_WIDTH
+   :height     SVGAbstractTranscoder/KEY_HEIGHT
+   :max-width  SVGAbstractTranscoder/KEY_MAX_WIDTH
+   :max-height SVGAbstractTranscoder/KEY_MAX_HEIGHT})
 
 (defn vl-map->bytearray [vl-chart-map]
   (-> vl-chart-map
       json/json-str
       darkstar/vega-lite-spec->svg
       svg-string->document))
+
+(defn svg-document->png
+  ([svg-document]
+   (svg-document->png svg-document {}))
+  ([svg-document {:keys [filename width scale]}]
+   (with-open [out-stream (cond
+                            filename
+                            (FileOutputStream. filename)
+                            :else
+                            (ByteArrayOutputStream.))]
+     (let [{doc-width :width :as dimensions} (document-dimensions svg-document)
+           in (TranscoderInput. svg-document)
+           out (TranscoderOutput. out-stream)
+           trans (high-quality-png-transcoder)]
+       (cond
+         scale
+         (.addTranscodingHint trans (:width transcoder-keys) (float (* scale doc-width)))
+         width
+         (.addTranscodingHint trans (:width transcoder-keys) (float width)))
+       (.transcode trans in out)
+       (when (not filename)
+         (.toByteArray out-stream))))))
 
 (comment
 
