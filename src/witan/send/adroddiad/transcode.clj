@@ -151,5 +151,7 @@
       (svg-file->document (SAXSVGDocumentFactory. "org.apache.xerces.parsers.SAXParser"))
       (svg-document->png {:filename "file_example_SVG_20kB.png"}))
 
+  ;; TODO add an example to xlsx
+
 
   )
