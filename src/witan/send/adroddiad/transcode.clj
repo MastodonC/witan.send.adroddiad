@@ -45,10 +45,6 @@
         (.setRenderingHints renderer hints)
         renderer))))
 
-(defn- parse-double [x]
-  (when x
-    (try (Double/parseDouble x) (catch Exception _ nil))))
-
 (defn children [element]
   (let [c (.getChildNodes element)]
     (if (zero? (.getLength c))
