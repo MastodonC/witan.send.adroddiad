@@ -151,7 +151,21 @@
       (svg-file->document (SAXSVGDocumentFactory. "org.apache.xerces.parsers.SAXParser"))
       (svg-document->png {:filename "file_example_SVG_20kB.png"}))
 
-  ;; TODO add an example to xlsx
+  ;; write svg to png in xlsx
+
+  (require '[tablecloth.api :as tc] '[kixi.large :as large])
+
+  (-> [{:plot-title "Chart title"
+        ::large/sheet-name "Sheet 1"
+        ::large/data (-> example-vega-lite-chart-map
+                         :data
+                         :values
+                         tc/dataset)
+        ::large/images      [{::large/image (-> example-vega-lite-chart-map
+                                                vl-map->bytearray
+                                                svg-document->png)}]}]
+      large/create-workbook
+      (large/save-workbook! "test.xlsx"))
 
 
   )
