@@ -72,13 +72,15 @@
            chart-height chart-width
            clerk-width
            x x-title x-format
-           y y-title y-format y-zero
+           y y-title y-format
+           y-zero y-scale
            group group-title
            colors-and-shapes]
     :or {chart-height full-height
          chart-width full-width
          clerk-width :full
-         y-zero true}}]
+         y-zero true
+         y-scale false}}]
   (let [tooltip [{:field group, :title group-title},
                  {:field x, :type "temporal", :format x-format, :title x-title},
                  {:field y, :title y-title ;; :format y-format
@@ -101,11 +103,13 @@
                        :labelFontSize 12}}
       :data {:values (-> data
                          (tc/rows :as-maps))}
+      :encoding {:y {:scale {:domain y-scale
+                             :zero y-zero}}}
       :layer [{:mark {:type "line", :point {:filled false,
                                             :fill "white",
                                             :size 50
                                             :strokewidth 0.5}},
-               :encoding {:y {:field y, :title y-title :type "quantitative" :scale {:zero y-zero}},
+               :encoding {:y {:field y, :title y-title :type "quantitative"},
                           :x {:field x, :title x-title :format x-format :type "temporal"},
                           ;; color and shape scale and range must be specified or you get extra things in the legend
                           :color (assoc (color-map data group colors-and-shapes) :title group-title)
@@ -118,7 +122,8 @@
            chart-height chart-width
            clerk-width
            x x-title x-format
-           y y-title y-format y-zero
+           y y-title y-format
+           y-zero y-scale
            irl iru ir-title
            orl oru or-title
            range-format-f
@@ -129,7 +134,8 @@
          clerk-width :full
          range-format-f (fn [lower upper]
                           (format "%,f - %,1f" lower upper))
-         y-zero true}}]
+         y-zero true
+         y-scale false}}]
   (let [tooltip [{:field group, :title group-title},
                  {:field x, :type "temporal", :format x-format, :title x-title},
                  {:field y, :title y-title ;; :format y-format
@@ -156,6 +162,8 @@
                          (tc/map-columns :ir [irl iru] range-format-f)
                          (tc/map-columns :or [orl oru] range-format-f)
                          (tc/rows :as-maps))}
+      :encoding {:y {:scale {:domain y-scale
+                             :zero y-zero}}}
       :layer [{:mark "errorband"
                :encoding {:y {:field iru :title y-title :type "quantitative"}
                           :y2 {:field irl}
@@ -172,7 +180,7 @@
                                             :fill "white",
                                             :size 50
                                             :strokewidth 0.5}},
-               :encoding {:y {:field y, :title y-title :type "quantitative" :scale {:zero y-zero}},
+               :encoding {:y {:field y, :title y-title :type "quantitative"},
                           :x {:field x, :title x-title :format x-format :type "temporal"},
                           ;; color and shape scale and range must be specified or you get extra things in the legend
                           :color (color-map data group colors-and-shapes)
