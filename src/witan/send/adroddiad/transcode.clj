@@ -138,10 +138,10 @@
       vl-map->bytearray
       svg-document->png)
 
-  ;; write vega-lite chart map to png file
+  ;; write vega-lite chart map to png file and change size
   (-> example-vega-lite-chart-map
       vl-map->bytearray
-      (svg-document->png {:filename "example-vega-lite-chart.png"}))
+      (svg-document->png {:filename "example-vega-lite-chart.png" :width 100}))
 
   ;; write svg to png file
   (-> example-svg-file
