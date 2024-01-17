@@ -111,57 +111,55 @@
        (when (not filename)
          (.toByteArray out-stream))))))
 
-(comment
+;;   ;;; Examples ;;;
+;; (def example-vega-lite-chart-map
+;;   {:data {:values [{:a "A" :b 28}
+;;                    {:a "B" :b 55}
+;;                    {:a "C" :b 43}
+;;                    {:a "D" :b 91}
+;;                    {:a "E" :b 81}
+;;                    {:a "F" :b 53}
+;;                    {:a "G" :b 19}
+;;                    {:a "H" :b 87}
+;;                    {:a "I" :b 52}]}
+;;    :encoding {:x {:axis {:labelAngle 0} :field "a" :type "nominal"}
+;;               :y {:field "b" :type "quantitative"}}
+;;    :mark "bar"})
 
-  (def example-vega-lite-chart-map
-    {:data {:values [{:a "A" :b 28}
-                     {:a "B" :b 55}
-                     {:a "C" :b 43}
-                     {:a "D" :b 91}
-                     {:a "E" :b 81}
-                     {:a "F" :b 53}
-                     {:a "G" :b 19}
-                     {:a "H" :b 87}
-                     {:a "I" :b 52}]}
-     :encoding {:x {:axis {:labelAngle 0} :field "a" :type "nominal"}
-                :y {:field "b" :type "quantitative"}}
-     :mark "bar"})
+;; (def example-svg-file "file_example_SVG_20kB.svg")
 
-  (def example-svg-file "file_example_SVG_20kB.svg")
+;; ;; write vega-lite chart map to byte array
+;; (-> example-vega-lite-chart-map
+;;     vl-map->bytearray
+;;     svg-document->png)
 
-  ;; write vega-lite chart map to byte array
-  (-> example-vega-lite-chart-map
-      vl-map->bytearray
-      svg-document->png)
+;; ;; write vega-lite chart map to png file and change size
+;; (-> example-vega-lite-chart-map
+;;     vl-map->bytearray
+;;     (svg-document->png {:filename "example-vega-lite-chart.png" :width 100}))
 
-  ;; write vega-lite chart map to png file and change size
-  (-> example-vega-lite-chart-map
-      vl-map->bytearray
-      (svg-document->png {:filename "example-vega-lite-chart.png" :width 100}))
+;; ;; write svg to png file
+;; (-> example-svg-file
+;;     File.
+;;     .toURL
+;;     .toString
+;;     (svg-file->document (SAXSVGDocumentFactory. "org.apache.xerces.parsers.SAXParser"))
+;;     (svg-document->png {:filename "file_example_SVG_20kB.png"}))
 
-  ;; write svg to png file
-  (-> example-svg-file
-      File.
-      .toURL
-      .toString
-      (svg-file->document (SAXSVGDocumentFactory. "org.apache.xerces.parsers.SAXParser"))
-      (svg-document->png {:filename "file_example_SVG_20kB.png"}))
+;; ;; write svg to png in xlsx
 
-  ;; write svg to png in xlsx
+;; (require '[tablecloth.api :as tc])
 
-  (require '[tablecloth.api :as tc] '[kixi.large :as large])
+;; (require '[kixi.large :as large])
 
-  (-> [{:plot-title "Chart title"
-        ::large/sheet-name "Sheet 1"
-        ::large/data (-> example-vega-lite-chart-map
-                         :data
-                         :values
-                         tc/dataset)
-        ::large/images      [{::large/image (-> example-vega-lite-chart-map
-                                                vl-map->bytearray
-                                                svg-document->png)}]}]
-      large/create-workbook
-      (large/save-workbook! "test.xlsx"))
-
-
-  )
+;; (-> [{:plot-title "Chart title"
+;;       ::large/sheet-name "Sheet 1"
+;;       ::large/data (-> example-vega-lite-chart-map
+;;                        :data
+;;                        :values
+;;                        tc/dataset)
+;;       ::large/images      [{::large/image (-> example-vega-lite-chart-map
+;;                                               vl-map->bytearray
+;;                                               svg-document->png)}]}]
+;;     large/create-workbook
+;;     (large/save-workbook! "test.xlsx"))
