@@ -2,12 +2,17 @@
  :deps  {mastodonc/kixi.plot                        {:git/url "https://github.com/MastodonC/kixi.plot.git"
                                                      :sha     "e1c744daddd248ad01c673eab4bfa6fb01d5f7e6"}
          mastodonc/kixi.large                       {:git/url "https://github.com/MastodonC/kixi.large.git"
-                                                     :sha     "c593467394c7007b565fbd395afe00920c6d334d"}
+                                                     :sha     "bda0812f692b8521e8273ff8c7754499ee834b5e"}
          io.github.matthewdowney/rich-comment-tests {:git/tag "v1.0.3"
                                                      :git/sha "a8711e9"}
          reducibles/reducibles                      {:mvn/version "0.3.0"}
          com.cognitect/transit-clj                  {:mvn/version "1.0.324"}
-         org.clojure/core.async                     {:mvn/version "1.5.648"}}
+         org.clojure/core.async                     {:mvn/version "1.5.648"}
+         org.apache.xmlgraphics/batik-transcoder    {:mvn/version "1.17"}
+         org.apache.xmlgraphics/batik-codec         {:mvn/version "1.17"}
+         xerces/xercesImpl                          {:mvn/version "2.12.2"}
+         applied-science/darkstar                   {:git/url "https://github.com/applied-science/darkstar/"
+                                                     :sha "541a3ff36065c59e92fe6aa61e41a4385ba6f893"}}
  :aliases
  {:dev  {:extra-paths ["notebooks" "dev" "test"]
          :extra-deps  {org.clojure/clojure         {:mvn/version "1.11.1"}
