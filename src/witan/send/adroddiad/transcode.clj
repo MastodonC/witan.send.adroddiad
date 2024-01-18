@@ -126,7 +126,7 @@
 ;;               :y {:field "b" :type "quantitative"}}
 ;;    :mark "bar"})
 
-;; (def example-svg-file "file_example_SVG_20kB.svg")
+;; (def example-svg-file "./resources/images/file_example_SVG_20kB.svg")
 
 ;; ;; write vega-lite chart map to byte array
 ;; (-> example-vega-lite-chart-map
