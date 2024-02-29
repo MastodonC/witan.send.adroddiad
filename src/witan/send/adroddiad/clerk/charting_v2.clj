@@ -70,7 +70,7 @@
   [{:keys [data
            chart-title
            chart-height chart-width
-           clerk-width
+           clerk-width legend
            x x-title x-format
            y y-title y-format
            y-zero y-scale
@@ -80,7 +80,8 @@
          chart-width full-width
          clerk-width :full
          y-zero true
-         y-scale false}}]
+         y-scale false
+         legend true}}]
   (let [tooltip [{:field group, :title group-title},
                  {:field x, :type "temporal", :format x-format, :title x-title},
                  {:field y, :title y-title ;; :format y-format
@@ -104,7 +105,8 @@
       :data {:values (-> data
                          (tc/rows :as-maps))}
       :encoding {:y {:scale {:domain y-scale
-                             :zero y-zero}}}
+                             :zero y-zero}}
+                 :color {:legend legend}}
       :layer [{:mark {:type "line", :point {:filled false,
                                             :fill "white",
                                             :size 50
@@ -120,7 +122,7 @@
   [{:keys [data
            chart-title
            chart-height chart-width
-           clerk-width
+           clerk-width legend
            x x-title x-format
            y y-title y-format
            y-zero y-scale
@@ -135,7 +137,8 @@
          range-format-f (fn [lower upper]
                           (format "%,f - %,1f" lower upper))
          y-zero true
-         y-scale false}}]
+         y-scale false
+         legend true}}]
   (let [tooltip [{:field group, :title group-title},
                  {:field x, :type "temporal", :format x-format, :title x-title},
                  {:field y, :title y-title ;; :format y-format
@@ -163,7 +166,8 @@
                          (tc/map-columns :or [orl oru] range-format-f)
                          (tc/rows :as-maps))}
       :encoding {:y {:scale {:domain y-scale
-                             :zero y-zero}}}
+                             :zero y-zero}}
+                 :color {:legend legend}}
       :layer [{:mark "errorband"
                :encoding {:y {:field iru :title y-title :type "quantitative"}
                           :y2 {:field irl}
