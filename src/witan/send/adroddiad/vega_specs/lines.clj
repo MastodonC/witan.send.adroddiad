@@ -14,7 +14,10 @@
   (fn [ds]
     (-> ds
         (tc/map-columns tooltip-field [:p05 :q1 :median :q3 :p95]
-                        (fn [p05 q1 median q3 p95] (format "Median: %,.0f 50%%: %,.0f-%,.0f 90%%: %,.0f-%,.0f"  median q1 q3 p05 p95)))
+                        (fn [p05 q1 median q3 p95] (format
+                                                    "%,.0f (%,.0f (%,.0f↔%,.0f) %,.0f)"
+                                                    ;; "Median: %,.0f 50%%: %,.0f-%,.0f 90%%: %,.0f-%,.0f"
+                                                    median p05 q1 q3 p95)))
         (tc/select-columns [group x tooltip-field])
         (tc/pivot->wider [group] [tooltip-field] {:drop-missing? false})
         (tc/replace-missing :all :value "")
@@ -66,6 +69,7 @@
               :axisY {:titleFontSize 16 :labelFontSize 12}}
      :encoding {:x {:field x :title x-title :type "temporal"}}
      :layer [{:encoding {:color (vs/color-map data group colors-and-shapes)
+                         :shape (vs/shape-map data group colors-and-shapes)
                          :y {:field y
                              :type "quantitative"
                              :axis {:format y-format}
@@ -78,7 +82,11 @@
                        :encoding {:y {:field iru :title y-title :type "quantitative"}
                                   :y2 {:field irl}
                                   :color {:field group :title group-title}}}
-                      {:mark {:type "line" :size 5}}
+                      {:mark {:type "line"
+                              :size 5
+                              :point {:filled      true #_false
+                                      :size        150
+                                      :strokewidth 0.5}}}
                       {:transform [{:filter {:param "hover" :empty false}}] :mark {:type "point" :size 200 :strokeWidth 5}}]}
              {:data {:values (tooltip-formatf data)}
               :mark {:type "rule" :strokeWidth 4}
@@ -219,5 +227,3 @@
                                     {:field y, :title y-title}
                                     {:field :ir :title ir-title}
                                     {:field :or :title or-title}]}}]})
-
-
