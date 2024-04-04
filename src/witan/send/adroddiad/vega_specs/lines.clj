@@ -198,9 +198,9 @@
                           :y2      {:field irl}
                           :x       {:field x :title x-title :type "temporal" :format x-format}
                           :color   {:field group :title group-title}
-                          :tooltip [{:field group, :title group-title},
-                                    {:field x, :type "temporal", :format x-format, :title x-title},
-                                    {:field y, :title y-title}
+                          :tooltip [{:field group :title group-title}
+                                    {:field x :type "temporal" :format x-format :title x-title}
+                                    {:field y :title y-title}
                                     {:field :ir :title ir-title}
                                     {:field :or :title or-title}]}}
               {:mark     "errorband"
@@ -208,22 +208,70 @@
                           :y2      {:field orl}
                           :x       {:field x :title x-title :type "temporal" :format x-format}
                           :color   {:field group :title group-title}
-                          :tooltip [{:field group, :title group-title},
-                                    {:field x, :type "temporal", :format x-format, :title x-title},
-                                    {:field y, :title y-title}
+                          :tooltip [{:field group :title group-title}
+                                    {:field x :type "temporal" :format x-format :title x-title}
+                                    {:field y :title y-title}
                                     {:field :ir :title ir-title}
                                     {:field :or :title or-title}]}}
-              {:mark     {:type "line", :point {:filled      false,
-                                                :fill        "white",
-                                                :size        50
-                                                :strokewidth 0.5}},
-               :encoding {:y       {:field y, :title y-title :type "quantitative"}
-                          :x       {:field x, :title x-title :type "temporal" :axis {:format x-format}}
+              {:mark     {:type "line" :point {:filled      false
+                                               :fill        "white"
+                                               :size        50
+                                               :strokewidth 0.5}}
+               :encoding {:y       {:field y :title y-title :type "quantitative"}
+                          :x       {:field x :title x-title :type "temporal" :axis {:format x-format}}
                           ;; color and shape scale and range must be specified or you get extra things in the legend
                           :color   (vs/color-map data group colors-and-shapes)
                           :shape   (vs/shape-map data group colors-and-shapes)
-                          :tooltip [{:field group, :title group-title}
-                                    {:field x, :type "temporal", :format x-format, :title x-title}
-                                    {:field y, :title y-title}
+                          :tooltip [{:field group :title group-title}
+                                    {:field x :type "temporal" :format x-format :title x-title}
+                                    {:field y :title y-title}
                                     {:field :ir :title ir-title}
                                     {:field :or :title or-title}]}}]})
+
+(defn line-plot
+  [{:keys [data
+           chart-title
+           chart-height chart-width
+           legend
+           x x-title x-format
+           y y-title y-format
+           y-zero y-scale
+           group group-title
+           colors-and-shapes]
+    :or   {chart-height vs/full-height
+           chart-width  vs/full-width
+           y-zero       true
+           y-scale      false
+           legend       true}}]
+  (let [tooltip [{:field group :title group-title}
+                 {:field x :type "temporal" :format x-format :title x-title}
+                 {:field y :title y-title ;; :format y-format
+                  }]]
+    {:height   chart-height
+     :width    chart-width
+     :title    {:text     chart-title
+                :fontSize 24}
+     :config   {:legend {:titleFontSize 16
+                         :labelFontSize 14}
+                :axisX  {:tickcount     7
+                         :tickExtra     true
+                         :labelalign    "center"
+                         :titleFontSize 16
+                         :labelFontSize 12}
+                :axisY  {:titleFontSize 16
+                         :labelFontSize 12}}
+     :data     {:values (-> data
+                            (tc/rows :as-maps))}
+     :encoding {:y     {:scale {:domain y-scale
+                                :zero   y-zero}}
+                :color {:legend legend}}
+     :layer    [{:mark     {:type "line" :point {:filled      false
+                                                 :fill        "white"
+                                                 :size        50
+                                                 :strokewidth 0.5}}
+                 :encoding {:y       {:field y :title y-title :type "quantitative"}
+                            :x       {:field x :title x-title :format x-format :type "temporal"}
+                            ;; color and shape scale and range must be specified or you get extra things in the legend
+                            :color   (assoc (vs/color-map data group colors-and-shapes) :title group-title)
+                            :shape   (vs/shape-map data group colors-and-shapes)
+                            :tooltip tooltip}}]}))
