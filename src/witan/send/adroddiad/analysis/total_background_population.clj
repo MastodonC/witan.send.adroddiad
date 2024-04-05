@@ -103,7 +103,7 @@
                           :colors-and-shapes colors-and-shapes))
         headline (population-trend-headline summary)
         description (population-trend-description summary)]
-    {:population population'
+    {:data population'
      :summary summary
      :plot line-plot
      :headline headline
