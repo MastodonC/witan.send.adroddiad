@@ -83,9 +83,7 @@
    :y-zero            true
    :group             :age
    :group-title       "Age"
-   :chart-width       vs/two-thirds-width
-   ;; :colors-and-shapes (acc/color-and-shape-lookup (into (sorted-set) (:age population)))
-   })
+   :chart-width       vs/two-thirds-width})
 
 (defn summary-charts-and-data
   [population {:keys [anchor-year colors-and-shapes source]
