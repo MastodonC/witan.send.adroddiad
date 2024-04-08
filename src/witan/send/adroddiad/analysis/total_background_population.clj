@@ -74,16 +74,26 @@
     (format "Beteween %d-%d 0-25 Population Expected to Shrink by %,.1f%%" anchor-year five-year (* -100 five-year-delta-pct))))
 
 (def chart-base
-  {:x                 :calendar-year
-   :x-title           "Calendar Year"
-   :x-format          "%Y"
-   :y                 :population
-   :y-title           "Population"
-   :y-format          "%,.2f"
-   :y-zero            true
-   :group             :age
-   :group-title       "Age"
-   :chart-width       vs/two-thirds-width})
+  {:x           :calendar-year
+   :x-title     "Calendar Year"
+   :x-format    "Jan %Y"
+   :y           :population
+   :y-title     "Population"
+   :y-format    "%,.0f"
+   :y-zero      true
+   :group       :source
+   :group-title "Source"
+   :chart-title "0-25 Population"
+   :chart-width vs/two-thirds-width
+   :chart-height vs/full-height})
+
+(defn line-plot [{:keys [data group group-title colors-and-shapes
+                         x x-title
+                         y y-title y-format y-zero
+                         chart-title chart-width chart-height] 
+                  :as chart-spec}]
+  (vsl/line-plot
+   (merge chart-base chart-spec)))
 
 (defn summary-charts-and-data
   [population {:keys [anchor-year colors-and-shapes source]
@@ -92,18 +102,14 @@
                         (tc/add-column :source source)
                         (summarise-population))
         summary (summarise-population-trend population' {:anchor-year anchor-year})
-        line-plot (vsl/line-plot
-                   (assoc chart-base
-                          :data (-> population'
-                                    (tc/map-columns :calendar-year [:calendar-year] str))
-                          :group :source
-                          :group-title "Source"
-                          :colors-and-shapes colors-and-shapes))
+        plot (line-plot {:data (-> population'
+                                   (tc/map-columns :calendar-year [:calendar-year] str))
+                         :colors-and-shapes colors-and-shapes})
         headline (population-trend-headline summary)
         description (population-trend-description summary)]
     {:data population'
      :summary summary
-     :plot line-plot
+     :plot plot
      :headline headline
      :description description
      :fragment (clerk/fragment
@@ -112,6 +118,6 @@
                  [:h2 headline])
                 (clerk/row
                  {::clerk/width :full}
-                 (clerk/vl line-plot)
+                 (clerk/vl plot)
                  (clerk/html (into [:div.max-w-screen-2xl.font-sans]
                                    (mapv (fn [d] [:p.mb-5 d]) description)))))}))
