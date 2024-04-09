@@ -13,10 +13,7 @@
   (let [config (ws/read-config config-edn)]
     (tc/dataset
      (str (:project-dir config) "/" (get-in config [:file-inputs :transitions]))
-     {:key-fn keyword})
-    #_(-> (ws/build-input-datasets (:project-dir config) (:file-inputs config))
-          :transitions
-          tc/dataset)))
+     {:key-fn keyword})))
 
 (defn historic-ehcp-count [transitions]
   (-> transitions
@@ -70,8 +67,8 @@
 
 
 (defn transform-simulation
-  [sim {:keys [ks historic-transitions background-population]}]
-  (-> (tc/concat-copying historic-transitions sim)
+  [sim {:keys [ks historic-transitions-count background-population]}]
+  (-> (tc/concat-copying historic-transitions-count sim)
       (tr/transitions->census)
       (tc/group-by ks)
       (tc/aggregate {:transition-count #(dfn/sum (:transition-count %))})
@@ -83,12 +80,11 @@
       (tc/map-columns :pct-ehcps [:transition-count :population] #(dfn// %1 %2))
       (tc/order-by ks)))
 
-
 (defn summarise
   [simulation-results
-   {:keys [background-population historic-transitions simulation-count]}]
-  (let [ks [:calendar-year]
-        summary
+   {:keys [background-population historic-transitions-count simulation-count grouping-keys]
+    :or {grouping-keys [:calendar-year]}}]
+  (let [summary
         (tc/order-by
          (->> simulation-results
               (hf-reduce/preduce
@@ -100,13 +96,13 @@
                        (transform-simulation
                         sim
                         {:background-population background-population
-                         :historic-transitions historic-transitions
-                         :ks ks})))
+                         :historic-transitions-count historic-transitions-count
+                         :ks grouping-keys})))
                ;; merge-fn
                (fn [acc acc']
                  (into acc acc')))
               (ds-reduce/group-by-column-agg
-               ks
+               grouping-keys
                {:transition-count-summary
                 (percentiles-reducer simulation-count :transition-count)
                 :echp-diff-summary
@@ -115,7 +111,7 @@
                 (percentiles-reducer simulation-count :ehcp-pct-diff)
                 :pct-ehcps-summary
                 (percentiles-reducer simulation-count :pct-ehcps)}))
-         ks)]
+         grouping-keys)]
     {:transition-count-summary
      (-> summary
          (tc/select-columns [:calendar-year :transition-count-summary])
