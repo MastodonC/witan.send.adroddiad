@@ -70,8 +70,8 @@
 (defn population-trend-headline
   [{:keys [anchor-year five-year five-year-delta five-year-delta-pct]}]
   (if (pos? five-year-delta)
-    (format "Beteween %d-%d 0-25 Population Expected to Grow by %,.1f%%" anchor-year five-year (* -100 five-year-delta-pct))
-    (format "Beteween %d-%d 0-25 Population Expected to Shrink by %,.1f%%" anchor-year five-year (* -100 five-year-delta-pct))))
+    (format "Between %d-%d 0-25 Population Expected to Grow by %,.1f%%" anchor-year five-year (* -100 five-year-delta-pct))
+    (format "Between %d-%d 0-25 Population Expected to Shrink by %,.1f%%" anchor-year five-year (* -100 five-year-delta-pct))))
 
 (def chart-base
   {:x           :calendar-year
