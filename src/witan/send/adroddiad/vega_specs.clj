@@ -1,6 +1,6 @@
 (ns witan.send.adroddiad.vega-specs
   (:require
-   [clojure2d.color :as color] 
+   [clojure2d.color :as color]
    [tablecloth.api :as tc]))
 
 ;; Copied from witan.send.adroddiad.clerk.charting-v2 as they will
@@ -42,14 +42,23 @@
                         [199 199 199 255]
                         [219 219 141 255]
                         [158 218 229 255]]))
-    :shape (cycle ["circle"
-                   "square"
-                   "triangle-up"
-                   "triangle-down"
-                   "triangle-right"
-                   "triangle-left"
-                   "cross"
-                   "diamond"])}))
+    :shape (cycle ["circle" ;; ○
+                   "square" ;; □
+                   "triangle-up" ;; △
+                   "triangle-down" ;; ▽
+                   "triangle-right" ;; ▷
+                   "triangle-left" ;; ◁
+                   "cross" ;; +
+                   "diamond" ;; ◇
+                   ])
+    :unicode-shape (cycle ["○"
+                           "□"
+                           "△"
+                           "▽"
+                           "▷"
+                           "◁"
+                           "+"
+                           "◇"])}))
 
 (defn color-map [plot-data color-field color-lookup]
   (let [group-keys (into (sorted-set) (get plot-data color-field))
