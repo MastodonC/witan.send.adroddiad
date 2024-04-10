@@ -6,8 +6,12 @@
    [tech.v3.datatype.functional :as dfn]
    [tech.v3.datatype.gradient :as gradient]
    [witan.send :as ws]
+   [witan.send.adroddiad.analysis.total-background-population :as tbp]
+   [witan.send.adroddiad.summary-v2 :as summary]
    [witan.send.adroddiad.summary-v2.io :as sio]
-   [witan.send.adroddiad.transitions :as tr]))
+   [witan.send.adroddiad.transitions :as tr]
+   [witan.send.adroddiad.vega-specs :as vs]
+   [witan.send.adroddiad.vega-specs.lines :as vsl]))
 
 (defn transitions-from-config [config-edn]
   (let [config (ws/read-config config-edn)]
@@ -113,59 +117,124 @@
                 (percentiles-reducer simulation-count :pct-ehcps)}))
          grouping-keys)]
     {:transition-count-summary
-     (-> summary
-         (tc/select-columns [:calendar-year :transition-count-summary])
-         (tc/separate-column :transition-count-summary :infer identity))
+     {:table
+      (-> summary
+          (tc/select-columns [:calendar-year :transition-count-summary])
+          (tc/separate-column :transition-count-summary :infer identity))}
      :echp-diff-summary
-     (-> summary
-         (tc/select-columns [:calendar-year :echp-diff-summary])
-         (tc/separate-column :echp-diff-summary :infer identity))
+     {:table
+      (-> summary
+          (tc/select-columns [:calendar-year :echp-diff-summary])
+          (tc/separate-column :echp-diff-summary :infer identity))}
      :ehcp-pct-diff-summary
-     (-> summary
-         (tc/select-columns [:calendar-year :ehcp-pct-diff-summary])
-         (tc/separate-column :ehcp-pct-diff-summary :infer identity))
+     {:table
+      (-> summary
+          (tc/select-columns [:calendar-year :ehcp-pct-diff-summary])
+          (tc/separate-column :ehcp-pct-diff-summary :infer identity))}
      :pct-ehcps-summary
-     (-> summary
-         (tc/select-columns [:calendar-year :pct-ehcps-summary])
-         (tc/separate-column :pct-ehcps-summary :infer identity))}))
+     {:table
+      (-> summary
+          (tc/select-columns [:calendar-year :pct-ehcps-summary])
+          (tc/separate-column :pct-ehcps-summary :infer identity))}}))
 
+(defn summarise-from-config [config-edn pqt-prefix]
+  (let [cfg (-> (ws/read-config config-edn))]
+    (summarise
+     (simulation-data-from-config config-edn pqt-prefix)
+     {:historic-transitions-count (-> config-edn
+                                      transitions-from-config
+                                      historic-ehcp-count)
+      :simulation-count (get-in cfg [:projection-parameters
+                                     :simulations])
+      :background-population (tbp/population-from-config config-edn)})))
 
-#_
-(time
- (def baz
-   ;; This takes 10 seconds and hits 50% of the cores
-   (let [ks [:calendar-year]
-         background-population (-> (:data total-background-population)
-                                   (tc/rename-columns
-                                    {:source :tbp-source
-                                     :diff :tbp-diff
-                                     :pct-diff :tbp-pct-diff}))
-         reducer (ds-reduce/group-by-column-agg-rf
-                  ks
-                  {:transition-count-summary
-                   (percentiles-reducer simulation-count :transition-count)
-                   :echp-diff-summary
-                   (percentiles-reducer simulation-count :ehcp-diff)
-                   :ehcp-pct-diff-summary
-                   (percentiles-reducer simulation-count :ehcp-pct-diff)
-                   :pct-ehcps-summary
-                   (percentiles-reducer simulation-count :pct-ehcps)})
-         reducer-xform (hf-reduce/reducer-xform->reducer
-                        reducer
-                        (comp
-                         (map (fn [sim]
-                                (-> (tc/concat-copying historic-transitions sim)
-                                    (tr/transitions->census)
-                                    (tc/group-by ks)
-                                    (tc/aggregate {:transition-count #(dfn/sum (:transition-count %))})
-                                    (add-diff :transition-count)
-                                    (tc/rename-columns
-                                     {:diff :ehcp-diff
-                                      :pct-diff :ehcp-pct-diff})
-                                    (tc/inner-join background-population [:calendar-year])
-                                    (tc/map-columns :pct-ehcps [:transition-count :population] #(dfn// %1 %2))
-                                    (tc/order-by ks))))))]
+(defn transition-count-summary-map [transition-count-summary {:keys [anchor-year]}]
+  (let [anchor-year (or anchor-year (reduce min (:calendar-year transition-count-summary)))
+        five-year (+ 5 anchor-year)
+        ten-year (+ 10 anchor-year)
+        anchor-year-median (summary/value-at transition-count-summary #(= anchor-year (:calendar-year %)) :median)
+        five-year-median (summary/value-at transition-count-summary #(= five-year (:calendar-year %)) :median)
+        ten-year-median (summary/value-at transition-count-summary #(= ten-year (:calendar-year %)) :median)
+        five-year-delta (dfn/- five-year-median anchor-year-median)
+        five-year-delta-pct (float (dfn// five-year-delta anchor-year-median))
+        ten-year-delta (dfn/- ten-year-median anchor-year-median)
+        ten-year-delta-pct (float (dfn// ten-year-delta anchor-year-median))]
+    {:anchor-year anchor-year
+     :five-year five-year
+     :ten-year ten-year
+     :anchor-year-median anchor-year-median
+     :five-year-median five-year-median
+     :ten-year-median ten-year-median
+     :five-year-delta five-year-delta
+     :five-year-delta-pct five-year-delta-pct
+     :ten-year-delta ten-year-delta
+     :ten-year-delta-pct ten-year-delta-pct}))
 
-     (hf-reduce/reduce-reducer
-      reducer-xform
-      simulation-results))))
+(defn transition-count-summary-description
+  [{:keys [anchor-year five-year ten-year anchor-year-median
+           five-year-median ten-year-median five-year-delta
+           five-year-delta-pct ten-year-delta ten-year-delta-pct]}]
+  [(if (pos? five-year-delta)
+     (format
+      "The total number of EHCPs in %d of %,.0f is expected to go up by %,.0f to %,.0f by the year %d, which is an increase of %,.1f%%."
+      anchor-year anchor-year-median five-year-delta five-year-median five-year (* 100 five-year-delta-pct))
+     (format
+      "The total number of EHCPs in %d of %,.0f is expected to go down by %,.0f to %,.0f by the year %d, which is a decrease of %,.1f%%."
+      anchor-year anchor-year-median (* -1 five-year-delta) five-year-median five-year (* -100 five-year-delta-pct)))
+   (if (pos? ten-year-delta)
+     (format "By %d it will have gone up by %,.0f to %,.0f, which is an increase of %,.1f%% over 10 years."
+             ten-year ten-year-delta ten-year-median (* 100 ten-year-delta-pct))
+     (format "By %d it will have gone down by %,.0f to %,.0f, which is a decrease of %,.1f%% over 10 years."
+             ten-year (* -1 ten-year-delta) ten-year-median (* -100 ten-year-delta-pct)))])
+
+(defn pct-ehcps-summary-map [pct-ehcps-summary {:keys [anchor-year]}]
+  (let [anchor-year (or anchor-year (reduce min (:calendar-year pct-ehcps-summary)))
+        five-year (+ 5 anchor-year)
+        ten-year (+ 10 anchor-year)
+        anchor-year-median (summary/value-at pct-ehcps-summary #(= anchor-year (:calendar-year %)) :median)
+        five-year-median (summary/value-at pct-ehcps-summary #(= five-year (:calendar-year %)) :median)
+        ten-year-median (summary/value-at pct-ehcps-summary #(= ten-year (:calendar-year %)) :median)
+        five-year-delta (dfn/- five-year-median anchor-year-median)
+        ten-year-delta (dfn/- ten-year-median anchor-year-median)]
+    {:anchor-year anchor-year
+     :five-year five-year
+     :ten-year ten-year
+     :anchor-year-median anchor-year-median
+     :five-year-median five-year-median
+     :ten-year-median ten-year-median
+     :five-year-delta five-year-delta
+     :ten-year-delta ten-year-delta}))
+
+(defn pct-ehcps-summary-description
+  [{:keys [anchor-year five-year ten-year
+           anchor-year-median five-year-median ten-year-median
+           five-year-delta ten-year-delta]}]
+  [(if (pos? five-year-delta)
+     (format
+      "In %d EHCPs were issued for %,.1f%% of the total population. It is projcted to go up by %,.1f percentage points to %,.1f%% of the population by the year %d."
+      anchor-year (* 100 anchor-year-median) (* 100 five-year-delta) (* 100 five-year-median) five-year)
+     (format
+      "In %d EHCPs were issued for %,.1f%% of the total population. It is projcted to go down by %,.1f percentage points to %,.1f%% of the population by the year %d."
+      anchor-year (* 100 anchor-year-median) (* -100 five-year-delta) (* 100 five-year-median) five-year))
+   (if (pos? ten-year-delta)
+     (format "By %d it will have gone up by %,.1f%% to %,.1f percentage points over 10 years."
+             ten-year (* 100 ten-year-delta) ten-year-median)
+     (format "By %d it will have gone down by %,.1f%% to %,.1f percentage points over 10 years."
+             ten-year (* -100 ten-year-delta) ten-year-median))])
+
+(def chart-base
+  {:x           :calendar-year      :x-title      "Calendar Year"
+   :irl         :q1                 :iru          :q3          :ir-title    "50% range"
+   :orl         :p05                :oru          :p95         :or-title    "90% range"
+   :y           :median             :y-title      "# of EHCPs" :y-format    "%,.0f" :y-zero true :y-scale false
+   :group       :projection         :group-title  "Projection" :chart-title "Number of EHCPs"
+   :chart-width vs/two-thirds-width :chart-height vs/full-height})
+
+(defn line-and-ribbon-and-rule-plot
+  [{:keys [data group group-title colors-and-shapes
+           x x-title
+           y y-title y-format y-zero
+           chart-title chart-width chart-height] 
+    :as chart-spec}]
+  (vsl/line-and-ribbon-and-rule-plot
+   (merge chart-base chart-spec)))

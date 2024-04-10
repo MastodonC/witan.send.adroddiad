@@ -55,7 +55,8 @@
          y-zero true
          y-format ",.0f"
          tooltip-field :tooltip-column}}]
-  (let [tooltip-formatf (or tooltip-formatf
+  (let [;; TODO: Find a way to get legend shape/colour into here
+        tooltip-formatf (or tooltip-formatf
                             (number-summary-tooltip {:tooltip-field tooltip-field
                                                      :group group
                                                      :x x}))]
