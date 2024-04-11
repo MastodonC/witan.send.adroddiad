@@ -30,8 +30,11 @@
          x :analysis-date}}]
   (fn [ds]
     (-> ds
-        (tc/map-columns tooltip-field [:p05 :q1 :median :q3 :p95]
-                        (fn [p05 q1 median q3 p95] (format "Percentages Median: %.1f 50%%: %.1f-%.1f 90%%: %.1f-%.1f"  (* 100 median) (* 100 q1) (* 100 q3) (* 100 p05) (* 100 p95))))
+        (tc/map-columns
+         tooltip-field [:p05 :q1 :median :q3 :p95]
+         (fn [p05 q1 median q3 p95]
+           (format "%.1f%% (%.1f%% (%.1f%%↔%.1f%%) %.1f%%)"
+                   (* 100 median) (* 100 p05) (* 100 q1) (* 100 q3) (* 100 p95))))
         (tc/select-columns [group x tooltip-field])
         (tc/pivot->wider [group] [tooltip-field] {:drop-missing? false})
         (tc/replace-missing :all :value "")
