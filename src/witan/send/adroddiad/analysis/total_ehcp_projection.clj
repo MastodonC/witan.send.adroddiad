@@ -222,13 +222,10 @@
      (format "By %d it will have gone down by %,.1f%% to %,.1f percentage points over 10 years."
              ten-year (* -100 ten-year-delta) ten-year-median))])
 
-(def chart-base
-  {:x           :calendar-year      :x-title      "Calendar Year"
-   :irl         :q1                 :iru          :q3          :ir-title    "50% range"
-   :orl         :p05                :oru          :p95         :or-title    "90% range"
-   :y           :median             :y-title      "# of EHCPs" :y-format    "%,.0f" :y-zero true :y-scale false
-   :group       :projection         :group-title  "Projection" :chart-title "Number of EHCPs"
-   :chart-width vs/two-thirds-width :chart-height vs/full-height})
+(def base-chart-spec
+  {:y   :median
+   :irl :q1  :iru :q3  :ir-title "50% range"
+   :orl :p05 :oru :p95 :or-title "90% range"})
 
 (defn line-and-ribbon-and-rule-plot
   [{:keys [data group group-title colors-and-shapes
@@ -237,4 +234,37 @@
            chart-title chart-width chart-height] 
     :as chart-spec}]
   (vsl/line-and-ribbon-and-rule-plot
-   (merge chart-base chart-spec)))
+   (merge base-chart-spec chart-spec)))
+
+#_
+(transition-count-summary-description
+ (transition-count-summary-map (-> summary :transition-count-summary :table) {}))
+
+#_
+(pct-ehcps-summary-description
+ (pct-ehcps-summary-map (-> summary :pct-ehcps-summary :table) {}))
+
+(defn summary-charts-and-data-from-config
+  [{:keys [config-edn pqt-prefix
+           anchor-year colors-and-shapes projection]}]
+  (let [summary (summarise-from-config config-edn pqt-prefix)
+        transition-count-plot 
+        (line-and-ribbon-and-rule-plot
+         {:data              (-> summary
+                                 :transition-count-summary
+                                 :table
+                                 (tc/add-column :projection projection)
+                                 (tc/map-columns :calendar-year [:calendar-year] (fn [d] (str d))))
+          :chart-title       "Total EHCPs"
+          :chart-height      vs/full-height :chart-width vs/two-thirds-width
+          :colors-and-shapes colors-and-shapes
+          :x                 :calendar-year :x-title     "Census Year" :x-format "%b %Y"
+          :y-title           "# EHCPs"      :y-zero      true         :y-scale  false
+          :group             :projection    :group-title "Projection"})
+        transition-count-summary-map (transition-count-summary-map 
+                                      (-> summary :transition-count-summary :table) {})
+        transition-count-summary-description (transition-count-summary-description transition-count-summary-map)]
+    (-> summary
+        (assoc-in [:transition-count-summary :plot] transition-count-plot)
+        (assoc-in [:transition-count-summary :summary-map] transition-count-summary-map)
+        (assoc-in [:transition-count-summary :summary-description] transition-count-summary-description))))
