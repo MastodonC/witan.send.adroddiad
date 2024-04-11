@@ -231,7 +231,7 @@
   [{:keys [data group group-title colors-and-shapes
            x x-title
            y y-title y-format y-zero
-           chart-title chart-width chart-height] 
+           chart-title chart-width chart-height]
     :as chart-spec}]
   (vsl/line-and-ribbon-and-rule-plot
    (merge base-chart-spec chart-spec)))
@@ -248,7 +248,7 @@
   [{:keys [config-edn pqt-prefix
            anchor-year colors-and-shapes projection]}]
   (let [summary (summarise-from-config config-edn pqt-prefix)
-        transition-count-plot 
+        transition-count-plot
         (line-and-ribbon-and-rule-plot
          {:data              (-> summary
                                  :transition-count-summary
@@ -261,10 +261,26 @@
           :x                 :calendar-year :x-title     "Census Year" :x-format "%b %Y"
           :y-title           "# EHCPs"      :y-zero      true         :y-scale  false
           :group             :projection    :group-title "Projection"})
-        transition-count-summary-map (transition-count-summary-map 
+        transition-count-summary-map (transition-count-summary-map
                                       (-> summary :transition-count-summary :table) {})
-        transition-count-summary-description (transition-count-summary-description transition-count-summary-map)]
+        transition-count-summary-description (transition-count-summary-description transition-count-summary-map)
+        ehcp-pct-diff-summary-plot
+        (line-and-ribbon-and-rule-plot
+         {:data              (-> summary
+                                 :ehcp-pct-diff-summary
+                                 :table
+                                 (tc/add-column :projection projection)
+                                 (tc/map-columns :calendar-year [:calendar-year] (fn [d] (str d))))
+          :chart-title       "% EHCP change YoY"
+          :chart-height      vs/full-height      :chart-width vs/two-thirds-width
+          :tooltip-formatf   (vsl/pct-summary-tooltip {:group :projection :x :calendar-year :tooltip-field :tooltip-column})
+          :colors-and-shapes colors-and-shapes
+          :x                 :calendar-year      :x-title     "Census Year" :x-format "%b %Y"
+          :y-title           "% EHCP change YoY" :y-zero      false         :y-scale  false :y-format ".1%"
+          :group             :projection         :group-title "Projection"})        ]
     (-> summary
         (assoc-in [:transition-count-summary :plot] transition-count-plot)
         (assoc-in [:transition-count-summary :summary-map] transition-count-summary-map)
-        (assoc-in [:transition-count-summary :summary-description] transition-count-summary-description))))
+        (assoc-in [:transition-count-summary :summary-description] transition-count-summary-description)
+
+        (assoc-in [:ehcp-pct-diff-summary :plot] ehcp-pct-diff-summary-plot))))
