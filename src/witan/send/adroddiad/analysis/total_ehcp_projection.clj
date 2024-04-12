@@ -247,7 +247,8 @@
 (defn summary-charts-and-data-from-config
   [{:keys [config-edn pqt-prefix
            anchor-year colors-and-shapes projection]}]
-  (let [summary (summarise-from-config config-edn pqt-prefix)
+  (let [summary
+        (summarise-from-config config-edn pqt-prefix)
         transition-count-plot
         (line-and-ribbon-and-rule-plot
          {:data              (-> summary
@@ -259,11 +260,13 @@
           :chart-height      vs/full-height :chart-width vs/two-thirds-width
           :colors-and-shapes colors-and-shapes
           :x                 :calendar-year :x-title     "Census Year" :x-format "%b %Y"
-          :y-title           "# EHCPs"      :y-zero      true         :y-scale  false
+          :y-title           "# EHCPs"      :y-zero      true          :y-scale  false
           :group             :projection    :group-title "Projection"})
-        transition-count-summary-map (transition-count-summary-map
-                                      (-> summary :transition-count-summary :table) {})
-        transition-count-summary-description (transition-count-summary-description transition-count-summary-map)
+        transition-count-summary-map
+        (transition-count-summary-map
+         (-> summary :transition-count-summary :table) {})
+        transition-count-summary-description
+        (transition-count-summary-description transition-count-summary-map)
         ehcp-pct-diff-summary-plot
         (line-and-ribbon-and-rule-plot
          {:data              (-> summary
@@ -277,10 +280,26 @@
           :colors-and-shapes colors-and-shapes
           :x                 :calendar-year      :x-title     "Census Year" :x-format "%b %Y"
           :y-title           "% EHCP change YoY" :y-zero      false         :y-scale  false :y-format ".1%"
-          :group             :projection         :group-title "Projection"})        ]
+          :group             :projection         :group-title "Projection"})
+        pct-ehcps-summary-plot
+        (line-and-ribbon-and-rule-plot
+         {:data              (-> summary
+                                 :pct-ehcps-summary
+                                 :table
+                                 (tc/add-column :projection projection)
+                                 (tc/map-columns :calendar-year [:calendar-year] (fn [d] (str d))))
+          :chart-title       "EHCP % of 0-25 Population"
+          :chart-height      vs/full-height         :chart-width vs/two-thirds-width
+          :tooltip-formatf   (vsl/pct-summary-tooltip {:group :projection :x :calendar-year :tooltip-field :tooltip-column})
+          :colors-and-shapes colors-and-shapes
+          :x                 :calendar-year         :x-title     "Census Year" :x-format "%b %Y"
+          :y-title           "EHCP % of 0-25 Population" :y-zero      true         :y-scale  false :y-format ".1%"
+          :group             :projection            :group-title "Projection"})]
     (-> summary
         (assoc-in [:transition-count-summary :plot] transition-count-plot)
         (assoc-in [:transition-count-summary :summary-map] transition-count-summary-map)
         (assoc-in [:transition-count-summary :summary-description] transition-count-summary-description)
 
-        (assoc-in [:ehcp-pct-diff-summary :plot] ehcp-pct-diff-summary-plot))))
+        (assoc-in [:ehcp-pct-diff-summary :plot] ehcp-pct-diff-summary-plot)
+
+        (assoc-in [:pct-ehcps-summary :plot] pct-ehcps-summary-plot))))
