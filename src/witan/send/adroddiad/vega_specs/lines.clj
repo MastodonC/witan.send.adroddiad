@@ -16,7 +16,6 @@
         (tc/map-columns tooltip-field [:p05 :q1 :median :q3 :p95]
                         (fn [p05 q1 median q3 p95] (format
                                                     "%,.0f (%,.0f (%,.0f↔%,.0f) %,.0f)"
-                                                    ;; "Median: %,.0f 50%%: %,.0f-%,.0f 90%%: %,.0f-%,.0f"
                                                     median p05 q1 q3 p95)))
         (tc/select-columns [group x tooltip-field])
         (tc/pivot->wider [group] [tooltip-field] {:drop-missing? false})
@@ -71,7 +70,9 @@
      :config {:legend {:titleFontSize 20 :labelFontSize 14}
               :axisX {:titleFontSize 16 :labelFontSize 12}
               :axisY {:titleFontSize 16 :labelFontSize 12}}
-     :encoding {:x {:field x :title x-title :type "temporal"}}
+     :encoding {:x {:field x :title x-title :type "temporal"
+                    ;; :axis {:format ["%Y"] :tickCount {:interval "month" :step 12}}
+                    }}
      :layer [{:encoding {:color (vs/color-map data group colors-and-shapes)
                          :shape (vs/shape-map data group colors-and-shapes)
                          :y {:field y
