@@ -236,6 +236,12 @@
   (vsl/line-and-ribbon-and-rule-plot
    (merge base-chart-spec chart-spec)))
 
+(defn format-calendar-year
+  [d] 
+  ;; (str d "-01-01")
+  (str d)
+  )
+
 #_
 (transition-count-summary-description
  (transition-count-summary-map (-> summary :transition-count-summary :table) {}))
@@ -255,7 +261,7 @@
                                  :transition-count-summary
                                  :table
                                  (tc/add-column :projection projection)
-                                 (tc/map-columns :calendar-year [:calendar-year] (fn [d] (str d))))
+                                 (tc/map-columns :calendar-year [:calendar-year] format-calendar-year))
           :chart-title       "Total EHCPs"
           :chart-height      vs/full-height :chart-width vs/two-thirds-width
           :colors-and-shapes colors-and-shapes
@@ -273,13 +279,13 @@
                                  :ehcp-pct-diff-summary
                                  :table
                                  (tc/add-column :projection projection)
-                                 (tc/map-columns :calendar-year [:calendar-year] (fn [d] (str d))))
+                                 (tc/map-columns :calendar-year [:calendar-year] format-calendar-year))
           :chart-title       "% EHCP change YoY"
           :chart-height      vs/full-height      :chart-width vs/two-thirds-width
           :tooltip-formatf   (vsl/pct-summary-tooltip {:group :projection :x :calendar-year :tooltip-field :tooltip-column})
           :colors-and-shapes colors-and-shapes
           :x                 :calendar-year      :x-title     "Census Year" :x-format "%b %Y"
-          :y-title           "% EHCP change YoY" :y-zero      false         :y-scale  false :y-format ".1%"
+          :y-title            "% change" :y-zero      false         :y-scale  false :y-format ".1%"
           :group             :projection         :group-title "Projection"})
         pct-ehcps-summary-plot
         (line-and-ribbon-and-rule-plot
@@ -287,13 +293,13 @@
                                  :pct-ehcps-summary
                                  :table
                                  (tc/add-column :projection projection)
-                                 (tc/map-columns :calendar-year [:calendar-year] (fn [d] (str d))))
+                                 (tc/map-columns :calendar-year [:calendar-year] format-calendar-year))
           :chart-title       "EHCP % of 0-25 Population"
           :chart-height      vs/full-height         :chart-width vs/two-thirds-width
           :tooltip-formatf   (vsl/pct-summary-tooltip {:group :projection :x :calendar-year :tooltip-field :tooltip-column})
           :colors-and-shapes colors-and-shapes
           :x                 :calendar-year         :x-title     "Census Year" :x-format "%b %Y"
-          :y-title           "EHCP % of 0-25 Population" :y-zero      true         :y-scale  false :y-format ".1%"
+          :y-title           "% Population" :y-zero      true         :y-scale  false :y-format ".1%"
           :group             :projection            :group-title "Projection"})]
     (-> summary
         (assoc-in [:transition-count-summary :plot] transition-count-plot)
