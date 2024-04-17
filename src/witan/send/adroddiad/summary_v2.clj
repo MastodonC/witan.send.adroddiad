@@ -1,12 +1,14 @@
 (ns witan.send.adroddiad.summary-v2
   (:require
    [clojure.math :as maths]
+   [fastmath.core :as m]
    [ham-fisted.api :as hf]
    [ham-fisted.reduce :as hf-reduce]
    [net.cgrand.xforms :as x]
    [tablecloth.api :as tc]
    [tech.v3.dataset.reductions :as ds-reduce]
    [tech.v3.datatype.functional :as dfn]
+   [tech.v3.datatype.gradient :as gradient]
    [witan.send.adroddiad.transitions :as tr]))
 
 ;; FIXME: This should be merged with summarise-simulations in the rfn and merge-fn for v3
@@ -134,3 +136,21 @@
     (tc/replace-missing $ [:min :p05 :q1 :median :q3 :p95 :max :mean :observations :simulation-count] :value 0)
     (tc/order-by $ ks)
     (finalise-f $)))
+
+(defn add-diff [ds value-col]
+  (let [ds' (tc/order-by ds [:calendar-year])
+        diff (gradient/diff1d (value-col ds'))
+        values (value-col ds')
+        pct-diff (sequence
+                  (map (fn [d m] (m/approx (* 100 (double (/ d m))))))
+                  diff values)]
+    (-> ds'
+        (tc/add-column :diff (into [0] diff))
+        (tc/add-column :pct-diff (into [0] pct-diff)))))
+
+(defn value-at [ds predicate key]
+  (-> ds
+      (tc/select-rows predicate)
+      (tc/rows :as-maps)
+      first
+      key))
