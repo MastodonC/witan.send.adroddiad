@@ -279,7 +279,7 @@
           :group             :projection    :group-title "Projection"})
         transition-count-summary-map
         (transition-count-summary-map
-         (-> summary :transition-count-summary :table) {})
+         (-> summary :transition-count-summary :table) {:anchor-year anchor-year})
         transition-count-summary-description
         (transition-count-summary-description transition-count-summary-map)
         ehcp-pct-diff-summary-plot
