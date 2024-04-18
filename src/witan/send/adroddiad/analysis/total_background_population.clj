@@ -65,13 +65,22 @@
     (if (pos? ten-year-delta)
       "By %d it will have gone up by %,.0f to %,.0f, which is an increase of %,.1f%% over 10 years."
       "By %d it will have gone down by %,.0f to %,.0f, which is a decrease of %,.1f%% over 10 years.")
-    ten-year (* -1 ten-year-delta) ten-year-pop (* -100 ten-year-delta-pct))])
+    ten-year (* -1 ten-year-delta) ten-year-pop (* -100 ten-year-delta-pct))]
+  [(if (pos? five-year-delta)
+     (format
+      "The 0-25 population in %d of %,.0f is expected to go up by %,.0f to %,.0f by the year %d, which is an increase of %,.1f%%."
+      anchor-year anchor-year-pop five-year-delta five-year-pop five-year (* 100 five-year-delta-pct))
+     (format
+      "The 0-25 population in %d of %,.0f is expected to go down by %,.0f to %,.0f by the year %d, which is a decrease of %,.1f%%."
+      anchor-year anchor-year-pop (* -1 five-year-delta) five-year-pop five-year (* -100 five-year-delta-pct)))])
 
 (defn population-trend-headline
   [{:keys [anchor-year five-year five-year-delta five-year-delta-pct]}]
   (if (pos? five-year-delta)
-    (format "Between %d-%d 0-25 Population Expected to Grow by %,.1f%%" anchor-year five-year (* -100 five-year-delta-pct))
-    (format "Between %d-%d 0-25 Population Expected to Shrink by %,.1f%%" anchor-year five-year (* -100 five-year-delta-pct))))
+    (format "Between %d-%d 0-25 Population Expected to Grow by %,.1f%%"
+            anchor-year five-year (* 100 five-year-delta-pct))
+    (format "Between %d-%d 0-25 Population Expected to Shrink by %,.1f%%"
+            anchor-year five-year (* -100 five-year-delta-pct))))
 
 (def chart-base
   {:x           :calendar-year
@@ -90,7 +99,7 @@
 (defn line-plot [{:keys [data group group-title colors-and-shapes
                          x x-title
                          y y-title y-format y-zero
-                         chart-title chart-width chart-height] 
+                         chart-title chart-width chart-height]
                   :as chart-spec}]
   (vsl/line-plot
    (merge chart-base chart-spec)))
