@@ -229,7 +229,7 @@
 
 (defn line-and-ribbon-and-rule-plot
   [{:keys [data group group-title colors-and-shapes
-           x x-title
+           x x-title x-scale
            y y-title y-format y-zero
            chart-title chart-width chart-height]
     :as chart-spec}]
@@ -237,7 +237,7 @@
    (merge base-chart-spec chart-spec)))
 
 (defn format-calendar-year
-  [d] 
+  [d]
   ;; (str d "-01-01")
   (str d)
   )
@@ -250,18 +250,27 @@
 (pct-ehcps-summary-description
  (pct-ehcps-summary-map (-> summary :pct-ehcps-summary :table) {}))
 
+(defn min-max-year [ds]
+  (let [years (map read-string (:calendar-year ds))]
+    {:min (apply dfn/min years)
+     :max (apply dfn/max years)}))
+
 (defn summary-charts-and-data-from-config
   [{:keys [config-edn pqt-prefix
            anchor-year colors-and-shapes projection]}]
   (let [summary
         (summarise-from-config config-edn pqt-prefix)
+        data
+        (-> summary
+            :transition-count-summary
+            :table
+            (tc/add-column :projection projection)
+            (tc/map-columns :calendar-year [:calendar-year] format-calendar-year))
+        calendar-year-limits
+        (min-max-year data)
         transition-count-plot
         (line-and-ribbon-and-rule-plot
-         {:data              (-> summary
-                                 :transition-count-summary
-                                 :table
-                                 (tc/add-column :projection projection)
-                                 (tc/map-columns :calendar-year [:calendar-year] format-calendar-year))
+         {:data              data
           :chart-title       "Total EHCPs"
           :chart-height      vs/full-height :chart-width vs/two-thirds-width
           :colors-and-shapes colors-and-shapes
@@ -279,12 +288,15 @@
                                  :ehcp-pct-diff-summary
                                  :table
                                  (tc/add-column :projection projection)
+                                 (tc/drop-rows #(= (:min calendar-year-limits)
+                                                   (:calendar-year %)))
                                  (tc/map-columns :calendar-year [:calendar-year] format-calendar-year))
           :chart-title       "% EHCP change YoY"
           :chart-height      vs/full-height      :chart-width vs/two-thirds-width
           :tooltip-formatf   (vsl/pct-summary-tooltip {:group :projection :x :calendar-year :tooltip-field :tooltip-column})
           :colors-and-shapes colors-and-shapes
           :x                 :calendar-year      :x-title     "Census Year" :x-format "%b %Y"
+          :x-scale (mapv format-calendar-year (range (:min calendar-year-limits) (+ 1 (:max calendar-year-limits))))
           :y-title            "% change" :y-zero      false         :y-scale  false :y-format ".1%"
           :group             :projection         :group-title "Projection"})
         pct-ehcps-summary-plot

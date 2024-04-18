@@ -44,7 +44,7 @@
 (defn line-and-ribbon-and-rule-plot
   [{:keys [data
            chart-title
-           x x-title x-format
+           x x-title x-format x-scale
            y y-title y-format y-scale y-zero
            irl iru ir-title
            orl oru or-title
@@ -72,6 +72,7 @@
               :axisX {:titleFontSize 16 :labelFontSize 12}
               :axisY {:titleFontSize 16 :labelFontSize 12}}
      :encoding {:x {:field x :title x-title :type "temporal"
+                    :scale {:domain x-scale :x-xero false}
                     ;; :axis {:format ["%Y"] :tickCount {:interval "month" :step 12}}
                     }}
      :layer [{:encoding {:color (vs/color-map data group colors-and-shapes)
