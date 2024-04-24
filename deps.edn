@@ -7,12 +7,7 @@
                                                      :git/sha "a8711e9"}
          reducibles/reducibles                      {:mvn/version "0.3.0"}
          com.cognitect/transit-clj                  {:mvn/version "1.0.324"}
-         org.clojure/core.async                     {:mvn/version "1.5.648"}
-         org.apache.xmlgraphics/batik-transcoder    {:mvn/version "1.17"}
-         org.apache.xmlgraphics/batik-codec         {:mvn/version "1.17"}
-         xerces/xercesImpl                          {:mvn/version "2.12.2"}
-         applied-science/darkstar                   {:git/url "https://github.com/applied-science/darkstar/"
-                                                     :sha "541a3ff36065c59e92fe6aa61e41a4385ba6f893"}}
+         org.clojure/core.async                     {:mvn/version "1.5.648"}}
  :aliases
  {:dev  {:extra-paths ["notebooks" "dev" "test"]
          :extra-deps  {org.clojure/clojure         {:mvn/version "1.11.1"}
