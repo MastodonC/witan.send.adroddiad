@@ -69,8 +69,6 @@
              [0.00001 5 25 50 75 95 100]))
            (assoc :observations observations))))))
 
-;; FIXME: We don’t want background-population to be the denominator,
-;; we want total # of EHCPs to be the denominator
 (defn transform-simulation
   [sim {:keys [numerator-grouping-keys denominator-grouping-keys historic-transitions-count]}]
   (let [census (-> (tc/concat-copying historic-transitions-count sim)
@@ -89,8 +87,6 @@
         (tc/map-columns :pct-ehcps [:transition-count :denominator] #(dfn// %1 %2))
         (tc/order-by numerator-grouping-keys))))
 
-;; FIXME: We don’t want background-population to be the denominator,
-;; we want total # of EHCPs to be the denominator
 (defn summarise
   [simulation-results
    {:keys [historic-transitions-count simulation-count numerator-grouping-keys denominator-grouping-keys]
