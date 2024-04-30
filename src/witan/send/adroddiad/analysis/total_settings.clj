@@ -1,5 +1,7 @@
 (ns witan.send.adroddiad.analysis.total-settings
   (:require
+   [clojure.java.io :as io]
+   [tech.v3.libs.parquet :as parquet]
    [ham-fisted.reduce :as hf-reduce]
    [tablecloth.api :as tc]
    [tech.v3.dataset.reductions :as ds-reduce]
@@ -33,7 +35,19 @@
        ws/read-config
        :project-dir
        (sio/simulated-transitions-files prefix)
-       (sio/files->ds-vec)))
+       (sio/files->ds-vec))
+  ;; This eduction is much slower than the above
+  #_(eduction
+     (filter #(re-find (re-pattern (format "%s-[0-9]+\\.parquet$" prefix)) (.getName %)))
+     (map #(.getPath %))
+     (map #(parquet/parquet->ds % {:key-fn keyword}))
+     (mapcat #(tc/group-by % [:simulation] {:result-type :as-seq}))
+     (-> config-edn
+         ws/read-config
+         :project-dir
+         io/file
+         .listFiles
+         sort)))
 
 (defn add-diff [ds value-col]
   (let [ds' (tc/order-by ds [:calendar-year])
@@ -127,7 +141,7 @@
                 :pct-ehcps-summary
                 (percentiles-reducer simulation-count :pct-ehcps)}))
          numerator-grouping-keys)]
-    {:transition-count-summary
+    {:total-summary
      {:table
       (-> summary
           (tc/select-columns (conj numerator-grouping-keys :transition-count-summary))
@@ -157,3 +171,60 @@
                                       historic-ehcp-count)
       :simulation-count (get-in cfg [:projection-parameters
                                      :simulations])})))
+
+(
+;;; Charting
+ )
+(def base-chart-spec
+  {:y   :median
+   :irl :q1  :iru :q3  :ir-title "50% range"
+   :orl :p05 :oru :p95 :or-title "90% range"})
+
+(defn line-and-ribbon-and-rule-plot
+  [{:keys [data group group-title colors-and-shapes order-field
+           x x-title x-scale
+           y y-title y-format y-zero
+           chart-title chart-width chart-height]
+    :as chart-spec}]
+  (vsl/line-and-ribbon-and-rule-plot
+   (merge base-chart-spec chart-spec)))
+
+(defn format-calendar-year
+  [d]
+  ;; (str d "-01-01")
+  (str d)
+  )
+
+(
+;;; All Settings
+ )
+(defn total-summary-plot
+  [{:keys [data colors-and-shapes order-field]}]
+  (line-and-ribbon-and-rule-plot
+   {:data              (-> data
+                           (tc/map-columns :calendar-year [:calendar-year] format-calendar-year))
+    :chart-title       "# EHCP by Setting"
+    :chart-height      vs/full-height :chart-width vs/two-thirds-width
+    :colors-and-shapes colors-and-shapes
+    :x                 :calendar-year :x-title     "Census Year" :x-format "%b %Y"
+    :y-title           "# EHCPs"      :y-zero      true          :y-scale  false
+    :group             :label       :group-title "Setting" :order-field order-field}))
+
+#_
+(defn echp-diff-summary-plot
+  [{}]
+  )
+
+#_
+(defn ehcp-pct-diff-summary-plot
+  [{}]
+  )
+
+#_
+(defn pct-ehcps-summary-plot
+  [{}]
+  )
+
+(
+;;; Each Setting on its own
+ )
