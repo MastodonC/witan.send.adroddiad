@@ -146,17 +146,17 @@
       (-> summary
           (tc/select-columns (conj numerator-grouping-keys :transition-count-summary))
           (tc/separate-column :transition-count-summary :infer identity))}
-     :echp-diff-summary
+     :diff-summary
      {:table
       (-> summary
           (tc/select-columns (conj numerator-grouping-keys :echp-diff-summary))
           (tc/separate-column :echp-diff-summary :infer identity))}
-     :ehcp-pct-diff-summary
+     :pct-diff-summary
      {:table
       (-> summary
           (tc/select-columns (conj numerator-grouping-keys :ehcp-pct-diff-summary))
           (tc/separate-column :ehcp-pct-diff-summary :infer identity))}
-     :pct-ehcps-summary
+     :pct-of-total-summary
      {:table
       (-> summary
           (tc/select-columns (conj numerator-grouping-keys :pct-ehcps-summary))
@@ -211,17 +211,25 @@
     :group             :label       :group-title "Setting" :order-field order-field}))
 
 #_
-(defn echp-diff-summary-plot
+(defn diff-summary-plot
   [{}]
   )
 
-#_
-(defn ehcp-pct-diff-summary-plot
-  [{}]
-  )
+(defn pct-diff-summary-plot
+  [{:keys [data colors-and-shapes order-field]}]
+  (line-and-ribbon-and-rule-plot
+   {:data              (-> data
+                           (tc/map-columns :calendar-year [:calendar-year] format-calendar-year))
+    :chart-title       "% EHCP by Setting"
+    :chart-height      vs/full-height :chart-width vs/two-thirds-width
+    :tooltip-formatf   (vsl/pct-summary-tooltip {:group :label :x :calendar-year :tooltip-field :tooltip-column})
+    :colors-and-shapes colors-and-shapes
+    :x                 :calendar-year :x-title     "Census Year" :x-format "%b %Y"
+    :y-title           "% Population" :y-zero      true         :y-scale  false :y-format ".1%"
+    :group             :label       :group-title "Setting" :order-field order-field}))
 
 #_
-(defn pct-ehcps-summary-plot
+(defn pct-of-total-summary-plot
   [{}]
   )
 
