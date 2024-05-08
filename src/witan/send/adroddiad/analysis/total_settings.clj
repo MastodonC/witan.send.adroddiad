@@ -200,16 +200,19 @@
 ;;; All Settings
  )
 (defn total-summary-plot
-  [{:keys [data colors-and-shapes order-field]}]
+  [{:keys [data colors-and-shapes order-field label-field]
+    :or   {label-field :setting
+           order-field :setting}}]
   (line-and-ribbon-and-rule-plot
    {:data              (-> data
                            (tc/map-columns :calendar-year [:calendar-year] format-calendar-year))
     :chart-title       "# EHCP by Setting"
     :chart-height      vs/full-height :chart-width vs/two-thirds-width
+    :tooltip-formatf   (vsl/number-summary-tooltip {:group label-field :x :calendar-year :tooltip-field :tooltip-column})
     :colors-and-shapes colors-and-shapes
-    :x                 :calendar-year :x-title     "Census Year" :x-format "%b %Y"
-    :y-title           "# EHCPs"      :y-zero      true          :y-scale  false
-    :group             :label       :group-title "Setting" :order-field order-field}))
+    :x                 :calendar-year :x-title     "Census Year" :x-format    "%b %Y"
+    :y-title           "# EHCPs"      :y-zero      true          :y-scale     false
+    :group             label-field    :group-title "Setting"     :order-field order-field}))
 
 #_
 (defn diff-summary-plot
@@ -217,17 +220,19 @@
   )
 
 (defn pct-diff-summary-plot
-  [{:keys [data colors-and-shapes order-field]}]
+  [{:keys [data colors-and-shapes order-field label-field]
+    :or   {label-field :setting
+           order-field :setting}}]
   (line-and-ribbon-and-rule-plot
    {:data              (-> data
                            (tc/map-columns :calendar-year [:calendar-year] format-calendar-year))
     :chart-title       "% EHCP by Setting"
     :chart-height      vs/full-height :chart-width vs/two-thirds-width
-    :tooltip-formatf   (vsl/pct-summary-tooltip {:group :label :x :calendar-year :tooltip-field :tooltip-column})
+    :tooltip-formatf   (vsl/pct-summary-tooltip {:group label-field :x :calendar-year :tooltip-field :tooltip-column})
     :colors-and-shapes colors-and-shapes
-    :x                 :calendar-year :x-title     "Census Year" :x-format "%b %Y"
-    :y-title           "% Population" :y-zero      true         :y-scale  false :y-format ".1%"
-    :group             :label       :group-title "Setting" :order-field order-field}))
+    :x                 :calendar-year :x-title     "Census Year" :x-format    "%b %Y"
+    :y-title           "% Population" :y-zero      true          :y-scale     false :y-format ".1%"
+    :group             label-field    :group-title "Setting"     :order-field order-field}))
 
 #_
 (defn pct-of-total-summary-plot
