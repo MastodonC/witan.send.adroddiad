@@ -103,9 +103,10 @@
 
 (defn summarise
   [simulation-results
-   {:keys [historic-transitions-count simulation-count numerator-grouping-keys denominator-grouping-keys]
+   {:keys [historic-transitions-count simulation-count numerator-grouping-keys denominator-grouping-keys transform-simulation-f]
     :or {numerator-grouping-keys [:calendar-year :setting]
-         denominator-grouping-keys [:calendar-year]}}]
+         denominator-grouping-keys [:calendar-year]
+         transform-simulation-f transform-simulation}}]
   (let [summary
         (tc/order-by
          (->> simulation-results
@@ -116,7 +117,7 @@
                (fn [acc sim]
                  (conj acc
                        (try
-                         (transform-simulation
+                         (transform-simulation-f
                           sim
                           {:denominator-grouping-keys denominator-grouping-keys
                            :historic-transitions-count historic-transitions-count
