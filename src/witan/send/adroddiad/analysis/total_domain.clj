@@ -84,13 +84,15 @@
            (assoc :observations observations))))))
 
 (defn transform-simulation
-  [sim {:keys [numerator-grouping-keys denominator-grouping-keys historic-transitions-count]}]
+  [sim {:keys [numerator-grouping-keys denominator-grouping-keys historic-transitions-count extra-transformation-f]
+        :or {extra-transformation-f identity}}]
   (let [census (-> (tc/concat-copying historic-transitions-count sim)
                    (tr/transitions->census))
         denominator (-> census
                         (tc/group-by denominator-grouping-keys)
                         (tc/aggregate {:denominator #(dfn/sum (:transition-count %))}))]
     (-> census
+        extra-transformation-f
         (tc/group-by numerator-grouping-keys)
         (tc/aggregate {:transition-count #(dfn/sum (:transition-count %))})
         (add-diff :transition-count)
@@ -105,9 +107,13 @@
   [simulation-results
    {:keys [historic-transitions-count simulation-count domain-key
            numerator-grouping-keys denominator-grouping-keys transform-simulation-f]
-    :or {numerator-grouping-keys [:calendar-year domain-key]
+    :or {numerator-grouping-keys (let [cy-base [:calendar-year]]
+                                   (if (keyword? domain-key)
+                                     (conj cy-base domain-key)
+                                     (into cy-base domain-key)))
          denominator-grouping-keys [:calendar-year]
-         transform-simulation-f transform-simulation}}]
+         transform-simulation-f transform-simulation}
+    :as config}]
   (let [summary
         (tc/order-by
          (->> simulation-results
@@ -120,9 +126,10 @@
                        (try
                          (transform-simulation-f
                           sim
-                          {:denominator-grouping-keys denominator-grouping-keys
-                           :historic-transitions-count historic-transitions-count
-                           :numerator-grouping-keys numerator-grouping-keys})
+                          (assoc config
+                                 :denominator-grouping-keys denominator-grouping-keys
+                                 :historic-transitions-count historic-transitions-count
+                                 :numerator-grouping-keys numerator-grouping-keys))
                          (catch Exception e (throw (ex-info "Failed to transform simulation."
                                                             {:sim sim
                                                              :denominator-grouping-keys denominator-grouping-keys
@@ -164,15 +171,17 @@
           (tc/select-columns (conj numerator-grouping-keys :pct-ehcps-summary))
           (tc/separate-column :pct-ehcps-summary :infer identity))}}))
 
-(defn summarise-from-config [config-edn pqt-prefix]
+(defn summarise-from-config [{:keys [config-edn pqt-prefix] :as config}]
   (let [cfg (-> (ws/read-config config-edn))]
     (summarise
      (simulation-data-from-config config-edn pqt-prefix)
-     {:historic-transitions-count (-> config-edn
+     (assoc
+      config
+      :historic-transitions-count (-> config-edn
                                       transitions-from-config
                                       historic-ehcp-count)
       :simulation-count (get-in cfg [:projection-parameters
-                                     :simulations])})))
+                                     :simulations])))))
 
 (
 ;;; Charting
