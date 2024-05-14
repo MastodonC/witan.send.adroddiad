@@ -8,7 +8,7 @@
    :orl :p05 :oru :p95 :or-title "90% range"})
 
 (defn number-summary-tooltip
-  [{:keys [tooltip-field group x]
+  [{:keys [tooltip-field group x order-field]
     :or {tooltip-field :tooltip-field
          x :analysis-date}}]
   (fn [ds]
@@ -18,14 +18,14 @@
          (fn [p05 q1 median q3 p95] (format
                                      "%,.0f (%,.0f (%,.0f↔%,.0f) %,.0f)"
                                      median p05 q1 q3 p95)))
+        (tc/order-by [(or order-field x)])
         (tc/select-columns [group x tooltip-field])
         (tc/pivot->wider [group] [tooltip-field] {:drop-missing? false})
         (tc/replace-missing :all :value "")
-        (tc/order-by [x])
         (tc/rows :as-maps))))
 
 (defn pct-summary-tooltip
-  [{:keys [tooltip-field group x]
+  [{:keys [tooltip-field group x order-field]
     :or {tooltip-field :tooltip-field
          x :analysis-date}}]
   (fn [ds]
@@ -35,10 +35,10 @@
          (fn [p05 q1 median q3 p95]
            (format "%.1f%% (%.1f%% (%.1f%%↔%.1f%%) %.1f%%)"
                    (* 100 median) (* 100 p05) (* 100 q1) (* 100 q3) (* 100 p95))))
+        (tc/order-by [(or order-field x)])
         (tc/select-columns [group x tooltip-field])
         (tc/pivot->wider [group] [tooltip-field] {:drop-missing? false})
         (tc/replace-missing :all :value "")
-        (tc/order-by [x])
         (tc/rows :as-maps))))
 
 (defn line-and-ribbon-and-rule-plot
@@ -49,7 +49,7 @@
            irl iru ir-title
            orl oru or-title
            tooltip-field tooltip-formatf
-           group group-title
+           group group-title order-field
            chart-height chart-width
            colors-and-shapes]
     :or {chart-height vs/full-height
@@ -62,6 +62,7 @@
         tooltip-formatf (or tooltip-formatf
                             (number-summary-tooltip {:tooltip-field tooltip-field
                                                      :group group
+                                                     :order-field order-field
                                                      :x x}))]
     {:data {:values (-> data
                         (tc/rows :as-maps))}
@@ -101,7 +102,11 @@
                                    :value 0}
                          :tooltip (into [{:field x :type "temporal" :format x-format :title x-title}]
                                         (map (fn [g] {:field g}))
-                                        (into (sorted-set) (data group)))}
+                                        (if order-field
+                                          (-> data
+                                              (tc/order-by [order-field])
+                                              (get group))
+                                          (into (sorted-set) (data group))))}
               :params [{:name "hover"
                         :select {:type "point"
                                  :size 200
