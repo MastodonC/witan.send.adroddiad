@@ -50,7 +50,7 @@
          sort)))
 
 (defn add-diff [ds value-col]
-  (let [ds' (tc/order-by ds [:calendar-year])
+  (let [ds' (tc/order-by ds [value-col :calendar-year])
         diff (gradient/diff1d (value-col ds'))
         values (value-col ds')
         pct-diff (sequence
