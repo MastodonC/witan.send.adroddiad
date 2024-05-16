@@ -257,7 +257,7 @@
                  (tc/map-columns :calendar-year [:calendar-year] format-calendar-year))]
     (line-and-ribbon-and-rule-plot
      {:data              data
-      :chart-title       "% EHCP change year on year by setting"
+      :chart-title       (str "% EHCP change year on year by " (name label-field))
       :chart-height      vs/full-height      :chart-width vs/two-thirds-width
       :tooltip-formatf   (vsl/pct-summary-tooltip {:group label-field :x :calendar-year :tooltip-field :tooltip-column})
       :colors-and-shapes colors-and-shapes
