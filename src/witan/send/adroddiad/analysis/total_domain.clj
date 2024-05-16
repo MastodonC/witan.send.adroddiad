@@ -50,7 +50,7 @@
          sort)))
 
 (defn add-diff [ds value-col]
-  (let [ds' (tc/order-by ds [value-col :calendar-year])
+  (let [ds' (tc/order-by ds [:calendar-year])
         diff (gradient/diff1d (value-col ds'))
         values (value-col ds')
         pct-diff (sequence
@@ -84,24 +84,26 @@
            (assoc :observations observations))))))
 
 (defn transform-simulation
-  [sim {:keys [numerator-grouping-keys denominator-grouping-keys historic-transitions-count extra-transformation-f]
+  [sim {:keys [numerator-grouping-keys denominator-grouping-keys domain-key historic-transitions-count extra-transformation-f]
         :or {extra-transformation-f identity}}]
   (let [census (-> (tc/concat-copying historic-transitions-count sim)
                    (tr/transitions->census))
         denominator (-> census
                         (tc/group-by denominator-grouping-keys)
                         (tc/aggregate {:denominator #(dfn/sum (:transition-count %))}))]
-    (-> census
-        extra-transformation-f
-        (tc/group-by numerator-grouping-keys)
-        (tc/aggregate {:transition-count #(dfn/sum (:transition-count %))})
-        (add-diff :transition-count)
-        (tc/rename-columns
-         {:diff :ehcp-diff
-          :pct-diff :ehcp-pct-diff})
-        (tc/inner-join denominator denominator-grouping-keys)
-        (tc/map-columns :pct-ehcps [:transition-count :denominator] #(dfn// %1 %2))
-        (tc/order-by numerator-grouping-keys))))
+    (as-> census $
+      (extra-transformation-f $)
+      (tc/group-by $ numerator-grouping-keys)
+      (tc/aggregate $ {:transition-count #(dfn/sum (:transition-count %))})
+      (tc/group-by $ domain-key {:result-type :as-seq})
+      (map #(add-diff % :transition-count) $)
+      (apply tc/concat $)
+      (tc/rename-columns $
+                         {:diff :ehcp-diff
+                          :pct-diff :ehcp-pct-diff})
+      (tc/inner-join $ denominator denominator-grouping-keys)
+      (tc/map-columns $ :pct-ehcps [:transition-count :denominator] #(dfn// %1 %2))
+      (tc/order-by $ numerator-grouping-keys))))
 
 (defn summarise
   [simulation-results
@@ -129,7 +131,8 @@
                           (assoc config
                                  :denominator-grouping-keys denominator-grouping-keys
                                  :historic-transitions-count historic-transitions-count
-                                 :numerator-grouping-keys numerator-grouping-keys))
+                                 :numerator-grouping-keys numerator-grouping-keys
+                                 :domain-key domain-key))
                          (catch Exception e (throw (ex-info "Failed to transform simulation."
                                                             {:sim sim
                                                              :denominator-grouping-keys denominator-grouping-keys
