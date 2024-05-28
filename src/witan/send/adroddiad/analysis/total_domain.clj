@@ -84,24 +84,26 @@
            (assoc :observations observations))))))
 
 (defn transform-simulation
-  [sim {:keys [numerator-grouping-keys denominator-grouping-keys historic-transitions-count extra-transformation-f]
+  [sim {:keys [numerator-grouping-keys denominator-grouping-keys domain-key historic-transitions-count extra-transformation-f]
         :or {extra-transformation-f identity}}]
   (let [census (-> (tc/concat-copying historic-transitions-count sim)
                    (tr/transitions->census))
         denominator (-> census
                         (tc/group-by denominator-grouping-keys)
                         (tc/aggregate {:denominator #(dfn/sum (:transition-count %))}))]
-    (-> census
-        extra-transformation-f
-        (tc/group-by numerator-grouping-keys)
-        (tc/aggregate {:transition-count #(dfn/sum (:transition-count %))})
-        (add-diff :transition-count)
-        (tc/rename-columns
-         {:diff :ehcp-diff
-          :pct-diff :ehcp-pct-diff})
-        (tc/inner-join denominator denominator-grouping-keys)
-        (tc/map-columns :pct-ehcps [:transition-count :denominator] #(dfn// %1 %2))
-        (tc/order-by numerator-grouping-keys))))
+    (as-> census $
+      (extra-transformation-f $)
+      (tc/group-by $ numerator-grouping-keys)
+      (tc/aggregate $ {:transition-count #(dfn/sum (:transition-count %))})
+      (tc/group-by $ domain-key {:result-type :as-seq})
+      (map #(add-diff % :transition-count) $)
+      (apply tc/concat $)
+      (tc/rename-columns $
+                         {:diff :ehcp-diff
+                          :pct-diff :ehcp-pct-diff})
+      (tc/inner-join $ denominator denominator-grouping-keys)
+      (tc/map-columns $ :pct-ehcps [:transition-count :denominator] #(dfn// %1 %2))
+      (tc/order-by $ numerator-grouping-keys))))
 
 (defn summarise
   [simulation-results
@@ -129,7 +131,8 @@
                           (assoc config
                                  :denominator-grouping-keys denominator-grouping-keys
                                  :historic-transitions-count historic-transitions-count
-                                 :numerator-grouping-keys numerator-grouping-keys))
+                                 :numerator-grouping-keys numerator-grouping-keys
+                                 :domain-key domain-key))
                          (catch Exception e (throw (ex-info "Failed to transform simulation."
                                                             {:sim sim
                                                              :denominator-grouping-keys denominator-grouping-keys
@@ -222,23 +225,46 @@
     :y-title           "# EHCPs"      :y-zero      true          :y-scale     false
     :group             label-field    :group-title (name label-field)     :order-field order-field}))
 
-#_
+(defn min-max-year [ds]
+  (let [years (:calendar-year ds)]
+    {:min (apply dfn/min years)
+     :max (apply dfn/max years)}))
+
 (defn diff-summary-plot
-  [{}]
-  )
+  [{:keys [data colors-and-shapes order-field label-field]}]
+  (let [calendar-year-limits (min-max-year data)
+        data (-> data
+                 (tc/drop-rows #(= (:min calendar-year-limits)
+                                   (:calendar-year %)))
+                 (tc/map-columns :calendar-year [:calendar-year] format-calendar-year))]
+    (line-and-ribbon-and-rule-plot
+     {:data              data
+      :chart-title       (str "EHCP change Year on Year by " (name label-field))
+      :chart-height      vs/full-height      :chart-width vs/two-thirds-width
+      :tooltip-formatf   (vsl/number-summary-tooltip {:group label-field :x :calendar-year :tooltip-field :tooltip-column})
+      :colors-and-shapes colors-and-shapes
+      :x                 :calendar-year      :x-title     "Census Year" :x-format "%b %Y"
+      :x-scale (mapv format-calendar-year (range (:min calendar-year-limits) (+ 1 (:max calendar-year-limits))))
+      :y-title            "# EHCPs" :y-zero      false         :y-scale  false
+      :group             label-field         :group-title (name label-field) :order-field order-field})))
 
 (defn pct-diff-summary-plot
   [{:keys [data colors-and-shapes order-field label-field]}]
-  (line-and-ribbon-and-rule-plot
-   {:data              (-> data
-                           (tc/map-columns :calendar-year [:calendar-year] format-calendar-year))
-    :chart-title       (str "% EHCP by " (name label-field))
-    :chart-height      vs/full-height :chart-width vs/two-thirds-width
-    :tooltip-formatf   (vsl/pct-summary-tooltip {:group label-field :x :calendar-year :tooltip-field :tooltip-column})
-    :colors-and-shapes colors-and-shapes
-    :x                 :calendar-year :x-title     "Census Year" :x-format    "%b %Y"
-    :y-title           "% Population" :y-zero      true          :y-scale     false :y-format ".1%"
-    :group             label-field    :group-title (name label-field)     :order-field order-field}))
+  (let [calendar-year-limits (min-max-year data)
+        data (-> data
+                 (tc/drop-rows #(= (:min calendar-year-limits)
+                                   (:calendar-year %)))
+                 (tc/map-columns :calendar-year [:calendar-year] format-calendar-year))]
+    (line-and-ribbon-and-rule-plot
+     {:data              data
+      :chart-title       (str "% EHCP change year on year by " (name label-field))
+      :chart-height      vs/full-height      :chart-width vs/two-thirds-width
+      :tooltip-formatf   (vsl/pct-summary-tooltip {:group label-field :x :calendar-year :tooltip-field :tooltip-column})
+      :colors-and-shapes colors-and-shapes
+      :x                 :calendar-year      :x-title     "Census Year" :x-format "%b %Y"
+      :x-scale (mapv format-calendar-year (range (:min calendar-year-limits) (+ 1 (:max calendar-year-limits))))
+      :y-title            "% change" :y-zero      false         :y-scale  false :y-format ".1%"
+      :group             label-field         :group-title (name label-field) :order-field order-field})))
 
 #_
 (defn pct-of-total-summary-plot
