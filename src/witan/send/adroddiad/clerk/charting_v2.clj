@@ -75,7 +75,8 @@
            y y-title y-format
            y-zero y-scale
            group group-title
-           colors-and-shapes]
+           colors-and-shapes
+           labelLimit]
     :or {chart-height full-height
          chart-width full-width
          clerk-width :full
