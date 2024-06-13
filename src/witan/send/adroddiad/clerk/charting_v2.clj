@@ -75,13 +75,15 @@
            y y-title y-format
            y-zero y-scale
            group group-title
-           colors-and-shapes]
+           colors-and-shapes
+           labelLimit]
     :or {chart-height full-height
          chart-width full-width
          clerk-width :full
          y-zero true
          y-scale false
-         legend true}}]
+         legend {:encode {:labels {:update {:text {:signal "[datum.value]"}}}}}
+         labelLimit 0}}]
   (let [tooltip [{:field group, :title group-title},
                  {:field x, :type "temporal", :format x-format, :title x-title},
                  {:field y, :title y-title ;; :format y-format
@@ -94,7 +96,8 @@
       :title {:text chart-title
               :fontSize 24}
       :config {:legend {:titleFontSize 16
-                        :labelFontSize 14}
+                        :labelFontSize 14
+                        :labelLimit labelLimit}
                :axisX {:tickcount 7
                        :tickExtra true
                        :labelalign "center"
@@ -106,7 +109,11 @@
                          (tc/rows :as-maps))}
       :encoding {:y {:scale {:domain y-scale
                              :zero y-zero}}
-                 :color {:legend legend}}
+                 :color {:legend (cond
+                                   (false? legend)
+                                   false
+                                   :else
+                                   legend)}}
       :layer [{:mark {:type "line", :point {:filled false,
                                             :fill "white",
                                             :size 50
@@ -130,7 +137,8 @@
            orl oru or-title
            range-format-f
            group group-title
-           colors-and-shapes]
+           colors-and-shapes
+           labelLimit]
     :or {chart-height full-height
          chart-width full-width
          clerk-width :full
@@ -138,7 +146,8 @@
                           (format "%,f - %,1f" lower upper))
          y-zero true
          y-scale false
-         legend true}}]
+         legend {:encode {:labels {:update {:text {:signal "[datum.value]"}}}}}
+         labelLimit 0}}]
   (let [tooltip [{:field group, :title group-title},
                  {:field x, :type "temporal", :format x-format, :title x-title},
                  {:field y, :title y-title ;; :format y-format
@@ -153,7 +162,8 @@
       :title {:text chart-title
               :fontSize 24}
       :config {:legend {:titleFontSize 16
-                        :labelFontSize 14}
+                        :labelFontSize 14
+                        :labelLimit labelLimit}
                :axisX {:tickcount 7
                        :tickExtra true
                        :labelalign "center"
@@ -167,7 +177,11 @@
                          (tc/rows :as-maps))}
       :encoding {:y {:scale {:domain y-scale
                              :zero y-zero}}
-                 :color {:legend legend}}
+                 :color {:legend (cond
+                                   (false? legend)
+                                   false
+                                   :else
+                                   legend)}}
       :layer [{:mark "errorband"
                :encoding {:y {:field iru :title y-title :type "quantitative"}
                           :y2 {:field irl}
