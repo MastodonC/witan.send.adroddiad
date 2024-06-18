@@ -69,7 +69,7 @@
      :height chart-height
      :width chart-width
      :title {:text chart-title :fontSize 24}
-     :config {:legend {:titleFontSize 20 :labelFontSize 14}
+     :config {:legend {:titleFontSize 20 :labelFontSize 14 :labelLimit 0}
               :axisX {:titleFontSize 16 :labelFontSize 12}
               :axisY {:titleFontSize 16 :labelFontSize 12}}
      :encoding {:x {:field x :title x-title :type "temporal"
