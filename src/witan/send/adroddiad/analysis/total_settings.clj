@@ -173,6 +173,32 @@
       :simulation-count (get-in cfg [:projection-parameters
                                      :simulations])})))
 
+(defn five-ten-summary-map [summary {:keys [table setting anchor-year]}]
+  (let [summary-table (-> summary
+                          table :table
+                          (tc/select-rows #(= setting (:setting %))))
+        anchor-year (or anchor-year (reduce min (:calendar-year summary-table)))
+        five-year (+ 5 anchor-year)
+        ten-year (+ 10 anchor-year)
+        anchor-year-median (summary/value-at summary-table #(= anchor-year (:calendar-year %)) :median)
+        five-year-median (summary/value-at summary-table #(= five-year (:calendar-year %)) :median)
+        ten-year-median (summary/value-at summary-table #(= ten-year (:calendar-year %)) :median)
+        five-year-delta (dfn/- five-year-median anchor-year-median)
+        ten-year-delta (dfn/- ten-year-median anchor-year-median)]
+    {:setting setting
+     :table table
+     :anchor-year anchor-year
+     :five-year five-year
+     :ten-year ten-year
+     :anchor-year-median anchor-year-median
+     :five-year-median five-year-median
+     :ten-year-median ten-year-median
+     :five-year-delta five-year-delta
+     :ten-year-delta ten-year-delta}))
+
+(defn top-k-summary [summary {:keys [table column-selector anchor-year]}]
+  )
+
 (
 ;;; Charting
  )
