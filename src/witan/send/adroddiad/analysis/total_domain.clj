@@ -54,7 +54,9 @@
         diff (gradient/diff1d (value-col ds'))
         values (value-col ds')
         pct-diff (sequence
-                  (map (fn [d m] (dfn// d m)))
+                  (map (fn [d m] (if (zero? m)
+                                   0
+                                   (dfn// d m))))
                   diff values)]
     (-> ds'
         (tc/add-column :diff (into [0] diff))
@@ -213,7 +215,7 @@
 ;;; All Settings
  )
 (defn total-summary-plot
-  [{:keys [data colors-and-shapes order-field label-field]}]
+  [{:keys [data colors-and-shapes order-field label-field group-title]}]
   (line-and-ribbon-and-rule-plot
    {:data              (-> data
                            (tc/map-columns :calendar-year [:calendar-year] format-calendar-year))
@@ -223,7 +225,7 @@
     :colors-and-shapes colors-and-shapes
     :x                 :calendar-year :x-title     "Census Year" :x-format    "%b %Y"
     :y-title           "# EHCPs"      :y-zero      true          :y-scale     false
-    :group             label-field    :group-title (name label-field)     :order-field order-field}))
+    :group             label-field    :group-title (or group-title (name label-field))     :order-field order-field}))
 
 (defn min-max-year [ds]
   (let [years (:calendar-year ds)]
@@ -249,7 +251,7 @@
       :group             label-field         :group-title (name label-field) :order-field order-field})))
 
 (defn pct-diff-summary-plot
-  [{:keys [data colors-and-shapes order-field label-field]}]
+  [{:keys [data colors-and-shapes order-field label-field group-title chart-title]}]
   (let [calendar-year-limits (min-max-year data)
         data (-> data
                  (tc/drop-rows #(= (:min calendar-year-limits)
@@ -257,14 +259,14 @@
                  (tc/map-columns :calendar-year [:calendar-year] format-calendar-year))]
     (line-and-ribbon-and-rule-plot
      {:data              data
-      :chart-title       (str "% EHCP change year on year by " (name label-field))
+      :chart-title       (or chart-title (str "% EHCP change year on year by " (name label-field)))
       :chart-height      vs/full-height      :chart-width vs/two-thirds-width
       :tooltip-formatf   (vsl/pct-summary-tooltip {:group label-field :x :calendar-year :tooltip-field :tooltip-column})
       :colors-and-shapes colors-and-shapes
       :x                 :calendar-year      :x-title     "Census Year" :x-format "%b %Y"
       :x-scale (mapv format-calendar-year (range (:min calendar-year-limits) (+ 1 (:max calendar-year-limits))))
       :y-title            "% change" :y-zero      false         :y-scale  false :y-format ".1%"
-      :group             label-field         :group-title (name label-field) :order-field order-field})))
+      :group             label-field         :group-title (or group-title (name label-field)) :order-field order-field})))
 
 #_
 (defn pct-of-total-summary-plot
