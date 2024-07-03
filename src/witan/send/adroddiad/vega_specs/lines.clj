@@ -33,7 +33,7 @@
         (tc/map-columns
          tooltip-field [:p05 :q1 :median :q3 :p95]
          (fn [p05 q1 median q3 p95]
-           (format "%.1f%% (%.1f%% (%.1f%%↔%.1f%%) %.1f%%)"
+           (format "%.2f%% (%.2f%% (%.2f%%↔%.2f%%) %.2f%%)"
                    (* 100 median) (* 100 p05) (* 100 q1) (* 100 q3) (* 100 p95))))
         (tc/order-by [(or order-field x)])
         (tc/select-columns [group x tooltip-field])
