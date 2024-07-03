@@ -257,7 +257,7 @@
     :tooltip-formatf   (vsl/pct-summary-tooltip {:group label-field :x :calendar-year :tooltip-field :tooltip-column})
     :colors-and-shapes colors-and-shapes
     :x                 :calendar-year :x-title     "Census Year" :x-format    "%b %Y"
-    :y-title           "% Population" :y-zero      true          :y-scale     false :y-format ".1%"
+    :y-title           "% Population" :y-zero      true          :y-scale     false :y-format ".2%"
     :group             label-field    :group-title "Setting"     :order-field order-field}))
 
 #_

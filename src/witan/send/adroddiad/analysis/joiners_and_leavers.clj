@@ -25,7 +25,7 @@
                                       (tc/select-rows #(or 
                                                         (tr/leaver? %)
                                                         (tr/joiner? %)))
-                                      (tc/map-columns :transition-type [:setting-1 :setting-2] #(-> (tr/transition-type %1 %2) (str str/capitalize "s")))
+                                      (tc/map-columns :transition-type [:setting-1 :setting-2] #(-> (tr/transition-type %1 %2) str/capitalize (str "s")))
                                       (tc/map-columns :calendar-year-2 [:calendar-year] inc)
 
                                       
