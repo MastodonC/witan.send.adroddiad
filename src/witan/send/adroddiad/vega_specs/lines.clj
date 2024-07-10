@@ -133,7 +133,8 @@
    :title {:text chart-title
            :fontSize 24}
    :config {:legend {:titleFontSize 20
-                     :labelFontSize 14}
+                     :labelFontSize 14
+                     :labelLimit 0}
             :axisX {:titleFontSize 16
                     :labelFontSize 12}
             :axisY {:titleFontSize 16
@@ -192,7 +193,8 @@
    :title    {:text     chart-title
               :fontSize 24}
    :config   {:legend {:titleFontSize 20
-                       :labelFontSize 14}
+                       :labelFontSize 14
+                       :labelLimit 0}
               :axisX  {:titleFontSize 16
                        :labelFontSize 12}
               :axisY  {:titleFontSize 16
@@ -264,7 +266,8 @@
      :title    {:text     chart-title
                 :fontSize 24}
      :config   {:legend {:titleFontSize 16
-                         :labelFontSize 14}
+                         :labelFontSize 14
+                         :labelLimit 0}
                 :axisX  {:tickcount     7
                          :tickExtra     true
                          :labelalign    "center"
