@@ -240,6 +240,48 @@
     :y-title           "# EHCPs"      :y-zero      true          :y-scale     false
     :group             label-field    :group-title "Setting"     :order-field order-field}))
 
+(defn cost-summary-plot
+  [{:keys [data colors-and-shapes order-field
+           label-field cost-map]
+    :or   {label-field :setting
+           order-field :setting}}]
+  (let [settings-filter (into (sorted-set) (keys cost-map))
+        data (-> data
+                 (tc/select-rows #(settings-filter (:setting %)))
+                 (tc/map-columns :calendar-year [:calendar-year] str)
+                 (tc/map-rows
+                  (fn [row]
+                    (assoc row
+                           :p05 (float
+                                 (/ (* (:p05 row)
+                                       (cost-map (:setting row)))
+                                    (* 1 1000 1000)))
+                           :q1 (float
+                                (/ (* (:q1 row)
+                                      (cost-map (:setting row)))
+                                   (* 1 1000 1000)))
+                           :median (float
+                                    (/ (* (:median row)
+                                          (cost-map (:setting row)))
+                                       (* 1 1000 1000)))
+                           :q3 (float
+                                (/ (* (:q3 row)
+                                      (cost-map (:setting row)))
+                                   (* 1 1000 1000)))
+                           :p95 (float
+                                 (/ (* (:p95 row)
+                                       (cost-map (:setting row)))
+                                    (* 1 1000 1000)))))))]
+    (line-and-ribbon-and-rule-plot
+     {:data              data
+      :colors-and-shapes colors-and-shapes
+      :chart-title       "Cost by Setting"
+      :chart-height      vs/full-height :chart-width vs/two-thirds-width
+      :tooltip-formatf   (vsl/number-summary-tooltip {:group label-field :x :calendar-year :tooltip-field :tooltip-column})
+      :x                 :calendar-year :x-title     "Census Year" :x-format    "%b %Y"
+      :y-title           "£ (millions)" :y-zero      true          :y-scale     false   :y-format ",.1f"
+      :group             label-field    :group-title "Setting"     :order-field order-field})))
+
 #_
 (defn diff-summary-plot
   [{}]
