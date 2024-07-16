@@ -19,6 +19,12 @@
      (str (:project-dir config) "/" (get-in config [:file-inputs :transitions]))
      {:key-fn keyword})))
 
+(defn costs-from-config [config-edn]
+  (let [config (ws/read-config config-edn)]
+    (tc/dataset
+     (str (:project-dir config) "/" (get-in config [:file-inputs :costs]))
+     {:key-fn keyword})))
+
 (defn historic-ehcp-count [transitions]
   (-> transitions
       (tc/group-by
@@ -40,7 +46,11 @@
         diff (gradient/diff1d (value-col ds'))
         values (value-col ds')
         pct-diff (sequence
-                  (map (fn [d m] (dfn// d m)))
+                  (map (fn [d m] (cond
+                                   (every? zero? [d m])
+                                   0
+                                   :else
+                                   (dfn// d m))))
                   diff values)]
     (-> ds'
         (tc/add-column :diff (into [0] diff))
@@ -83,6 +93,40 @@
       (tc/inner-join background-population [:calendar-year])
       (tc/map-columns :pct-ehcps [:transition-count :population] #(dfn// %1 %2))
       (tc/order-by ks)))
+
+(defn transform-simulation-costs
+  [sim {:keys [ks historic-transitions-count cost-map]}]
+  (let [settings-filter (into (sorted-set) (keys cost-map))
+        data (-> (tc/concat-copying historic-transitions-count sim)
+                 (tr/transitions->census))]
+    (-> data
+        (tc/map-columns :cost [:transition-count :setting]
+                        (fn [count setting] (cond
+                                              (re-find #"^SpMdA" setting)
+                                              (float (/ (* count (cost-map "SpMdA"))
+                                                        (* 1 1000 1000)))
+                                              (re-find #"^MsMdA" setting)
+                                              (float (/ (* count (cost-map "MsMdA"))
+                                                        (* 1 1000 1000)))
+                                              (or (re-find #"^RP" setting)
+                                                  (re-find #"^SENU" setting))
+                                              (float (/ (* count (cost-map "ARB"))
+                                                        (* 1 1000 1000)))
+                                              (re-find #"^SpNm" setting)
+                                              (float (/ (* count (cost-map "SpNm"))
+                                                        (* 1 1000 1000)))
+                                              (re-find #"^SpIn" setting)
+                                              (float (/ (* count (cost-map "SpIn"))
+                                                        (* 1 1000 1000)))
+                                              :else
+                                              0)))
+        (tc/group-by ks)
+        (tc/aggregate {:cost #(dfn/sum (:cost %))})
+        (add-diff :cost)
+        (tc/rename-columns
+         {:diff :cost-diff
+          :pct-diff :cost-pct-diff})
+        (tc/order-by ks))))
 
 (defn summarise
   [simulation-results
@@ -137,6 +181,52 @@
           (tc/select-columns [:calendar-year :pct-ehcps-summary])
           (tc/separate-column :pct-ehcps-summary :infer identity))}}))
 
+(defn summarise-costs
+  [simulation-results
+   {:keys [historic-transitions-count simulation-count grouping-keys cost-map]
+    :or {grouping-keys [:calendar-year]}}]
+  (let [summary
+        (tc/order-by
+         (->> simulation-results
+              (hf-reduce/preduce
+               ;; init-val
+               (fn [] [])
+               ;; rfn
+               (fn [acc sim]
+                 (conj acc
+                       (transform-simulation-costs
+                        sim
+                        {:historic-transitions-count historic-transitions-count
+                         :ks grouping-keys
+                         :cost-map cost-map})))
+               ;; merge-fn
+               (fn [acc acc']
+                 (into acc acc')))
+              (ds-reduce/group-by-column-agg
+               grouping-keys
+               {:cost-summary
+                (percentiles-reducer simulation-count :cost)
+                :cost-diff-summary
+                (percentiles-reducer simulation-count :cost-diff)
+                :cost-pct-diff-summary
+                (percentiles-reducer simulation-count :cost-pct-diff)}))
+         grouping-keys)]
+    {:cost-summary
+     {:table
+      (-> summary
+          (tc/select-columns [:calendar-year :cost-summary])
+          (tc/separate-column :cost-summary :infer identity))}
+     :cost-diff-summary
+     {:table
+      (-> summary
+          (tc/select-columns [:calendar-year :cost-diff-summary])
+          (tc/separate-column :cost-diff-summary :infer identity))}
+     :cost-pct-diff-summary
+     {:table
+      (-> summary
+          (tc/select-columns [:calendar-year :cost-pct-diff-summary])
+          (tc/separate-column :cost-pct-diff-summary :infer identity))}}))
+
 (defn summarise-from-config [config-edn pqt-prefix]
   (let [cfg (-> (ws/read-config config-edn))]
     (summarise
@@ -147,6 +237,22 @@
       :simulation-count (get-in cfg [:projection-parameters
                                      :simulations])
       :background-population (tbp/population-from-config config-edn)})))
+
+(defn summarise-costs-from-config [config-edn pqt-prefix {:keys [cost-map]}]
+  (let [cfg (-> (ws/read-config config-edn))
+        costs (cond
+                (empty? cost-map)
+                (costs-from-config config-edn)
+                :else
+                cost-map)]
+    (summarise-costs
+     (simulation-data-from-config config-edn pqt-prefix)
+     {:historic-transitions-count (-> config-edn
+                                      transitions-from-config
+                                      historic-ehcp-count)
+      :simulation-count (get-in cfg [:projection-parameters
+                                     :simulations])
+      :cost-map costs})))
 
 (defn transition-count-summary-map [transition-count-summary {:keys [anchor-year]}]
   (let [anchor-year (or anchor-year (reduce min (:calendar-year transition-count-summary)))
@@ -255,6 +361,45 @@
     {:min (apply dfn/min years)
      :max (apply dfn/max years)}))
 
+(defn cost-summary-plot
+  [{:keys [data colors-and-shapes cost-map projection]}]
+  (let [data (-> data
+                 :transition-count-summary
+                 :table
+                 (tc/add-column :projection projection)
+                 (tc/map-columns :calendar-year [:calendar-year] format-calendar-year)
+                 (tc/map-rows
+                  (fn [row]
+                    (assoc row
+                           :p05 (float
+                                 (/ (* (:p05 row)
+                                       (cost-map (:setting row)))
+                                    (* 1 1000 1000)))
+                           :q1 (float
+                                (/ (* (:q1 row)
+                                      (cost-map (:setting row)))
+                                   (* 1 1000 1000)))
+                           :median (float
+                                    (/ (* (:median row)
+                                          (cost-map (:setting row)))
+                                       (* 1 1000 1000)))
+                           :q3 (float
+                                (/ (* (:q3 row)
+                                      (cost-map (:setting row)))
+                                   (* 1 1000 1000)))
+                           :p95 (float
+                                 (/ (* (:p95 row)
+                                       (cost-map (:setting row)))
+                                    (* 1 1000 1000)))))))]
+    (line-and-ribbon-and-rule-plot
+     {:data              data
+      :colors-and-shapes colors-and-shapes
+      :chart-title       "Total EHCP Cost"
+      :chart-height      vs/full-height :chart-width vs/two-thirds-width
+      :x                 :calendar-year :x-title     "Census Year" :x-format    "%b %Y"
+      :y-title           "£ (millions)" :y-zero      true          :y-scale     false   :y-format ",.1f"
+      :group             :projection    :group-title "Projection"})))
+
 (defn summary-charts-and-data-from-config
   [{:keys [config-edn pqt-prefix
            anchor-year colors-and-shapes projection]}]
@@ -321,3 +466,62 @@
         (assoc-in [:ehcp-pct-diff-summary :plot] ehcp-pct-diff-summary-plot)
 
         (assoc-in [:pct-ehcps-summary :plot] pct-ehcps-summary-plot))))
+
+(defn summary-cost-charts-and-data-from-config
+  [{:keys [config-edn pqt-prefix cost-map
+           anchor-year colors-and-shapes projection]
+    :or   {cost-map {}}}]
+  (let [summary (summarise-costs-from-config config-edn pqt-prefix {:cost-map cost-map})
+        data (-> summary
+                 :cost-summary
+                 :table
+                 (tc/add-column :projection projection)
+                 (tc/map-columns :calendar-year [:calendar-year] format-calendar-year))
+        calendar-year-limits (min-max-year data)
+        cost-plot (line-and-ribbon-and-rule-plot
+                   {:data              data
+                    :chart-title       "Total Cost"
+                    :chart-height      vs/full-height :chart-width vs/two-thirds-width
+                    :colors-and-shapes colors-and-shapes
+                    :x                 :calendar-year :x-title     "Census Year" :x-format "%b %Y"
+                    :y-title           "£ (millions)" :y-zero      true          :y-scale  false
+                    :group             :projection    :group-title "Projection"
+                    :tooltip-formatf   (vsl/number-summary-tooltip {:group :projection :x :calendar-year
+                                                                    :tooltip-field :tooltip-column :decimal-places 2})})
+        cost-diff-plot (line-and-ribbon-and-rule-plot
+                        {:data              (-> summary
+                                                :cost-diff-summary
+                                                :table
+                                                (tc/add-column :projection projection)
+                                                (tc/drop-rows #(= (:min calendar-year-limits)
+                                                                  (:calendar-year %)))
+                                                (tc/map-columns :calendar-year [:calendar-year] format-calendar-year))
+                         :chart-title       "Cost change YoY"
+                         :chart-height      vs/full-height      :chart-width vs/two-thirds-width
+                         :tooltip-formatf   (vsl/number-summary-tooltip {:group :projection :x :calendar-year
+                                                                         :tooltip-field :tooltip-column :decimal-places 2})
+                         :colors-and-shapes colors-and-shapes
+                         :x                 :calendar-year      :x-title     "Census Year" :x-format "%b %Y"
+                         :x-scale (mapv format-calendar-year (range (:min calendar-year-limits) (+ 1 (:max calendar-year-limits))))
+                         :y-title            "£ change (millions)" :y-zero      false         :y-scale  false :y-format ".2f"
+                         :group             :projection         :group-title "Projection"})
+        cost-pct-diff-plot (line-and-ribbon-and-rule-plot
+                            {:data              (-> summary
+                                                    :cost-pct-diff-summary
+                                                    :table
+                                                    (tc/add-column :projection projection)
+                                                    (tc/drop-rows #(= (:min calendar-year-limits)
+                                                                      (:calendar-year %)))
+                                                    (tc/map-columns :calendar-year [:calendar-year] format-calendar-year))
+                             :chart-title       "% Cost change YoY"
+                             :chart-height      vs/full-height      :chart-width vs/two-thirds-width
+                             :tooltip-formatf   (vsl/pct-summary-tooltip {:group :projection :x :calendar-year :tooltip-field :tooltip-column})
+                             :colors-and-shapes colors-and-shapes
+                             :x                 :calendar-year      :x-title     "Census Year" :x-format "%b %Y"
+                             :x-scale (mapv format-calendar-year (range (:min calendar-year-limits) (+ 1 (:max calendar-year-limits))))
+                             :y-title            "% change" :y-zero      false         :y-scale  false :y-format ".1%"
+                             :group             :projection         :group-title "Projection"})]
+    (-> summary
+        (assoc-in [:cost-summary :plot] cost-plot)
+        (assoc-in [:cost-diff-summary :plot] cost-diff-plot)
+        (assoc-in [:cost-pct-diff-summary :plot] cost-pct-diff-plot))))
