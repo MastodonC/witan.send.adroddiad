@@ -486,7 +486,8 @@
                     :x                 :calendar-year :x-title     "Census Year" :x-format "%b %Y"
                     :y-title           "£ (millions)" :y-zero      true          :y-scale  false
                     :group             :projection    :group-title "Projection"
-                    :tooltip-formatf   (vsl/number-summary-tooltip {:group :projection :x :calendar-year :tooltip-field :tooltip-column})})
+                    :tooltip-formatf   (vsl/number-summary-tooltip {:group :projection :x :calendar-year
+                                                                    :tooltip-field :tooltip-column :decimal-places 2})})
         cost-diff-plot (line-and-ribbon-and-rule-plot
                         {:data              (-> summary
                                                 :cost-diff-summary
@@ -497,7 +498,8 @@
                                                 (tc/map-columns :calendar-year [:calendar-year] format-calendar-year))
                          :chart-title       "Cost change YoY"
                          :chart-height      vs/full-height      :chart-width vs/two-thirds-width
-                         :tooltip-formatf   (vsl/number-summary-tooltip {:group :projection :x :calendar-year :tooltip-field :tooltip-column})
+                         :tooltip-formatf   (vsl/number-summary-tooltip {:group :projection :x :calendar-year
+                                                                         :tooltip-field :tooltip-column :decimal-places 2})
                          :colors-and-shapes colors-and-shapes
                          :x                 :calendar-year      :x-title     "Census Year" :x-format "%b %Y"
                          :x-scale (mapv format-calendar-year (range (:min calendar-year-limits) (+ 1 (:max calendar-year-limits))))

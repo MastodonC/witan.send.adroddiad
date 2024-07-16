@@ -277,7 +277,7 @@
       :colors-and-shapes colors-and-shapes
       :chart-title       "Cost by Setting"
       :chart-height      vs/full-height :chart-width vs/two-thirds-width
-      :tooltip-formatf   (vsl/number-summary-tooltip {:group label-field :x :calendar-year :tooltip-field :tooltip-column})
+      :tooltip-formatf   (vsl/number-summary-tooltip {:group label-field :x :calendar-year :tooltip-field :tooltip-column :decimal-places 2})
       :x                 :calendar-year :x-title     "Census Year" :x-format    "%b %Y"
       :y-title           "£ (millions)" :y-zero      true          :y-scale     false   :y-format ",.1f"
       :group             label-field    :group-title "Setting"     :order-field order-field})))

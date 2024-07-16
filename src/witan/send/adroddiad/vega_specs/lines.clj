@@ -8,21 +8,24 @@
    :orl :p05 :oru :p95 :or-title "90% range"})
 
 (defn number-summary-tooltip
-  [{:keys [tooltip-field group x order-field]
+  [{:keys [tooltip-field group x order-field decimal-places]
     :or {tooltip-field :tooltip-field
-         x :analysis-date}}]
-  (fn [ds]
-    (-> ds
-        (tc/map-columns
-         tooltip-field [:p05 :q1 :median :q3 :p95]
-         (fn [p05 q1 median q3 p95] (format
-                                     "%,.0f (%,.0f (%,.0f↔%,.0f) %,.0f)"
-                                     median p05 q1 q3 p95)))
-        (tc/order-by [(or order-field x)])
-        (tc/select-columns [group x tooltip-field])
-        (tc/pivot->wider [group] [tooltip-field] {:drop-missing? false})
-        (tc/replace-missing :all :value "")
-        (tc/rows :as-maps))))
+         x :analysis-date
+         decimal-places 0}}]
+  (let [dp-string (clojure.string/replace "%,.0f (%,.0f (%,.0f↔%,.0f) %,.0f)"
+                                          "0" (str decimal-places))]
+    (fn [ds]
+      (-> ds
+          (tc/map-columns
+           tooltip-field [:p05 :q1 :median :q3 :p95]
+           (fn [p05 q1 median q3 p95] (format
+                                       dp-string
+                                       median p05 q1 q3 p95)))
+          (tc/order-by [(or order-field x)])
+          (tc/select-columns [group x tooltip-field])
+          (tc/pivot->wider [group] [tooltip-field] {:drop-missing? false})
+          (tc/replace-missing :all :value "")
+          (tc/rows :as-maps)))))
 
 (defn pct-summary-tooltip
   [{:keys [tooltip-field group x order-field]
