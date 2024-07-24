@@ -819,3 +819,19 @@
                           :color-field     color-field
                           :title           (str "# EHCPs per Designation by Primary Need in " year)
                           :white-text-test white-text-test}))))) [2022 2023])))
+
+(defn remove-tooltips [chart]
+  (assoc chart :layer
+         [(-> chart
+              :layer
+              second
+              (dissoc :encoding)
+              (assoc-in [:mark :strokeWidth] 0))
+          (-> chart
+              :layer
+              first
+              (assoc :layer
+                     (remove #(contains? % :transform) (-> chart
+                                                           :layer
+                                                           first
+                                                           :layer))))]))
