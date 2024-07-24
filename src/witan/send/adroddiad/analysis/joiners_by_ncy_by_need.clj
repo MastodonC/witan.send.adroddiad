@@ -55,12 +55,12 @@
 (def half-width 700)
 (def third-width 475)
 
-(defn chart [joiners-by-ncy-by-need-summaries
-             {:keys [colors-and-shapes y-scale y-zero order-field select-p]
-              :or   {y-scale     false
-                     y-zero      true
-                     order-field :need
-                     select-p (constantly true)}}]
+(defn total-summary [joiners-by-ncy-by-need-summaries
+                     {:keys [colors-and-shapes y-scale y-zero order-field select-p]
+                      :or   {y-scale     false
+                             y-zero      true
+                             order-field :need
+                             select-p (constantly true)}}]
   (let [label-field :need
         data        (-> (get-in joiners-by-ncy-by-need-summaries [:total-summary :table])
                         (tc/select-rows select-p))]

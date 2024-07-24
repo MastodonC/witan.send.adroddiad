@@ -21,7 +21,7 @@
                    :historic-transitions-count (-> config-edn
                                                    td/transitions-from-config
                                                    td/historic-ehcp-count)
-                   :transform-simulation-f 
+                   :transform-simulation-f
                    (fn [sim {:keys [historic-transitions-count]}]
                      (let [census (-> (tc/concat-copying historic-transitions-count sim)
                                       (tc/select-rows #(tr/joiner? %))
@@ -55,12 +55,12 @@
 (def half-width 700)
 (def third-width 475)
 
-(defn chart [joiners-by-ncy-summaries
-             {:keys [colors-and-shapes y-scale y-zero order-field select-p]
-              :or   {y-scale     false
-                     y-zero      true
-                     order-field :academic-year
-                     select-p (constantly true)}}] 
+(defn total-summary [joiners-by-ncy-summaries
+                     {:keys [colors-and-shapes y-scale y-zero order-field select-p]
+                      :or   {y-scale     false
+                             y-zero      true
+                             order-field :academic-year
+                             select-p (constantly true)}}]
   (let [label-field :academic-year
         data        (-> (get-in joiners-by-ncy-summaries [:total-summary :table])
                         (tc/select-rows select-p))]
@@ -77,4 +77,3 @@
              :group             label-field    :group-title "NCY"
              :order-field       order-field
              }))))
-
