@@ -56,7 +56,7 @@
 (def third-width 475)
 
 (defn total-summary [joiners-by-ncy-by-need-summaries
-                     {:keys [colors-and-shapes y-scale y-zero order-field select-p]
+                     {:keys [colors-and-shapes y-scale y-zero order-field select-p title]
                       :or   {y-scale     false
                              y-zero      true
                              order-field :need
@@ -68,7 +68,7 @@
      (merge base-chart-spec
             {:data              (-> data
                                     (tc/map-columns :calendar-year [:calendar-year] td/format-calendar-year))
-             :chart-title       "# New EHCP by Primary Need"
+             :chart-title       (or title "# New EHCP by Primary Need")
              :chart-height      vs/full-height :chart-width vs/two-thirds-width
              :tooltip-formatf   (vsl/number-summary-tooltip {:group label-field :x :calendar-year :tooltip-field :tooltip-column})
              :colors-and-shapes colors-and-shapes
