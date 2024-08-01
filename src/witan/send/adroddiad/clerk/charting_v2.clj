@@ -2,6 +2,7 @@
   (:require
    [clojure2d.color :as color]
    [nextjournal.clerk :as clerk]
+   [clojure.string :as string]
    [tablecloth.api :as tc]
    [tech.v3.datatype.functional :as dfn]
    [witan.send.adroddiad.dataset :as ds]
@@ -353,7 +354,7 @@
        :x-field-label   (axis-labels x-field)
        :x-sort-field    x-order-field
        :color-field     color-field
-       :title           "# EHCPs for Settings by Year"
+       :title           (str "# EHCPs for " (sweet-column-names x-field x-field) " by Year")
        :white-text-test white-text-test
        }))))
 
