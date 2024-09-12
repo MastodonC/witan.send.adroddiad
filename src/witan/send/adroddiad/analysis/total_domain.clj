@@ -215,11 +215,11 @@
 ;;; All Settings
  )
 (defn total-summary-plot
-  [{:keys [data colors-and-shapes order-field label-field group-title]}]
+  [{:keys [data chart-title colors-and-shapes order-field label-field group-title]}]
   (line-and-ribbon-and-rule-plot
    {:data              (-> data
                            (tc/map-columns :calendar-year [:calendar-year] format-calendar-year))
-    :chart-title       (str "# EHCP by " (name label-field))
+    :chart-title       (or chart-title (str "# EHCP by " (or group-title (name label-field))))
     :chart-height      vs/full-height :chart-width vs/two-thirds-width
     :tooltip-formatf   (vsl/number-summary-tooltip {:group label-field :x :calendar-year :tooltip-field :tooltip-column})
     :colors-and-shapes colors-and-shapes
@@ -273,6 +273,3 @@
   [{}]
   )
 
-(
-;;; Each Setting on its own
- )
