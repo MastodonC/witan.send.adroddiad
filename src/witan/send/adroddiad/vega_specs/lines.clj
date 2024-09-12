@@ -293,3 +293,19 @@
                             :color   (assoc (vs/color-map data group colors-and-shapes) :title group-title)
                             :shape   (vs/shape-map data group colors-and-shapes)
                             :tooltip tooltip}}]}))
+
+(defn remove-tooltips [chart]
+  (assoc chart :layer
+         [(-> chart
+              :layer
+              second
+              (dissoc :encoding)
+              (assoc-in [:mark :strokeWidth] 0))
+          (-> chart
+              :layer
+              first
+              (assoc :layer
+                     (remove #(contains? % :transform) (-> chart
+                                                           :layer
+                                                           first
+                                                           :layer))))]))
