@@ -26,15 +26,16 @@
 
 ;;; # Mastodon C School Phases
 ;; Note that in contrast to school phases previously defined in `witan.send.domain.academic-years`:
-;; - using "early-childhood" for NCYs #{-4 -3 -2 -1} (as recommended by our advisor 11-AUG-22),
+;; - Using "early-childhood" for NCYs #{-4 -3 -2 -1} (as recommended by our advisor 11-NOV-22),
 ;;   rather than "nursery" or "early-years" to avoid confusion:
 ;;   - Nursery schools are "aimed at pre-school children aged three and four years old"
 ;;     (according to the [Early Years Alliance](https://www.eyalliance.org.uk/how-choose-right-childcare-and-early-education)).
 ;;   - Early years as used in [national curriculum](https://www.gov.uk/national-curriculum) is NCYs #{-1 0}.
 ;;   - Early years as used in [early years foundation stage (EYFS)](https://www.gov.uk/early-years-foundation-stage)
 ;;     is "from birth to 5 years old" which includes reception.
-;; - keys are abbreviations rather than keywords, to facilitate use in datasets & files as strings
-;; - abbreviations are hyphenated so "keyword friendly" and can be converted to keywords if required
+;; - Keys are abbreviations rather than keywords, to facilitate use in datasets & files as strings.
+;; - Abbreviations are hyphenated so "keyword friendly" and can be converted to keywords if required.
+;; - The map is sorted so that `(keys school-phases)` returns the school phases in the correct order.
 
 (def school-phases
   "Mastodon C School Phase definitions as a sorted map."
