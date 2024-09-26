@@ -4,15 +4,15 @@
    [clojure.string :as str]
    [nextjournal.clerk :as clerk]))
 
-(defn root-ns-to-out-dir 
+(defn root-ns-to-out-dir
   "Convert the first part of `ns` to a path name."
   [ns]
-  (->> ns 
+  (->> ns
        str
        (re-find #"^[^\.]*")
        (format "./%s/")))
 
-(defn pathified-namespace 
+(defn pathified-namespace
   "Turn . into / and - into _"
   [ns]
   (str/replace ns #"\.|-" {"." "/" "-" "_"}))
@@ -33,7 +33,7 @@
     (io/make-parents out-path)
     (clerk/build! {:paths    [in-path]
                    :ssr      true
-                   :bundle   true
+                   :package  :single-file
                    :out-path out-dir})
     (.renameTo (io/file index-out) (io/file out-path))))
 
@@ -44,5 +44,5 @@
   (def out-dir (root-ns-to-out-dir *ns*))
 
   (ns->html out-dir *ns*)
-  
+
   )
