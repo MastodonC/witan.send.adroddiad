@@ -11,7 +11,7 @@
  :aliases
  {:dev  {:extra-paths ["notebooks" "dev" "test"]
          :extra-deps  {org.clojure/clojure         {:mvn/version "1.11.1"}
-                       io.github.nextjournal/clerk {:mvn/version "0.16.1016"}
+                       io.github.nextjournal/clerk {:mvn/version "0.17.1102"}
                        scicloj/tablecloth          {:mvn/version "7.014"
                                                     :exclusions  [techascent/tech.ml.dataset]}
                        techascent/tech.ml.dataset  {:mvn/version "7.019"}
