@@ -278,13 +278,13 @@
            legend]
     :or   {chart-height vs/full-height
            chart-width  vs/full-width
-           y-format     ",.0f"
+           #_#_y-format ".0f"
            y-zero       true
            y-scale      false
            legend       true}}]
   (let [tooltip [{:field group :title group-title}
-                 {:field x :title x-title :type "temporal" :format x-format }
-                 {:field y :title y-title :format y-format}]]
+                 {:field x :title x-title :format x-format :type "temporal"}
+                 {:field y :title y-title #_#_:format y-format}]]
     {:height   chart-height
      :width    chart-width
      :title    {:text     chart-title
