@@ -6,8 +6,8 @@
 
 (def base-chart-spec
   {:y   :median
-   :irl :q1  :iru :q3  :ir-title "50% range"
-   :orl :p05 :oru :p95 :or-title "90% range"})
+   :irl :q1  :iru :q3
+   :orl :p05 :oru :p95})
 
 (defn five-number-summary-string
   "Format five number summaries [`orl` `irl` `y` `iru` `oru`] into a single string
