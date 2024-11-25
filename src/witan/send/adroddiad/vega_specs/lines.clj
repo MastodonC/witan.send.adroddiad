@@ -15,57 +15,48 @@
    using format `fmt` for each summary (default \"%,.0f\")
    after applying (optional) function `f` to it.
    (So for percentages specify `:fmt \"%.0f%%\" :f (partial * 100)`.)"
-  [[orl irl y iru oru] & {:keys [fmt f]
-                          :or   {fmt "%,.0f"
-                                 f   identity}}]
-  (apply format
-         (apply format "%s (%s (%s↔%s) %s)" (repeat 5 fmt))
-         (map f [y orl irl iru oru])))
+  ([xs] (five-number-summary-string {} xs))
+  ([{:keys [fmt f] :or {fmt "%,.0f", f identity}} [orl irl y iru oru]]
+   (apply format
+          (apply format "%s (%s (%s↔%s) %s)" (repeat 5 fmt))
+          (map f [y orl irl iru oru]))))
 
 (comment
-  (five-number-summary-string ["p05" "q1" "median" "q3" "p95"] :fmt "%s")
+  (five-number-summary-string {:fmt "%s"} ["p05" "q1" "median" "q3" "p95"])
   ;; => "median (p05 (q1↔q3) p95)"
-  (five-number-summary-string [0.3 0.1 0.2 0.4 0.5] :fmt "%.0f%%" :f (partial * 100))
+  (five-number-summary-string [3.0 1.0 2.0 4.0 5.0])
+  ;; => "2 (3 (1↔4) 5)"
+  (five-number-summary-string {:fmt "%.0f%%", :f (partial * 100)} [0.3 0.1 0.2 0.4 0.5])
   ;; => "20% (30% (10%↔40%) 50%)"
-  
+
   )
 
-(defn number-summary-tooltip
-  [{:keys [tooltip-field group x order-field decimal-places]
-    :or   {tooltip-field  :tooltip-field
-           x              :analysis-date
-           decimal-places 0}}]
-  (let [dp-string (clojure.string/replace "%,.0f (%,.0f (%,.0f↔%,.0f) %,.0f)"
-                                          "0" (str decimal-places))]
-    (fn [ds]
-      (-> ds
-          (tc/map-columns
-           tooltip-field [:p05 :q1 :median :q3 :p95]
-           (fn [p05 q1 median q3 p95] (format
-                                       dp-string
-                                       median p05 q1 q3 p95)))
-          (tc/order-by [(or order-field x)])
-          (tc/select-columns [group x tooltip-field])
-          (tc/pivot->wider [group] [tooltip-field] {:drop-missing? false})
-          (tc/replace-missing :all :value "")
-          (tc/rows :as-maps)))))
-
-(defn pct-summary-tooltip
-  [{:keys [tooltip-field group x order-field]
-    :or {tooltip-field :tooltip-field
-         x :analysis-date}}]
+(defn five-number-summary-tooltip
+  [& {:keys [tooltip-field
+             orl irl y iru oru]
+      :or {tooltip-field :tooltip-column}
+      :as cfg}]
   (fn [ds]
     (-> ds
-        (tc/map-columns
-         tooltip-field [:p05 :q1 :median :q3 :p95]
-         (fn [p05 q1 median q3 p95]
-           (format "%.2f%% (%.2f%% (%.2f%%↔%.2f%%) %.2f%%)"
-                   (* 100 median) (* 100 p05) (* 100 q1) (* 100 q3) (* 100 p95))))
-        (tc/order-by [(or order-field x)])
-        (tc/select-columns [group x tooltip-field])
-        (tc/pivot->wider [group] [tooltip-field] {:drop-missing? false})
-        (tc/replace-missing :all :value "")
-        (tc/rows :as-maps))))
+        (tc/map-columns tooltip-field [orl irl y iru oru]
+                        #(five-number-summary-string (select-keys cfg [:fmt :f]) %&)))))
+
+(defn number-summary-tooltip
+  [& {:keys [tooltip-field decimal-places]
+      :or   {tooltip-field  :tooltip-column
+             decimal-places 0}}]
+  (fn [ds]
+    (-> ds
+        (tc/map-columns tooltip-field [:p05 :q1 :median :q3 :p95]
+                        #(five-number-summary-string {:fmt (format "%%,.%df" decimal-places)} %&)))))
+
+(defn pct-summary-tooltip
+  [& {:keys [tooltip-field]
+      :or {tooltip-field :tooltip-column}}]
+  (fn [ds]
+    (-> ds
+        (tc/map-columns tooltip-field [:p05 :q1 :median :q3 :p95]
+                        #(five-number-summary-string {:fmt "%.2f%%", :f (partial * 100)} %&)))))
 
 (defn line-and-ribbon-and-rule-plot
   [{:keys [data
@@ -74,7 +65,7 @@
            y y-title y-format y-scale y-zero
            orl irl iru oru
            tooltip-field tooltip-formatf
-           group group-title order-field
+           group group-title
            chart-height chart-width
            colors-and-shapes]
     :or   {chart-height  vs/full-height
@@ -82,13 +73,14 @@
            y-domain      false
            y-zero        true
            y-format      ",.0f"
-           tooltip-field :tooltip-column}}]
+           tooltip-field :tooltip-column}
+    :as   cfg}]
   (let [;; TODO: Find a way to get legend shape/colour into here
         tooltip-formatf (or tooltip-formatf
-                            (number-summary-tooltip {:tooltip-field tooltip-field
-                                                     :group         group
-                                                     :order-field   order-field
-                                                     :x             x}))]
+                            (five-number-summary-tooltip (assoc (select-keys cfg [:tooltip-field
+                                                                                  :orl :irl :y :iru :oru])
+                                                                :fmt (str "%" (str/replace y-format #"%" "%%"))
+                                                                :f   identity)))]
     {:data     {:values (-> data
                             (tc/rows :as-maps))}
      :height   chart-height
@@ -121,17 +113,20 @@
                                         :y2    {:field irl}
                                         :color {:field group :title group-title}}}
                             {:transform [{:filter {:param "hover" :empty false}}] :mark {:type "point" :size 200 :strokeWidth 5}}]}
-                {:data     {:values (tooltip-formatf data)}
+                {:data     {:values (-> data
+                                        tooltip-formatf
+                                        (tc/order-by [x])
+                                        (tc/select-columns [x group tooltip-field])
+                                        (tc/pivot->wider [group] [tooltip-field] {:drop-missing? false})
+                                        (tc/replace-missing :all :value "")
+                                        (tc/reorder-columns (cons x (:domain-value colors-and-shapes)))
+                                        (tc/rows :as-maps))}
                  :mark     {:type "rule" :strokeWidth 4}
                  :encoding {:opacity {:condition {:value 0.3 :param "hover" :empty false}
                                       :value     0}
                             :tooltip (into [{:field x :type "temporal" :format x-format :title x-title}]
                                            (map (fn [g] {:field g}))
-                                           (if order-field
-                                             (-> data
-                                                 (tc/order-by [order-field])
-                                                 (get group))
-                                             (into (sorted-set) (data group))))}
+                                           (keep (into #{} (get data group)) (get colors-and-shapes :domain-value)))}
                  :params   [{:name   "hover"
                              :select {:type    "point"
                                       :size    200
@@ -145,21 +140,26 @@
            chart-title
            chart-height chart-width
            x x-title x-format
-           y y-title y-format y-zero y-scale y-tooltip
+           y y-title y-format y-zero y-scale
            oru irl iru orl
+           tooltip-field tooltip-formatf
            group group-title
            colors-and-shapes]
-    :or   {chart-height vs/full-height
-           chart-width  vs/full-width
-           y-format     ",.0f"
-           y-zero       true
-           y-scale      false
-           y-tooltip    :y-tooltip}}]
-  (let [add-y-tooltip-col-f (fn [ds] (tc/map-columns ds y-tooltip [orl irl y iru oru]
-                                                     #(five-number-summary-string %& {:fmt (str "%" y-format)})))
+    :or   {chart-height  vs/full-height
+           chart-width   vs/full-width
+           y-format      ",.0f"
+           y-zero        true
+           y-scale       false
+           tooltip-field :tooltip-column}
+    :as   cfg}]
+  (let [tooltip-formatf     (or tooltip-formatf
+                                (five-number-summary-tooltip (assoc (select-keys cfg [:tooltip-field
+                                                                                      :orl :irl :y :iru :oru])
+                                                                    :fmt (str "%" (str/replace y-format #"%" "%%"))
+                                                                    :f   identity)))
         tooltip             [{:field group :title group-title}
                              {:field x :title x-title :type "temporal" :format x-format }
-                             {:field y-tooltip :title y-title}
+                             {:field tooltip-field :title y-title}
                              {:field y :title y-title}]]
     {:height   chart-height
      :width    chart-width
@@ -173,7 +173,7 @@
                 :axisY  {:titleFontSize 16
                          :labelFontSize 12}}
      :data     {:values (-> data
-                            add-y-tooltip-col-f
+                            tooltip-formatf
                             (tc/rows :as-maps))}
      :encoding {:x {:field  x
                     :title  x-title
@@ -206,21 +206,26 @@
            chart-title
            chart-height chart-width
            x x-title x-format
-           y y-title y-format y-zero y-scale y-tooltip
+           y y-title y-format y-zero y-scale
            oru irl iru orl
+           tooltip-field tooltip-formatf
            group group-title
            colors-and-shapes]
-    :or   {chart-height vs/full-height
-           chart-width  vs/full-width
-           y-format     ",.0f"
-           y-zero       true
-           y-scale      false
-           y-tooltip    :y-tooltip}}]
-  (let [add-y-tooltip-col-f (fn [ds] (tc/map-columns ds y-tooltip [orl irl y iru oru]
-                                                     #(five-number-summary-string %& {:fmt (str "%" y-format)})))
+    :or   {chart-height  vs/full-height
+           chart-width   vs/full-width
+           y-format      ",.0f"
+           y-zero        true
+           y-scale       false
+           tooltip-field :tooltip-column}
+    :as   cfg}]
+  (let [tooltip-formatf     (or tooltip-formatf
+                                (five-number-summary-tooltip (assoc (select-keys cfg [:tooltip-field
+                                                                                      :orl :irl :y :iru :oru])
+                                                                    :fmt (str "%" (str/replace y-format #"%" "%%"))
+                                                                    :f   identity)))
         tooltip             [{:field group :title group-title}
                              {:field x :title x-title :type "temporal" :format x-format }
-                             {:field y-tooltip :title y-title}
+                             {:field tooltip-field :title y-title}
                              {:field y :title y-title}]]
     {:height   chart-height
      :width    chart-width
@@ -234,7 +239,7 @@
                 :axisY  {:titleFontSize 16
                          :labelFontSize 12}}
      :data     {:values (-> data
-                            add-y-tooltip-col-f
+                            tooltip-formatf
                             (tc/rows :as-maps))}
      :encoding {:x {:field  x
                     :title  x-title
