@@ -126,7 +126,7 @@
                                       :value     0}
                             :tooltip (into [{:field x :type "temporal" :format x-format :title x-title}]
                                            (map (fn [g] {:field g}))
-                                           (-> colors-and-shapes :domain-value))}
+                                           (keep (into #{} (get data group)) (get colors-and-shapes :domain-value)))}
                  :params   [{:name   "hover"
                              :select {:type    "point"
                                       :size    200
