@@ -75,12 +75,13 @@
            y-format      ",.0f"
            tooltip-field :tooltip-column}
     :as   cfg}]
-  (let [;; TODO: Find a way to get legend shape/colour into here
-        tooltip-formatf (or tooltip-formatf
+  (let [tooltip-formatf (or tooltip-formatf
                             (five-number-summary-tooltip (assoc (select-keys cfg [:tooltip-field
                                                                                   :orl :irl :y :iru :oru])
-                                                                :fmt (str "%" (str/replace y-format #"%" "%%"))
-                                                                :f   identity)))]
+                                                                :fmt (str "%" (str/replace y-format #"%" "%%")))))
+        tooltip-group-formatf (fn [g] (str g " " (->> g
+                                                      (get (as-> colors-and-shapes $
+                                                             (zipmap (:domain-value $) (:unicode-shape $)))))))]
     {:data     {:values (-> data
                             (tc/rows :as-maps))}
      :height   chart-height
@@ -117,11 +118,7 @@
                                         tooltip-formatf
                                         (tc/order-by [x])
                                         (tc/select-columns [x group tooltip-field])
-                                        (tc/update-columns [group] (partial map (partial str " ")))
-                                        ; Ensure `group` is a string to avoid issues (seen with 0 NCY) in displayed tooltip:
-                                        ;; - string to avoid vl showing tooltip for 0 as "undefiend".
-                                        ;; - leading space to avoid vl putting digit groups before `x-title` in tooltip
-                                        ;;   (despite order in :encoding :tooltip below).
+                                        (tc/map-columns group [group] tooltip-group-formatf)
                                         (tc/pivot->wider [group] [tooltip-field] {:drop-missing? false})
                                         (tc/replace-missing :all :value "")
                                         (tc/reorder-columns (cons x (:domain-value colors-and-shapes)))
@@ -130,7 +127,7 @@
                  :encoding {:opacity {:condition {:value 0.3 :param "hover" :empty false}
                                       :value     0}
                             :tooltip (into [{:field x :type "temporal" :format x-format :title x-title}]
-                                           (map (fn [g] {:field (str " " g)}))
+                                           (map (fn [g] {:field (tooltip-group-formatf g)}))
                                            (keep (into #{} (get data group)) (get colors-and-shapes :domain-value)))}
                  :params   [{:name   "hover"
                              :select {:type    "point"
