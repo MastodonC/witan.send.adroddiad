@@ -221,7 +221,7 @@
                            (tc/map-columns :calendar-year [:calendar-year] format-calendar-year))
     :chart-title       (or chart-title (str "# EHCP by " (or group-title (name label-field))))
     :chart-height      vs/full-height :chart-width vs/two-thirds-width
-    :tooltip-formatf   (vsl/number-summary-tooltip {:group label-field :x :calendar-year :tooltip-field :tooltip-column})
+    :tooltip-formatf   (vsl/number-summary-tooltip {:tooltip-field :tooltip-column})
     :colors-and-shapes colors-and-shapes
     :x                 :calendar-year :x-title     "Census Year" :x-format    "%b %Y"
     :y-title           "# EHCPs"      :y-zero      true          :y-scale     false
@@ -243,7 +243,7 @@
      {:data              data
       :chart-title       (str "EHCP change Year on Year by " (name label-field))
       :chart-height      vs/full-height      :chart-width vs/two-thirds-width
-      :tooltip-formatf   (vsl/number-summary-tooltip {:group label-field :x :calendar-year :tooltip-field :tooltip-column})
+      :tooltip-formatf   (vsl/number-summary-tooltip {:tooltip-field :tooltip-column})
       :colors-and-shapes colors-and-shapes
       :x                 :calendar-year      :x-title     "Census Year" :x-format "%b %Y"
       :x-scale (mapv format-calendar-year (range (:min calendar-year-limits) (+ 1 (:max calendar-year-limits))))
@@ -261,7 +261,7 @@
      {:data              data
       :chart-title       (or chart-title (str "% EHCP change year on year by " (name label-field)))
       :chart-height      vs/full-height      :chart-width vs/two-thirds-width
-      :tooltip-formatf   (vsl/pct-summary-tooltip {:group label-field :x :calendar-year :tooltip-field :tooltip-column})
+      :tooltip-formatf   (vsl/pct-summary-tooltip {:tooltip-field :tooltip-column})
       :colors-and-shapes colors-and-shapes
       :x                 :calendar-year      :x-title     "Census Year" :x-format "%b %Y"
       :x-scale (mapv format-calendar-year (range (:min calendar-year-limits) (+ 1 (:max calendar-year-limits))))
