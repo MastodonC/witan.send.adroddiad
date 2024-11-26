@@ -117,6 +117,11 @@
                                         tooltip-formatf
                                         (tc/order-by [x])
                                         (tc/select-columns [x group tooltip-field])
+                                        (tc/update-columns [group] (partial map (partial str " ")))
+                                        ; Ensure `group` is a string to avoid issues (seen with 0 NCY) in displayed tooltip:
+                                        ;; - string to avoid vl showing tooltip for 0 as "undefiend".
+                                        ;; - leading space to avoid vl putting digit groups before `x-title` in tooltip
+                                        ;;   (despite order in :encoding :tooltip below).
                                         (tc/pivot->wider [group] [tooltip-field] {:drop-missing? false})
                                         (tc/replace-missing :all :value "")
                                         (tc/reorder-columns (cons x (:domain-value colors-and-shapes)))
@@ -125,7 +130,7 @@
                  :encoding {:opacity {:condition {:value 0.3 :param "hover" :empty false}
                                       :value     0}
                             :tooltip (into [{:field x :type "temporal" :format x-format :title x-title}]
-                                           (map (fn [g] {:field g}))
+                                           (map (fn [g] {:field (str " " g)}))
                                            (keep (into #{} (get data group)) (get colors-and-shapes :domain-value)))}
                  :params   [{:name   "hover"
                              :select {:type    "point"
