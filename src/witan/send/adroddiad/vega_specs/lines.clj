@@ -1,6 +1,7 @@
 (ns witan.send.adroddiad.vega-specs.lines
   (:require
    [clojure.string :as str]
+   [clojure.walk :as walk]
    [tablecloth.api :as tc]
    [witan.send.adroddiad.vega-specs :as vs]))
 
@@ -75,10 +76,10 @@
            y-format      ",.0f"
            tooltip-field :tooltip-column}
     :as   cfg}]
-  (let [tooltip-formatf (or tooltip-formatf
-                            (five-number-summary-tooltip (assoc (select-keys cfg [:tooltip-field
-                                                                                  :orl :irl :y :iru :oru])
-                                                                :fmt (str "%" (str/replace y-format #"%" "%%")))))
+  (let [tooltip-formatf       (or tooltip-formatf
+                                  (five-number-summary-tooltip (assoc (select-keys cfg [:tooltip-field
+                                                                                        :orl :irl :y :iru :oru])
+                                                                      :fmt (str "%" (str/replace y-format #"%" "%%")))))
         tooltip-group-formatf (fn [g] (str g " " (->> g
                                                       (get (as-> colors-and-shapes $
                                                              (zipmap (:domain-value $) (:unicode-shape $)))))))]
@@ -106,13 +107,15 @@
                                             :size        150
                                             :strokewidth 0.5}}}
                             {:mark     "errorband"
-                             :encoding {:y     {:field oru :title y-title :type "quantitative"}
-                                        :y2    {:field orl}
-                                        :color {:field group :title group-title}}}
+                             :encoding {:y       {:field oru :title y-title :type "quantitative"}
+                                        :y2      {:field orl}
+                                        :color   {:field group :title group-title}
+                                        :tooltip nil}}
                             {:mark     "errorband"
-                             :encoding {:y     {:field iru :title y-title :type "quantitative"}
-                                        :y2    {:field irl}
-                                        :color {:field group :title group-title}}}
+                             :encoding {:y       {:field iru :title y-title :type "quantitative"}
+                                        :y2      {:field irl}
+                                        :color   {:field group :title group-title}
+                                        :tooltip nil}}
                             {:transform [{:filter {:param "hover" :empty false}}] :mark {:type "point" :size 200 :strokeWidth 5}}]}
                 {:data     {:values (-> data
                                         tooltip-formatf
@@ -327,18 +330,22 @@
                             :shape   (vs/shape-map data group colors-and-shapes)
                             :tooltip tooltip}}]}))
 
-(defn remove-tooltips [chart]
-  (assoc chart :layer
-         [(-> chart
-              :layer
-              second
-              (dissoc :encoding)
-              (assoc-in [:mark :strokeWidth] 0))
-          (-> chart
-              :layer
-              first
-              (assoc :layer
-                     (remove #(contains? % :transform) (-> chart
-                                                           :layer
-                                                           first
-                                                           :layer))))]))
+(defn remove-tooltips
+  "Remove tooltips from a chart:
+   - Remove hover rules and associated `:transform` sub `:layer`s from a vl `chart`.
+     (These are added as tooltip by `line-and-ribbon-and-rule-plot`s.)
+   - Set any remaining `:tooltip` values to `nil`."
+  [chart]
+  (as-> chart $
+    ;; Remove "hover" rule layer
+    (update $ :layer (partial remove (fn [m] (and (some->> m :mark :type (= "rule"))
+                                                  (some->> m :params (some #(some->> % :name (= "hover"))))))))
+    ;; Remove any `:transform` layers within layers
+    (update $ :layer (partial mapv (fn [m] (if (contains? m :layer)
+                                             (update m :layer (partial remove #(contains? % :transform)))
+                                             m))))
+    ;; Disable any remaining `:tooltip`s by setting value to `nil`
+    (walk/prewalk (fn [e] (if (and (map-entry? e) (= (key e) :tooltip))
+                            [(key e) nil]
+                            e))
+                  $)))
