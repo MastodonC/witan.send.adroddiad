@@ -154,15 +154,15 @@
            y-scale       false
            tooltip-field :tooltip-column}
     :as   cfg}]
-  (let [tooltip-formatf     (or tooltip-formatf
-                                (five-number-summary-tooltip (assoc (select-keys cfg [:tooltip-field
-                                                                                      :orl :irl :y :iru :oru])
-                                                                    :fmt (str "%" (str/replace y-format #"%" "%%"))
-                                                                    :f   identity)))
-        tooltip             [{:field group :title group-title}
-                             {:field x :title x-title :type "temporal" :format x-format }
-                             {:field tooltip-field :title y-title}
-                             {:field y :title y-title}]]
+  (let [tooltip-formatf (or tooltip-formatf
+                            (five-number-summary-tooltip (assoc (select-keys cfg [:tooltip-field
+                                                                                  :orl :irl :y :iru :oru])
+                                                                :fmt (str "%" (str/replace y-format #"%" "%%"))
+                                                                :f   identity)))
+        tooltip         [{:field group :title group-title}
+                         {:field x :title x-title :type "temporal" :format x-format }
+                         {:field tooltip-field :title y-title}
+                         {:field y :title y-title}]]
     {:height   chart-height
      :width    chart-width
      :title    {:text     chart-title
@@ -183,22 +183,21 @@
                     :format x-format
                     :axis   {:format x-format}}
                 :y {:title y-title
-                    :type  "quantitative"
                     :scale {:domain y-scale
                             :zero   y-zero}}}
      :layer    [{:mark     {:type "line"
                             :size 5}
-                 :encoding {:y       {:field y}
+                 :encoding {:y       {:field y :type "quantitative"}
                             ;; color and shape scale and range must be specified or you get extra things in the legend
                             :color   (vs/color-map data group colors-and-shapes)
                             :tooltip tooltip}}
                 {:mark     "errorband"
-                 :encoding {:y       {:field iru}
+                 :encoding {:y       {:field iru :type "quantitative"}
                             :y2      {:field irl}
                             :color   {:field group :title group-title}
                             :tooltip tooltip}}
                 {:mark     "errorband"
-                 :encoding {:y       {:field oru}
+                 :encoding {:y       {:field oru :type "quantitative"}
                             :y2      {:field orl}
                             :color   {:field group :title group-title}
                             :tooltip tooltip}}]}))
@@ -220,15 +219,15 @@
            y-scale       false
            tooltip-field :tooltip-column}
     :as   cfg}]
-  (let [tooltip-formatf     (or tooltip-formatf
-                                (five-number-summary-tooltip (assoc (select-keys cfg [:tooltip-field
-                                                                                      :orl :irl :y :iru :oru])
-                                                                    :fmt (str "%" (str/replace y-format #"%" "%%"))
-                                                                    :f   identity)))
-        tooltip             [{:field group :title group-title}
-                             {:field x :title x-title :type "temporal" :format x-format }
-                             {:field tooltip-field :title y-title}
-                             {:field y :title y-title}]]
+  (let [tooltip-formatf (or tooltip-formatf
+                            (five-number-summary-tooltip (assoc (select-keys cfg [:tooltip-field
+                                                                                  :orl :irl :y :iru :oru])
+                                                                :fmt (str "%" (str/replace y-format #"%" "%%"))
+                                                                :f   identity)))
+        tooltip         [{:field group :title group-title}
+                         {:field x :title x-title :type "temporal" :format x-format }
+                         {:field tooltip-field :title y-title}
+                         {:field y :title y-title}]]
     {:height   chart-height
      :width    chart-width
      :title    {:text     chart-title
@@ -249,7 +248,6 @@
                     :format x-format
                     :axis   {:format x-format}}
                 :y {:title y-title
-                    :type  "quantitative"
                     :scale {:domain y-scale
                             :zero   y-zero}}}
      :layer    [{:mark     {:type  "line"
@@ -258,18 +256,18 @@
                                     :fill        "white"
                                     :size        50
                                     :strokewidth 0.5}}
-                 :encoding {:y       {:field y}
+                 :encoding {:y       {:field y :type "quantitative"}
                             ;; color and shape scale and range must be specified or you get extra things in the legend
                             :color   (vs/color-map data group colors-and-shapes)
                             :shape   (vs/shape-map data group colors-and-shapes)
                             :tooltip tooltip}}
                 {:mark     "errorband"
-                 :encoding {:y       {:field iru}
+                 :encoding {:y       {:field iru :type "quantitative"}
                             :y2      {:field irl}
                             :color   {:field group :title group-title}
                             :tooltip tooltip}}
                 {:mark     "errorband"
-                 :encoding {:y       {:field oru}
+                 :encoding {:y       {:field oru :type "quantitative"}
                             :y2      {:field orl}
                             :color   {:field group :title group-title}
                             :tooltip tooltip}}]}))
@@ -314,7 +312,6 @@
                         :format x-format
                         :axis   {:format x-format}}
                 :y     {:title y-title
-                        :type  "quantitative"
                         :scale {:domain y-scale
                                 :zero   y-zero}}
                 :color {:legend legend}}
@@ -324,7 +321,7 @@
                                     :fill        "white"
                                     :size        50
                                     :strokewidth 0.5}}
-                 :encoding {:y       {:field y}
+                 :encoding {:y       {:field y :type "quantitative"}
                             ;; color and shape scale and range must be specified or you get extra things in the legend
                             :color   (assoc (vs/color-map data group colors-and-shapes) :title group-title)
                             :shape   (vs/shape-map data group colors-and-shapes)
