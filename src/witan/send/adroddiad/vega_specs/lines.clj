@@ -1,4 +1,5 @@
 (ns witan.send.adroddiad.vega-specs.lines
+  "Specifications for Vega-Lite line plots for SEND projections."
   (:require
    [clojure.string :as str]
    [clojure.walk :as walk]
@@ -6,10 +7,16 @@
    [witan.send.adroddiad.vega-specs :as vs]))
 
 (def base-chart-spec
+  "Base specification mapping parameters for line and ribbon y values
+   used in plot definitions to the corresponding column names
+   usually used in summaries of SEND projections."
   {:y   :median
    :irl :q1  :iru :q3
    :orl :p05 :oru :p95})
 
+
+
+;;; # tooltip helpers
 (defn five-number-summary-string
   "Format five number summaries [`orl` `irl` `y` `iru` `oru`] into a single string
    of the form \"y (orl (irl↔iru) oru)\" 
@@ -59,7 +66,11 @@
         (tc/map-columns tooltip-field [:p05 :q1 :median :q3 :p95]
                         #(five-number-summary-string {:fmt "%.2f%%", :f (partial * 100)} %&)))))
 
+
+
+;;; # line plots
 (defn line-and-ribbon-and-rule-plot
+  "Vega-Lite specs for a line, shape and ribbon plot, by `group`, with a \"hover\" vertical rule tooltip."
   [{:keys [data
            chart-title
            x x-title x-format x-scale
@@ -141,6 +152,7 @@
                                       :clear   "pointerout"}}]}]}))
 
 (defn line-and-ribbon-plot
+  "Vega-Lite specs for a line and ribbon plot, by `group`."
   [{:keys [data
            chart-title
            chart-height chart-width
@@ -206,6 +218,7 @@
                             :tooltip tooltip}}]}))
 
 (defn line-shape-and-ribbon-plot
+  "Vega-Lite specs for a line, shape and ribbon plot, by `group`."
   [{:keys [data
            chart-title
            chart-height chart-width
@@ -276,6 +289,7 @@
                             :tooltip tooltip}}]}))
 
 (defn line-plot
+  "Vega-Lite specs for a shape and line plot, by `group`."
   [{:keys [data
            chart-title
            chart-height chart-width
@@ -330,6 +344,9 @@
                             :shape   (vs/shape-map data group colors-and-shapes)
                             :tooltip tooltip}}]}))
 
+
+
+;;; # Helper functions
 (defn remove-tooltips
   "Remove tooltips from a chart:
    - Remove hover rules and associated `:transform` sub `:layer`s from a vl `chart`.
