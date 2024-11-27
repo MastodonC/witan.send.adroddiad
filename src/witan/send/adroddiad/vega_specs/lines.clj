@@ -347,6 +347,34 @@
 
 
 ;;; # Helper functions
+(defn plot-spec-by-group->plot-spec-by-group-label
+  "Converts a plot spec with `group`s identified by abbreviations to use labels:
+   Uses `:label` column from `colors-and-shapes` (if present) update `data` `group` `colors-and-shapes`
+   in a `plot-spec` to group by the labelled values.
+   If the `colors-and-shapes` dataset in the `plot-spec` contains a `:label` column:
+   - The (domain) values in the `group` column are mapped to the corresponding labels
+     according to the `colors-and-shapes` `:domain-value` -> `:label` mapping.
+   - The `colors-and-shapes` dataset is updated with the `:label`s as new `:domain-values`.
+   - If a `group-label` column is specified then the labels are put in that column,
+     the `group` key updated to refer to the new `group-label` column,
+     and the `group-label` key removed from the `plot-spec`."
+  [{:keys [data group colors-and-shapes group-label]
+    :or   {group-label nil}
+    :as   plot-spec}]
+  (let [group-label (or group-label group)]
+    (-> plot-spec
+        (dissoc :group-label)
+        (merge (when (some #{:label} (tc/column-names colors-and-shapes))
+                 (let [domain-value->label (as-> colors-and-shapes $ (zipmap ($ :domain-value) ($ :label)))]
+                   {:data              (as-> data $
+                                         (tc/map-columns $ group-label [group] #(get domain-value->label % %))
+                                         (tc/reorder-columns $ (concat (take-while (complement #{group}) (tc/column-names $))
+                                                                       [group group-label])))
+                    :group             group-label
+                    :colors-and-shapes (-> colors-and-shapes
+                                           (tc/drop-columns [:domain-value])
+                                           (tc/rename-columns {:label :domain-value}))}))))))
+
 (defn remove-tooltips
   "Remove tooltips from a chart:
    - Remove hover rules and associated `:transform` sub `:layer`s from a vl `chart`.
@@ -366,3 +394,36 @@
                             [(key e) nil]
                             e))
                   $)))
+
+
+
+;;; # Wrappers
+(defn plot
+  "Augments supplied parameter map with defaults
+   suitable for a plot of count of #EHCP projections by `group`,
+   calls `plot-spec-by-group->plot-spec-by-group-label`
+   to apply any labels in the `colors-and-shapes`,
+   and passes through to `plotf` to return a Vega-Lite spec.
+   - Only requires: `data` `group` `colors-and-shapes`.
+   - Other parameters (except `plotf`) are passed through to `plotf`."
+  [& {:keys [data group group-title colors-and-shapes plotf]
+      :or   {group-title nil
+             plotf       line-and-ribbon-and-rule-plot}
+      :as   plot-spec}]
+  (-> base-chart-spec
+      (merge {:chart-title  (str "#EHCPs by " (or group-title (name group)))
+              :chart-height vs/full-height
+              :chart-width  vs/two-thirds-width
+              :x            :calendar-year
+              :x-format     "%Y"
+              :x-title      "Census Year"
+              :y-title      "# EHCPs"
+              :y-zero       true
+              :y-scale      false
+              :group-title  (or group-title (name group))})
+      (merge plot-spec)
+      (dissoc :plotf)
+      plot-spec-by-group->plot-spec-by-group-label
+      (update :data
+              (fn [ds] (tc/map-columns ds :calendar-year [:calendar-year] str)))
+      plotf))
