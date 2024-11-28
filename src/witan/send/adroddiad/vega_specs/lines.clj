@@ -424,6 +424,6 @@
       (merge plot-spec)
       (dissoc :plotf)
       plot-spec-by-group->plot-spec-by-group-label
-      (update :data
-              (fn [ds] (tc/map-columns ds :calendar-year [:calendar-year] str)))
+      ((fn [m] (update m :data
+                       (fn [ds] (tc/update-columns ds [(:x m)] (partial map str))))))
       plotf))
