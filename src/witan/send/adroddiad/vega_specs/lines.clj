@@ -422,8 +422,8 @@
               :y-scale      false
               :group-title  (or group-title (name group))})
       (merge plot-spec)
-      (dissoc :plotf)
       plot-spec-by-group->plot-spec-by-group-label
       ((fn [m] (update m :data
                        (fn [ds] (tc/update-columns ds [(:x m)] (partial map str))))))
+      (dissoc :plotf)
       plotf))
