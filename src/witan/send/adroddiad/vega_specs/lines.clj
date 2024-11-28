@@ -398,14 +398,21 @@
 
 
 ;;; # Wrappers
-(defn plot
-  "Augments supplied parameter map with defaults
-   suitable for a plot of count of #EHCP projections by `group`,
-   calls `plot-spec-by-group->plot-spec-by-group-label`
-   to apply any labels in the `colors-and-shapes`,
-   and passes through to `plotf` to return a Vega-Lite spec.
+(defn plot-ehcps-against-year-by-group
+  "Wrapper for `line*-plot`s supplying defaults for plotting an EHCP projection summary.
+
+   Augments supplied parameter map with defaults suitable for a plot of count of
+   7-number summary of #EHCP projections (y-axis) against year (x-axis) grouped
+   by (i.e. with a separate for each) `group`, then:
+   - calls `plot-spec-by-group->plot-spec-by-group-label` to apply any labels
+     in the `colors-and-shapes`,
+   - ensures the year `x` variable is a string (for vega-lite),
+   - passes through to the specific `plotf` to return a Vega-Lite spec.
+
+   Note:
    - Only requires: `data` `group` `colors-and-shapes`.
-   - Other parameters (except `plotf`) are passed through to `plotf`."
+   - Other parameters (except `plotf`) are passed through to `plotf`
+     (overriding any defaults specified here)."
   [& {:keys [data group group-title colors-and-shapes plotf]
       :or   {group-title nil
              plotf       line-and-ribbon-and-rule-plot}
