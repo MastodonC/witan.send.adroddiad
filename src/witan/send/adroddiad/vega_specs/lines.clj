@@ -401,13 +401,13 @@
 (defn plot-ehcps-against-year-by-group
   "Wrapper for `line*-plot`s supplying defaults for plotting an EHCP projection summary.
 
-   Augments supplied parameter map with defaults suitable for a plot of count of
+   Augments supplied parameter map with defaults suitable to plot a
    7-number summary of #EHCP projections (y-axis) against year (x-axis) grouped
-   by (i.e. with a separate for each) `group`, then:
+   by `group` (i.e. with a separate line for each value of `group`), then:
    - calls `plot-spec-by-group->plot-spec-by-group-label` to apply any labels
-     in the `colors-and-shapes`,
-   - ensures the year `x` variable is a string (for vega-lite),
-   - passes through to the specific `plotf` to return a Vega-Lite spec.
+     in the `colors-and-shapes` to the `group` values,
+   - ensures the year `x` variable is a string (for vega-lite), and
+   - passes through to a specific `plotf` to return a Vega-Lite spec.
 
    Note:
    - Only requires: `data` `group` `colors-and-shapes`.
