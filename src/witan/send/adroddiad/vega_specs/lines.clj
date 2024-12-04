@@ -1,6 +1,7 @@
 (ns witan.send.adroddiad.vega-specs.lines
   "Specifications for Vega-Lite line plots for SEND projections."
   (:require
+   [clojure.set :as set]
    [clojure.string :as str]
    [clojure.walk :as walk]
    [tablecloth.api :as tc]
@@ -399,11 +400,13 @@
 
 ;;; # Wrappers
 (defn plot-ehcps-against-year-by-group
-  "Wrapper for `line*-plot`s supplying defaults for plotting an EHCP projection summary.
+  "Wrapper for `line*-plot`s of `data` by `group` supplying defaults for plotting an EHCP projection summary.
 
-   Augments supplied parameter map with defaults suitable to plot a
+   Augments supplied parameter map with defaults suitable to plot `data`
    7-number summary of #EHCP projections (y-axis) against year (x-axis) grouped
    by `group` (i.e. with a separate line for each value of `group`), then:
+   - makes a default `colors-and-shapes` (for the `group` values in the `data`)
+     if not specified,
    - calls `plot-spec-by-group->plot-spec-by-group-label` to apply any labels
      in the `colors-and-shapes` to the `group` values,
    - ensures the year `x` variable is a string (for vega-lite), and
@@ -413,27 +416,45 @@
    - Only requires: `data` & `group`.
    - Other parameters (except `plotf`) are passed through to `plotf`
      (overriding any defaults specified here)."
-  [& {:keys [data group group-title colors-and-shapes plotf]
-      :or   {group-title       nil
-             colors-and-shapes nil
-             plotf             line-and-ribbon-and-rule-plot}
+  [& {:keys [data group group-title plotf]
+      :or   {group-title nil
+             plotf       line-and-ribbon-and-rule-plot}
       :as   plot-spec}]
   (-> base-chart-spec
-      (merge {:chart-title       (str "#EHCPs by " (or group-title (name group)))
-              :chart-height      vs/full-height
-              :chart-width       vs/two-thirds-width
-              :x                 :calendar-year
-              :x-format          "%Y"
-              :x-title           "Census Year"
-              :y-title           "# EHCPs"
-              :y-zero            true
-              :y-scale           false
-              :group-title       (or group-title (name group))
-              :colors-and-shapes (when (nil? colors-and-shapes)
-                                   (-> data (get group) distinct vs/color-and-shape-lookup))})
+      ;; defaults
+      (merge {:chart-title  (str "#EHCPs by " (or group-title (name group)))
+              :chart-height vs/full-height
+              :chart-width  vs/two-thirds-width
+              :x            :calendar-year
+              :x-format     "%Y"
+              :x-title      "Census Year"
+              :y-title      "# EHCPs"
+              :y-zero       true
+              :y-scale      false
+              :group-title  (or group-title (name group))})
+      ;; over-ride with supplied `plot-spec`
       (merge plot-spec)
-      plot-spec-by-group->plot-spec-by-group-label
+      ;; process `colors-and-shapes`
+      ((fn [{:keys [data group colors-and-shapes] :as m}]
+         (let [data-groups                       (-> data (get group) set)
+               domain-values                     (-> colors-and-shapes :domain-value set)
+               data-groups-without-domain-values (set/difference data-groups domain-values)]
+           (cond
+             ;; make `:colors-and-shapes` if none specified:
+             (nil? colors-and-shapes)
+             (assoc m :colors-and-shapes (vs/color-and-shape-lookup data-groups))
+             ;; if supplied `:colors-and-shapes` doesn't contain all `group`s in the `data` then error:
+             (seq data-groups-without-domain-values)
+             (throw (ex-info (str "`colors-and-shapes` doesn't contain all `group`s in the `data`.")
+                             {:group                             group
+                              :colors-and-shapes                 colors-and-shapes
+                              :data-groups-without-domain-values data-groups-without-domain-values}))
+             ;; otherwise process the plot-spec to apply any labels specified:
+             :else
+             (plot-spec-by-group->plot-spec-by-group-label m)))))
+      ;; convert the `x` column of the `data` to `str`
       ((fn [m] (update m :data
                        (fn [ds] (tc/update-columns ds [(:x m)] (partial map str))))))
+      ;; call the specified `plotf`
       (dissoc :plotf)
       plotf))
