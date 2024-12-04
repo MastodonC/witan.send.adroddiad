@@ -399,16 +399,38 @@
 
 
 ;;; # Wrappers
+(defn process-colors-and-shapes
+  "Processes a `plot-spec` to:
+   - make a default `colors-and-shapes` (for the `group` values in the `data`) if none specified,
+   - throw an exception if supplied `:colors-and-shapes` doesn't contain all `group`s in the `data`, and
+   - call `plot-spec-by-group->plot-spec-by-group-label` to apply any labels in the `colors-and-shapes` to the `group` values."
+  [{:keys [data group colors-and-shapes] :as plot-spec}]
+  (let [data-groups                       (-> data (get group) set)
+        domain-values                     (-> colors-and-shapes :domain-value set)
+        data-groups-without-domain-values (set/difference data-groups domain-values)]
+    (cond
+      ;; make `:colors-and-shapes` if none specified:
+      (nil? colors-and-shapes)
+      (assoc plot-spec :colors-and-shapes (vs/color-and-shape-lookup data-groups))
+      ;; if supplied `:colors-and-shapes` doesn't contain all `group`s in the `data` then error:
+      (seq data-groups-without-domain-values)
+      (throw (ex-info (str "`colors-and-shapes` doesn't contain all `group`s in the `data`.")
+                      {:group                             group
+                       :colors-and-shapes                 colors-and-shapes
+                       :data-groups-without-domain-values data-groups-without-domain-values}))
+      ;; otherwise process the plot-spec to apply any labels specified:
+      :else
+      (plot-spec-by-group->plot-spec-by-group-label plot-spec))))
+
 (defn plot-ehcps-against-year-by-group
   "Wrapper for `line*-plot`s of `data` by `group` supplying defaults for plotting an EHCP projection summary.
 
    Augments supplied parameter map with defaults suitable to plot `data`
    7-number summary of #EHCP projections (y-axis) against year (x-axis) grouped
    by `group` (i.e. with a separate line for each value of `group`), then:
-   - makes a default `colors-and-shapes` (for the `group` values in the `data`)
-     if not specified,
-   - calls `plot-spec-by-group->plot-spec-by-group-label` to apply any labels
-     in the `colors-and-shapes` to the `group` values,
+   - calls `process-colors-and-shapes` to:
+     - makes a default `colors-and-shapes` if not specified, and
+     - apply any labels;
    - ensures the year `x` variable is a string (for vega-lite), and
    - passes through to a specific `plotf` to return a Vega-Lite spec.
 
@@ -435,23 +457,7 @@
       ;; over-ride with supplied `plot-spec`
       (merge plot-spec)
       ;; process `colors-and-shapes`
-      ((fn [{:keys [data group colors-and-shapes] :as m}]
-         (let [data-groups                       (-> data (get group) set)
-               domain-values                     (-> colors-and-shapes :domain-value set)
-               data-groups-without-domain-values (set/difference data-groups domain-values)]
-           (cond
-             ;; make `:colors-and-shapes` if none specified:
-             (nil? colors-and-shapes)
-             (assoc m :colors-and-shapes (vs/color-and-shape-lookup data-groups))
-             ;; if supplied `:colors-and-shapes` doesn't contain all `group`s in the `data` then error:
-             (seq data-groups-without-domain-values)
-             (throw (ex-info (str "`colors-and-shapes` doesn't contain all `group`s in the `data`.")
-                             {:group                             group
-                              :colors-and-shapes                 colors-and-shapes
-                              :data-groups-without-domain-values data-groups-without-domain-values}))
-             ;; otherwise process the plot-spec to apply any labels specified:
-             :else
-             (plot-spec-by-group->plot-spec-by-group-label m)))))
+      process-colors-and-shapes
       ;; convert the `x` column of the `data` to `str`
       ((fn [m] (update m :data
                        (fn [ds] (tc/update-columns ds [(:x m)] (partial map str))))))
