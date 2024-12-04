@@ -13,6 +13,9 @@
 (defn bulleted-list [seq-of-text]
   (reduce #(into %1 [[:li.text-3xl.mb-4.mt-4 %2]]) [:ul.list-disc] seq-of-text))
 
+;; TODO
+;; single slide fn that does different layouts based on a :slide (?) key
+
 (defn title-slide [{:keys [presentation-title
                            work-package
                            presentation-date
