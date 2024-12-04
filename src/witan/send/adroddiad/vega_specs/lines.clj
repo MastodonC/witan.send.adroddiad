@@ -87,10 +87,10 @@
            y-zero        true
            y-format      ",.0f"
            tooltip-field :tooltip-column}
-    :as   cfg}]
+    :as   plot-spec}]
   (let [tooltip-formatf       (or tooltip-formatf
-                                  (five-number-summary-tooltip (assoc (select-keys cfg [:tooltip-field
-                                                                                        :orl :irl :y :iru :oru])
+                                  (five-number-summary-tooltip (assoc (select-keys plot-spec [:tooltip-field
+                                                                                              :orl :irl :y :iru :oru])
                                                                       :fmt (str "%" (str/replace y-format #"%" "%%")))))
         tooltip-group-formatf (fn [g] (str g " " (->> g
                                                       (get (as-> colors-and-shapes $
@@ -169,10 +169,10 @@
            y-zero        true
            y-scale       false
            tooltip-field :tooltip-column}
-    :as   cfg}]
+    :as   plot-spec}]
   (let [tooltip-formatf (or tooltip-formatf
-                            (five-number-summary-tooltip (assoc (select-keys cfg [:tooltip-field
-                                                                                  :orl :irl :y :iru :oru])
+                            (five-number-summary-tooltip (assoc (select-keys plot-spec [:tooltip-field
+                                                                                        :orl :irl :y :iru :oru])
                                                                 :fmt (str "%" (str/replace y-format #"%" "%%"))
                                                                 :f   identity)))
         tooltip         [{:field group :title group-title}
@@ -235,10 +235,10 @@
            y-zero        true
            y-scale       false
            tooltip-field :tooltip-column}
-    :as   cfg}]
+    :as   plot-spec}]
   (let [tooltip-formatf (or tooltip-formatf
-                            (five-number-summary-tooltip (assoc (select-keys cfg [:tooltip-field
-                                                                                  :orl :irl :y :iru :oru])
+                            (five-number-summary-tooltip (assoc (select-keys plot-spec [:tooltip-field
+                                                                                        :orl :irl :y :iru :oru])
                                                                 :fmt (str "%" (str/replace y-format #"%" "%%"))
                                                                 :f   identity)))
         tooltip         [{:field group :title group-title}
