@@ -398,8 +398,8 @@
 
 (defn process-colors-and-shapes
   "Processes a `plot-spec` to:
-   - make a default `colors-and-shapes` (for the `group` values in the `data`) if none specified,
-   - throw an exception if supplied `:colors-and-shapes` doesn't contain all `group`s in the `data`, and
+   - provide a default `colors-and-shapes` (for the `group` values in the `data`) if none specified,
+   - throw an exception if the supplied `:colors-and-shapes` doesn't contain all `group`s in the `data`, and
    - call `plot-spec-by-group->plot-spec-by-group-label` to apply any labels in the `colors-and-shapes` to the `group` values."
   [{:keys [data group colors-and-shapes] :as plot-spec}]
   (let [data-groups                       (-> data (get group) set)
@@ -429,7 +429,7 @@
    7-number summary of #EHCP projections (y-axis) against year (x-axis) grouped
    by `group` (i.e. with a separate line for each value of `group`), then:
    - calls `process-colors-and-shapes` to:
-     - makes a default `colors-and-shapes` if not specified, and
+     - provide a default `colors-and-shapes` if none specified, and
      - apply any labels;
    - ensures the year `x` variable is a string (for vega-lite), and
    - passes through to a specific `plotf` to return a Vega-Lite spec.
