@@ -410,24 +410,27 @@
    - passes through to a specific `plotf` to return a Vega-Lite spec.
 
    Note:
-   - Only requires: `data` `group` `colors-and-shapes`.
+   - Only requires: `data` & `group`.
    - Other parameters (except `plotf`) are passed through to `plotf`
      (overriding any defaults specified here)."
   [& {:keys [data group group-title colors-and-shapes plotf]
-      :or   {group-title nil
-             plotf       line-and-ribbon-and-rule-plot}
+      :or   {group-title       nil
+             colors-and-shapes nil
+             plotf             line-and-ribbon-and-rule-plot}
       :as   plot-spec}]
   (-> base-chart-spec
-      (merge {:chart-title  (str "#EHCPs by " (or group-title (name group)))
-              :chart-height vs/full-height
-              :chart-width  vs/two-thirds-width
-              :x            :calendar-year
-              :x-format     "%Y"
-              :x-title      "Census Year"
-              :y-title      "# EHCPs"
-              :y-zero       true
-              :y-scale      false
-              :group-title  (or group-title (name group))})
+      (merge {:chart-title       (str "#EHCPs by " (or group-title (name group)))
+              :chart-height      vs/full-height
+              :chart-width       vs/two-thirds-width
+              :x                 :calendar-year
+              :x-format          "%Y"
+              :x-title           "Census Year"
+              :y-title           "# EHCPs"
+              :y-zero            true
+              :y-scale           false
+              :group-title       (or group-title (name group))
+              :colors-and-shapes (when (nil? colors-and-shapes)
+                                   (-> data (get group) distinct vs/color-and-shape-lookup))})
       (merge plot-spec)
       plot-spec-by-group->plot-spec-by-group-label
       ((fn [m] (update m :data
