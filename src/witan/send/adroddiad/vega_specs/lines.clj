@@ -396,9 +396,6 @@
                             e))
                   $)))
 
-
-
-;;; # Wrappers
 (defn process-colors-and-shapes
   "Processes a `plot-spec` to:
    - make a default `colors-and-shapes` (for the `group` values in the `data`) if none specified,
@@ -422,6 +419,9 @@
       :else
       (plot-spec-by-group->plot-spec-by-group-label plot-spec))))
 
+
+
+;;; # Wrappers
 (defn plot-ehcps-against-year-by-group
   "Wrapper for `line*-plot`s of `data` by `group` supplying defaults for plotting an EHCP projection summary.
 
