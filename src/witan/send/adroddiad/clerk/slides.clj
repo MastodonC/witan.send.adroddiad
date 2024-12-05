@@ -16,23 +16,35 @@
 ;; TODO
 ;; single slide fn that does different layouts based on a :slide (?) key
 
-(defn title-slide [{:keys [presentation-title
-                           work-package
-                           presentation-date
-                           client-name]
-                    :or   {presentation-title ""
-                           work-package ""
-                           presentation-date ""
-                           client-name ""}}]
+(defn title-slide [presentation-title
+                   work-package
+                   presentation-date
+                   client-name]
+  (clerk/html {::clerk/width :full}
+              [:div.max-w-screen-2xl.font-sans
+               [:p.text-6xl.font-extrabold presentation-title]
+               [:p.text-3xl.font-bold work-package]
+               [:p.text-3xl.italic presentation-date]
+               [:p.text-5xl.font-bold.-mb-8.-mt-2 (format "For %s" client-name)]
+               [:p.text-4xl.font-bold.italic "Presented by Mastodon C"]
+               [:p.text-1xl "Use arrow keys to navigate and ESC to see an overview."]]))
+
+(defn slide [{:keys [presentation-title
+                     work-package
+                     presentation-date
+                     client-name]}]
   (clerk/fragment
-   (clerk/html {::clerk/width :full}
-               [:div.max-w-screen-2xl.font-sans
-                [:p.text-6xl.font-extrabold presentation-title]
-                [:p.text-3xl.font-bold work-package]
-                [:p.text-3xl.italic presentation-date]
-                [:p.text-5xl.font-bold.-mb-8.-mt-2 (format "For %s" client-name)]
-                [:p.text-4xl.font-bold.italic "Presented by Mastodon C"]
-                [:p.text-1xl "Use arrow keys to navigate and ESC to see an overview."]])
+   (cond
+     (every? some? [presentation-title
+                    work-package
+                    presentation-date
+                    client-name])
+     (title-slide presentation-title
+                  work-package
+                  presentation-date
+                  client-name)
+     :else
+     nil)
    (mc-logo)))
 
 (defn list-slide [{:keys [title
