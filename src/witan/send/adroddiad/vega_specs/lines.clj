@@ -1,6 +1,7 @@
 (ns witan.send.adroddiad.vega-specs.lines
   "Specifications for Vega-Lite line plots for SEND projections."
   (:require
+   [clojure.set :as set]
    [clojure.string :as str]
    [clojure.walk :as walk]
    [tablecloth.api :as tc]
@@ -86,10 +87,10 @@
            y-zero        true
            y-format      ",.0f"
            tooltip-field :tooltip-column}
-    :as   cfg}]
+    :as   plot-spec}]
   (let [tooltip-formatf       (or tooltip-formatf
-                                  (five-number-summary-tooltip (assoc (select-keys cfg [:tooltip-field
-                                                                                        :orl :irl :y :iru :oru])
+                                  (five-number-summary-tooltip (assoc (select-keys plot-spec [:tooltip-field
+                                                                                              :orl :irl :y :iru :oru])
                                                                       :fmt (str "%" (str/replace y-format #"%" "%%")))))
         tooltip-group-formatf (fn [g] (str g " " (->> g
                                                       (get (as-> colors-and-shapes $
@@ -168,10 +169,10 @@
            y-zero        true
            y-scale       false
            tooltip-field :tooltip-column}
-    :as   cfg}]
+    :as   plot-spec}]
   (let [tooltip-formatf (or tooltip-formatf
-                            (five-number-summary-tooltip (assoc (select-keys cfg [:tooltip-field
-                                                                                  :orl :irl :y :iru :oru])
+                            (five-number-summary-tooltip (assoc (select-keys plot-spec [:tooltip-field
+                                                                                        :orl :irl :y :iru :oru])
                                                                 :fmt (str "%" (str/replace y-format #"%" "%%"))
                                                                 :f   identity)))
         tooltip         [{:field group :title group-title}
@@ -234,10 +235,10 @@
            y-zero        true
            y-scale       false
            tooltip-field :tooltip-column}
-    :as   cfg}]
+    :as   plot-spec}]
   (let [tooltip-formatf (or tooltip-formatf
-                            (five-number-summary-tooltip (assoc (select-keys cfg [:tooltip-field
-                                                                                  :orl :irl :y :iru :oru])
+                            (five-number-summary-tooltip (assoc (select-keys plot-spec [:tooltip-field
+                                                                                        :orl :irl :y :iru :oru])
                                                                 :fmt (str "%" (str/replace y-format #"%" "%%"))
                                                                 :f   identity)))
         tooltip         [{:field group :title group-title}
@@ -395,29 +396,54 @@
                             e))
                   $)))
 
+(defn process-colors-and-shapes
+  "Processes a `plot-spec` to:
+   - provide a default `colors-and-shapes` (for the `group` values in the `data`) if none specified,
+   - throw an exception if the supplied `:colors-and-shapes` doesn't contain all `group`s in the `data`, and
+   - call `plot-spec-by-group->plot-spec-by-group-label` to apply any labels in the `colors-and-shapes` to the `group` values."
+  [{:keys [data group colors-and-shapes] :as plot-spec}]
+  (let [data-groups                       (-> data (get group) set)
+        domain-values                     (-> colors-and-shapes :domain-value set)
+        data-groups-without-domain-values (set/difference data-groups domain-values)]
+    (cond
+      ;; make `:colors-and-shapes` if none specified:
+      (nil? colors-and-shapes)
+      (assoc plot-spec :colors-and-shapes (vs/color-and-shape-lookup data-groups))
+      ;; if supplied `:colors-and-shapes` doesn't contain all `group`s in the `data` then error:
+      (seq data-groups-without-domain-values)
+      (throw (ex-info (str "`colors-and-shapes` doesn't contain all `group`s in the `data`.")
+                      {:group                             group
+                       :colors-and-shapes                 colors-and-shapes
+                       :data-groups-without-domain-values data-groups-without-domain-values}))
+      ;; otherwise process the plot-spec to apply any labels specified:
+      :else
+      (plot-spec-by-group->plot-spec-by-group-label plot-spec))))
+
 
 
 ;;; # Wrappers
 (defn plot-ehcps-against-year-by-group
-  "Wrapper for `line*-plot`s supplying defaults for plotting an EHCP projection summary.
+  "Wrapper for `line*-plot`s of `data` by `group` supplying defaults for plotting an EHCP projection summary.
 
-   Augments supplied parameter map with defaults suitable to plot a
+   Augments supplied parameter map with defaults suitable to plot `data`
    7-number summary of #EHCP projections (y-axis) against year (x-axis) grouped
    by `group` (i.e. with a separate line for each value of `group`), then:
-   - calls `plot-spec-by-group->plot-spec-by-group-label` to apply any labels
-     in the `colors-and-shapes` to the `group` values,
+   - calls `process-colors-and-shapes` to:
+     - provide a default `colors-and-shapes` if none specified, and
+     - apply any labels;
    - ensures the year `x` variable is a string (for vega-lite), and
    - passes through to a specific `plotf` to return a Vega-Lite spec.
 
    Note:
-   - Only requires: `data` `group` `colors-and-shapes`.
+   - Only requires: `data` & `group`.
    - Other parameters (except `plotf`) are passed through to `plotf`
      (overriding any defaults specified here)."
-  [& {:keys [data group group-title colors-and-shapes plotf]
+  [& {:keys [data group group-title plotf]
       :or   {group-title nil
              plotf       line-and-ribbon-and-rule-plot}
       :as   plot-spec}]
   (-> base-chart-spec
+      ;; defaults
       (merge {:chart-title  (str "#EHCPs by " (or group-title (name group)))
               :chart-height vs/full-height
               :chart-width  vs/two-thirds-width
@@ -428,9 +454,13 @@
               :y-zero       true
               :y-scale      false
               :group-title  (or group-title (name group))})
+      ;; over-ride with supplied `plot-spec`
       (merge plot-spec)
-      plot-spec-by-group->plot-spec-by-group-label
+      ;; process `colors-and-shapes`
+      process-colors-and-shapes
+      ;; convert the `x` column of the `data` to `str`
       ((fn [m] (update m :data
                        (fn [ds] (tc/update-columns ds [(:x m)] (partial map str))))))
+      ;; call the specified `plotf`
       (dissoc :plotf)
       plotf))
