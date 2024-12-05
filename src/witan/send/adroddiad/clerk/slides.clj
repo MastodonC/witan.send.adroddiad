@@ -44,7 +44,7 @@
                   presentation-date
                   client-name)
      :else
-     nil)
+     (clerk/md ""))
    (mc-logo)))
 
 (defn list-slide [{:keys [title
