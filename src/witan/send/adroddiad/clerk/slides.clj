@@ -29,10 +29,21 @@
                [:p.text-4xl.font-bold.italic "Presented by Mastodon C"]
                [:p.text-1xl "Use arrow keys to navigate and ESC to see an overview."]]))
 
-(defn slide [{:keys [presentation-title
+(defn list-slide [title
+                  text]
+  (clerk/fragment
+   (clerk/html
+    [:p.text-6xl.font-bold.font-sans title])
+   (clerk/html
+    {::clerk/width :full}
+    [:div.text-1xl.max-w-screen-2xl.font-sans
+     (bulleted-list text)])))
+
+(defn slide [{:keys [title
                      work-package
                      presentation-date
-                     client-name]}]
+                     client-name
+                     text]}]
   (clerk/fragment
    (cond
      (every? some? [title
@@ -43,23 +54,11 @@
                   work-package
                   presentation-date
                   client-name)
+     (every? some? [title
+                    text])
+     (list-slide title text)
      :else
      (clerk/md ""))
-   (mc-logo)))
-
-(defn list-slide [{:keys [title
-                          text]
-                   :or   {title "Title"
-                          text ["Point 1"
-                                "Point 2"
-                                "Point 3"]}}]
-  (clerk/fragment
-   (clerk/html
-    [:p.text-6xl.font-bold.font-sans title])
-   (clerk/html
-    {::clerk/width :full}
-    [:div.text-1xl.max-w-screen-2xl.font-sans
-     (bulleted-list text)])
    (mc-logo)))
 
 (defn section-header-slide [{:keys [section-title]
