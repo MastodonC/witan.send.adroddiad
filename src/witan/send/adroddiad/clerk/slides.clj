@@ -16,13 +16,13 @@
 ;; TODO
 ;; single slide fn that does different layouts based on a :slide (?) key
 
-(defn title-slide [presentation-title
+(defn title-slide [title
                    work-package
                    presentation-date
                    client-name]
   (clerk/html {::clerk/width :full}
               [:div.max-w-screen-2xl.font-sans
-               [:p.text-6xl.font-extrabold presentation-title]
+               [:p.text-6xl.font-extrabold title]
                [:p.text-3xl.font-bold work-package]
                [:p.text-3xl.italic presentation-date]
                [:p.text-5xl.font-bold.-mb-8.-mt-2 (format "For %s" client-name)]
@@ -35,11 +35,11 @@
                      client-name]}]
   (clerk/fragment
    (cond
-     (every? some? [presentation-title
+     (every? some? [title
                     work-package
                     presentation-date
                     client-name])
-     (title-slide presentation-title
+     (title-slide title
                   work-package
                   presentation-date
                   client-name)
