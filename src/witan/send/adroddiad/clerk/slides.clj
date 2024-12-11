@@ -13,112 +13,85 @@
 (defn bulleted-list [seq-of-text]
   (reduce #(into %1 [[:li.text-3xl.mb-4.mt-4 %2]]) [:ul.list-disc] seq-of-text))
 
-;; TODO
-;; single slide fn that does different layouts based on a :slide (?) key
+(defmulti left-hand-box :left-col)
 
-(defn title-slide [title
-                   work-package
-                   presentation-date
-                   client-name]
-  (clerk/html {::clerk/width :full}
-              [:div.max-w-screen-2xl.font-sans
-               [:p.text-6xl.font-extrabold title]
-               [:p.text-3xl.font-bold work-package]
-               [:p.text-3xl.italic presentation-date]
-               [:p.text-5xl.font-bold.-mb-8.-mt-2 (format "For %s" client-name)]
-               [:p.text-4xl.font-bold.italic "Presented by Mastodon C"]
-               [:p.text-1xl "Use arrow keys to navigate and ESC to see an overview."]]))
+(defmethod left-hand-box :chart [conf]
+  (clerk/vl {::clerk/width :full}
+            (:chart conf)))
 
-(defn list-slide [title
-                  text]
+(defmethod left-hand-box :text [conf]
+  (clerk/html
+   {::clerk/width :full}
+   [:div.text-1xl.max-w-screen-2xl.font-sans
+    (bulleted-list (:text conf))]))
+
+(defmethod left-hand-box :table [conf]
+  (clerk/col
+   (clerk/html [:p.text-3xl.font-bold.text-center.font-sans (tc/dataset-name (:table conf))])
+   (clerk/table (:table conf))))
+
+(defmulti right-hand-box :right-col)
+
+(defmethod right-hand-box :chart [conf]
+  (clerk/vl {::clerk/width :full}
+            (:chart conf)))
+
+(defmethod right-hand-box :text [conf]
+  (clerk/html
+   {::clerk/width :full}
+   [:div.text-1xl.max-w-screen-2xl.font-sans
+    (bulleted-list (:text conf))]))
+
+(defmethod right-hand-box :table [conf]
+  (clerk/col
+   (clerk/html [:p.text-3xl.font-bold.text-center.font-sans (tc/dataset-name (:table conf))])
+   (clerk/table (:table conf))))
+
+(defmulti slide :slide-type)
+
+(defmethod slide :title-slide [conf]
   (clerk/fragment
-   (clerk/html
-    [:p.text-6xl.font-bold.font-sans title])
-   (clerk/html
-    {::clerk/width :full}
-    [:div.text-1xl.max-w-screen-2xl.font-sans
-     (bulleted-list text)])))
-
-(defn slide [{:keys [title
-                     work-package
-                     presentation-date
-                     client-name
-                     text]}]
-  (clerk/fragment
-   (cond
-     (every? some? [title
-                    work-package
-                    presentation-date
-                    client-name])
-     (title-slide title
-                  work-package
-                  presentation-date
-                  client-name)
-     (every? some? [title
-                    text])
-     (list-slide title text)
-     :else
-     (clerk/md ""))
+   (clerk/html {::clerk/width :full}
+               [:div.max-w-screen-2xl.font-sans
+                [:p.text-6xl.font-extrabold (:title conf)]
+                [:p.text-3xl.font-bold (:work-package conf)]
+                [:p.text-3xl.italic (:presentation-date conf)]
+                [:p.text-5xl.font-bold.-mb-8.-mt-2 (format "For %s" (:client-name conf))]
+                [:p.text-4xl.font-bold.italic "Presented by Mastodon C"]
+                [:p.text-1xl "Use arrow keys to navigate and ESC to see an overview."]])
    (mc-logo)))
 
-(defn section-header-slide [{:keys [section-title]
-                             :or   {section-title "Section Title"}}]
+(defmethod slide :empty-slide [conf]
   (clerk/fragment
-   (clerk/html
-    {::clerk/width :full}
-    [:p.text-6xl.font-bold.font-sans section-title])
+   (clerk/md "")
    (mc-logo)))
 
-(defn title-chart-slide [{:keys [title
-                                 chart
-                                 text]
-                          :or   {title "Title"
-                                 chart {}
-                                 text ["Point 1"
-                                       "Point 2"
-                                       "Point 3"]}}]
+(defmethod slide :section-header-slide [conf]
   (clerk/fragment
    (clerk/html
     {::clerk/width :full}
-    [:p.text-6xl.font-bold.font-sans title]) ;;WORKING HERE
-   (clerk/vl {::clerk/width :full}
-             chart)
+    [:p.text-6xl.font-bold.font-sans (:title conf)])
    (mc-logo)))
 
-(defn title-chart-text-slide [{:keys [title
-                                      chart
-                                      text]
-                               :or   {title "Title"
-                                      chart {}
-                                      text ["Point 1"
-                                            "Point 2"
-                                            "Point 3"]}}]
+(defmethod slide :title-body-slide [conf]
+  (let [conf' (assoc conf :left-col (-> conf
+                                        (dissoc :title :slide-type)
+                                        keys
+                                        first))]
+    (clerk/fragment
+     (clerk/html
+      {::clerk/width :full}
+      [:p.text-6xl.font-bold.font-sans (:title conf')])
+     (left-hand-box conf')
+     (mc-logo))))
+
+(defmethod slide :title-two-columns-slide [conf]
   (clerk/fragment
    (clerk/html
     {::clerk/width :full}
-    [:p.text-6xl.font-bold.font-sans title])
+    [:p.text-6xl.font-bold.font-sans (:title conf)])
    (clerk/row
     {::clerk/width :full}
-    (clerk/vl chart)
-    (clerk/html
-     [:div.text-1xl.max-w-screen-2xl.font-sans
-      (bulleted-list text)]))
-   (mc-logo)))
-
-(defn title-chart-table-slide [{:keys [title
-                                       chart
-                                       ds]
-                                :or   {title "Title"
-                                       chart {}
-                                       ds (tc/dataset)}}]
-  (clerk/fragment
-   (clerk/html
-    {::clerk/width :full}
-    [:p.text-6xl.font-bold.font-sans title])
-   (clerk/row
-    {::clerk/width :full}
-    (clerk/vl chart)
-    (clerk/col
-     (clerk/html [:p.text-3xl.font-bold.text-center.font-sans (tc/dataset-name ds)])
-     (clerk/table ds)))
+    (left-hand-box conf)
+    (right-hand-box conf))
    (mc-logo)))
