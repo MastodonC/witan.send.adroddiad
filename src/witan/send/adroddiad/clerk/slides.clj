@@ -42,7 +42,7 @@
 
 (defmulti slide :slide-type)
 
-(defmethod slide :title-slide [conf]
+(defmethod slide ::title-slide [conf]
   (clerk/fragment
    (clerk/html {::clerk/width :full}
                [:div.max-w-screen-2xl.font-sans
@@ -54,19 +54,19 @@
                 [:p.text-1xl "Use arrow keys to navigate and ESC to see an overview."]])
    (mc-logo)))
 
-(defmethod slide :empty-slide [conf]
+(defmethod slide ::empty-slide [conf]
   (clerk/fragment
    (clerk/md "")
    (mc-logo)))
 
-(defmethod slide :section-header-slide [conf]
+(defmethod slide ::section-header-slide [conf]
   (clerk/fragment
    (clerk/html
     {::clerk/width :full}
     [:p.text-6xl.font-bold.font-sans (:title conf)])
    (mc-logo)))
 
-(defmethod slide :title-body-slide [conf]
+(defmethod slide ::title-body-slide [conf]
   (clerk/fragment
    (clerk/html
     {::clerk/width :full}
@@ -74,7 +74,7 @@
    (box? (partial contains? conf) conf)
    (mc-logo)))
 
-(defmethod slide :title-two-columns-slide [conf]
+(defmethod slide ::title-two-columns-slide [conf]
   (clerk/fragment
    (clerk/html
     {::clerk/width :full}
