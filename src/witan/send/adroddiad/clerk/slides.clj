@@ -13,39 +13,32 @@
 (defn bulleted-list [seq-of-text]
   (reduce #(into %1 [[:li.text-3xl.mb-4.mt-4 %2]]) [:ul.list-disc] seq-of-text))
 
-(defmulti left-hand-box :left-col)
-
-(defmethod left-hand-box :chart [conf]
+(defn chart-box [chart]
+  "expects a map for a veg-lite chart"
   (clerk/vl {::clerk/width :full}
-            (:chart conf)))
+            chart))
 
-(defmethod left-hand-box :text [conf]
+(defn text-box [text]
+  "expects a seq of strings in a vector"
   (clerk/html
    {::clerk/width :full}
    [:div.text-1xl.max-w-screen-2xl.font-sans
-    (bulleted-list (:text conf))]))
+    (bulleted-list text)]))
 
-(defmethod left-hand-box :table [conf]
+(defn table-box [table]
+  "expects a tablecloth dataset"
   (clerk/col
-   (clerk/html [:p.text-3xl.font-bold.text-center.font-sans (tc/dataset-name (:table conf))])
-   (clerk/table (:table conf))))
+   (clerk/html [:p.text-3xl.font-bold.text-center.font-sans (tc/dataset-name table)])
+   (clerk/table table)))
 
-(defmulti right-hand-box :right-col)
-
-(defmethod right-hand-box :chart [conf]
-  (clerk/vl {::clerk/width :full}
-            (:chart conf)))
-
-(defmethod right-hand-box :text [conf]
-  (clerk/html
-   {::clerk/width :full}
-   [:div.text-1xl.max-w-screen-2xl.font-sans
-    (bulleted-list (:text conf))]))
-
-(defmethod right-hand-box :table [conf]
-  (clerk/col
-   (clerk/html [:p.text-3xl.font-bold.text-center.font-sans (tc/dataset-name (:table conf))])
-   (clerk/table (:table conf))))
+(defn box? [pred conf]
+  (cond
+    (pred :chart)
+    (chart-box (:chart conf))
+    (pred :table)
+    (table-box (:table conf))
+    (pred :text)
+    (text-box (:text conf))))
 
 (defmulti slide :slide-type)
 
@@ -74,16 +67,12 @@
    (mc-logo)))
 
 (defmethod slide :title-body-slide [conf]
-  (let [conf' (assoc conf :left-col (-> conf
-                                        (dissoc :title :slide-type)
-                                        keys
-                                        first))]
-    (clerk/fragment
-     (clerk/html
-      {::clerk/width :full}
-      [:p.text-6xl.font-bold.font-sans (:title conf')])
-     (left-hand-box conf')
-     (mc-logo))))
+  (clerk/fragment
+   (clerk/html
+    {::clerk/width :full}
+    [:p.text-6xl.font-bold.font-sans (:title conf)])
+   (box? (partial contains? conf) conf)
+   (mc-logo)))
 
 (defmethod slide :title-two-columns-slide [conf]
   (clerk/fragment
@@ -92,6 +81,6 @@
     [:p.text-6xl.font-bold.font-sans (:title conf)])
    (clerk/row
     {::clerk/width :full}
-    (left-hand-box conf)
-    (right-hand-box conf))
+    (box? (partial = (:left-col conf)) conf)
+    (box? (partial = (:right-col conf)) conf))
    (mc-logo)))
