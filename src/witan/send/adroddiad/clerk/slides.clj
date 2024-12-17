@@ -1,7 +1,8 @@
 (ns witan.send.adroddiad.clerk.slides
   (:require [nextjournal.clerk :as clerk]
             [tablecloth.api :as tc]
-            [clojure.java.io :as io]))
+            [clojure.java.io :as io]
+            [witan.send.adroddiad.slides :as was]))
 
 (defn mc-logo []
   (clerk/html
@@ -41,7 +42,7 @@
 
 (defmulti slide :slide-type)
 
-(defmethod slide ::title-slide [conf]
+(defmethod slide ::was/title-slide [conf]
   (clerk/fragment
    (clerk/html {::clerk/width :full}
                [:div.max-w-screen-2xl.font-sans
@@ -53,19 +54,19 @@
                 [:p.text-1xl "Use arrow keys to navigate and ESC to see an overview."]])
    (mc-logo)))
 
-(defmethod slide ::empty-slide [conf]
+(defmethod slide ::was/empty-slide [conf]
   (clerk/fragment
    (clerk/md "")
    (mc-logo)))
 
-(defmethod slide ::section-header-slide [conf]
+(defmethod slide ::was/section-header-slide [conf]
   (clerk/fragment
    (clerk/html
     {::clerk/width :full}
     [:p.text-6xl.font-bold.font-sans (:title conf)])
    (mc-logo)))
 
-(defmethod slide ::title-body-slide [conf]
+(defmethod slide ::was/title-body-slide [conf]
   (clerk/fragment
    (clerk/html
     {::clerk/width :full}
@@ -73,7 +74,7 @@
    (box? (partial contains? conf) conf)
    (mc-logo)))
 
-(defmethod slide ::title-two-columns-slide [conf]
+(defmethod slide ::was/title-two-columns-slide [conf]
   (clerk/fragment
    (clerk/html
     {::clerk/width :full}
