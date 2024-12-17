@@ -1,14 +1,13 @@
 (ns witan.send.adroddiad.clerk.slides
   (:require [nextjournal.clerk :as clerk]
-            [tablecloth.api :as tc]))
-
-(def mc-logo-url "https://www.mastodonc.com/wp-content/themes/MastodonC-2018/dist/images/logo_mastodonc.png")
+            [tablecloth.api :as tc]
+            [clojure.java.io :as io]))
 
 (defn mc-logo []
   (clerk/html
    {::clerk/width :full}
    [:div.max-w-screen-2xl.font-sans
-    [:div.h-full.max-h-full.bottom-0.-right-12.absolute [:img {:src mc-logo-url}]]]))
+    [:div.h-full.max-h-full.bottom-0.-right-12.absolute (clerk/image (io/resource "logo_mastodonc.png"))]]))
 
 (defn bulleted-list [seq-of-text]
   (reduce #(into %1 [[:li.text-3xl.mb-4.mt-4 %2]]) [:ul.list-disc] seq-of-text))
