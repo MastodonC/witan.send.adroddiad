@@ -76,6 +76,9 @@
     :height (partial * 1.5)
     :width (partial * 1.5)}])
 
+(defmethod slide ::was/empty-slide [conf]
+  [])
+
 (defmethod slide ::was/section-header-slide [conf]
   [{:slide-fn :text-box
     :text (:title conf)
