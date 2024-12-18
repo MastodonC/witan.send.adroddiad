@@ -108,6 +108,8 @@
     :height (partial * 1.5)
     :width (partial * 1.5)}])
 
+;; TODO: needs preds to decide how/where to place boxes based on type of input
+
 (defmethod slide ::was/title-two-columns-slide [conf]
   [{:slide-fn :text-box
     :text (:title conf)
