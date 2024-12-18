@@ -90,3 +90,17 @@
     :height (partial * 1.5)
     :width (partial * 1.5)}])
 
+(defmethod slide ::was/title-body-slide [conf]
+  [{:slide-fn :text-box
+    :text (:title conf)
+    :width (- 1920 100)
+    :x 50 :y 200
+    :bold? true
+    :font-size 90.0}
+   (box? (partial contains? conf) conf)
+   {:slide-fn :image-box
+    :image was/mc-logo
+    :x (- 1920 350)
+    :y 900
+    :height (partial * 1.5)
+    :width (partial * 1.5)}])
