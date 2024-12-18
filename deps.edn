@@ -3,6 +3,9 @@
                                                      :sha     "e1c744daddd248ad01c673eab4bfa6fb01d5f7e6"}
          mastodonc/kixi.large                       {:git/url "https://github.com/MastodonC/kixi.large.git"
                                                      :sha     "bda0812f692b8521e8273ff8c7754499ee834b5e"}
+         com.github.mastodonc/kixi.plugsocket      {;;:git/sha     "b4cdfe31128189b750e6ae08f12577b8d7868726"
+                                                    :local/root  "../kixi.plugsocket/"
+                                                    }
          io.github.matthewdowney/rich-comment-tests {:git/tag "v1.0.3"
                                                      :git/sha "a8711e9"}
          reducibles/reducibles                      {:mvn/version "0.3.0"}

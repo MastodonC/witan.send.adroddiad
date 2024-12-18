@@ -8,7 +8,7 @@
   (clerk/html
    {::clerk/width :full}
    [:div.max-w-screen-2xl.font-sans
-    [:div.h-full.max-h-full.bottom-0.-right-12.absolute (clerk/image (io/resource "logo_mastodonc.png"))]]))
+    [:div.h-full.max-h-full.bottom-0.-right-12.absolute (clerk/image was/mc-logo)]]))
 
 (defn bulleted-list [seq-of-text]
   (reduce #(into %1 [[:li.text-3xl.mb-4.mt-4 %2]]) [:ul.list-disc] seq-of-text))
