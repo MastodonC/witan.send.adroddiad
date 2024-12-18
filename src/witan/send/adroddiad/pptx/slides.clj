@@ -7,6 +7,36 @@
        (map #(str "- " %))
        (clojure.string/join "\n\n")))
 
+(defn chart-box [chart]
+  "expects a map for a veg-lite chart"
+  {:slide-fn :chart-box
+   :vega-lite-chart-map chart
+   :y 400})
+
+(defn text-box [text]
+  "expects a seq of strings in a vector"
+  {:slide-fn :text-box
+   :text (bulleted-list text)
+   :width (- 1920 100)
+   :x 50 :y 400
+   :font-size 50.0})
+
+(defn table-box [table]
+  "expects a tablecloth dataset"
+  {:slide-fn :table-box
+   :ds table
+   :x 1300
+   :y 370})
+
+(defn box? [pred conf]
+  (cond
+    (pred :chart)
+    (chart-box (:chart conf))
+    (pred :table)
+    (table-box (:table conf))
+    (pred :text)
+    (text-box (:text conf))))
+
 (defmulti slide :slide-type)
 
 (defmethod slide ::was/title-slide [conf]
