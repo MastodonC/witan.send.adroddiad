@@ -107,3 +107,19 @@
     :y 900
     :height (partial * 1.5)
     :width (partial * 1.5)}])
+
+(defmethod slide ::was/title-two-columns-slide [conf]
+  [{:slide-fn :text-box
+    :text (:title conf)
+    :width (- 1920 100)
+    :x 50 :y 100
+    :bold? true
+    :font-size 70.0}
+   (box? (partial = (:left-col conf)) conf)
+   (box? (partial = (:right-col conf)) conf)
+   {:slide-fn :image-box
+    :image was/mc-logo
+    :x (- 1920 350)
+    :y 900
+    :height (partial * 1.5)
+    :width (partial * 1.5)}])
