@@ -75,3 +75,18 @@
     :y 900
     :height (partial * 1.5)
     :width (partial * 1.5)}])
+
+(defmethod slide ::was/section-header-slide [conf]
+  [{:slide-fn :text-box
+    :text (:title conf)
+    :bold? true
+    :font-size 80.0
+    :x 50 :y 400
+    :width (- 1920 100)}
+   {:slide-fn :image-box
+    :image was/mc-logo
+    :x (- 1920 350)
+    :y 900
+    :height (partial * 1.5)
+    :width (partial * 1.5)}])
+
