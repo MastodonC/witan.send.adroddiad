@@ -16,11 +16,11 @@
 
 ;;; # File input for transitions (historic and simulated)
 ;;; ## Historic transitions
-(defn transitions->transitions-count
+(defn count-transitions
   "Given a `transitions` dataset (with one record per CYP per `:calendar-year`),
-   returns a `transitions-count` dataset with counts in `:transition-count`."
+   returns a `transitions-count` dataset with row counts in `:transition-count`."
   ;; TODO: Move to `witan.send.adroddiad.transitions`
-  ;; TODO: Extend to cope with existing `:transition-count`?
+  ;; TODO: Make a similar `sum-transition-counts` for summing existing `:transition-count`s (if needed)?
   [transitions]
   (-> transitions
       (tc/group-by [:calendar-year
@@ -37,7 +37,7 @@
   [filepath]
   (-> filepath
       (tc/dataset {:key-fn keyword})
-      transitions->transitions-count))
+      count-transitions))
 
 
 ;;; ## Projections config handling
@@ -58,7 +58,7 @@
   "Given `projections-config`, returns the path to the historic transitions file.
    The `projections-config` must contain keys `:project-dir` and `:file-inputs`, the latter containing `:transitions`
    (like when read from a projections config.edn by `witan.send/read-config`)."
-  [{:keys                                      [project-dir]
+  [{:keys                                    [project-dir]
     {historic-transitions-file :transitions} :file-inputs}]
   (str project-dir "/" historic-transitions-file))
 
@@ -133,7 +133,7 @@
 
 
 
-;;; # Components
+;;; # Functions for summarising
 ;; Replacement for add-diff (though returns previous value rather than calculating pct-diff):
 ;; See test ns `witan.send.adroddiad.analysis-v2.alpha.summarise-domain-test` for rationale and examples.
 (defn add-sparse-lag1-diff-by-group
