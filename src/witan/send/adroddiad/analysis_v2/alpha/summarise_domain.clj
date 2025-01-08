@@ -289,8 +289,8 @@
 
   Note:
   - Due to handling sparsity, no other columns of the input dataset `ds` are returned.
-  - The `:calendar-year` is used as a map key and therefore must be unique.
-  - Any `:calendar-year`s outside the specified range are ignored.
+  - The `:calendar-year` is used as an index and therefore must be unique.
+  - Any `:calendar-year`s outside any range specified are ignored.
   - The previous value and diff for the `min-cy` `:calendar-year` are returned as `nil`.
   "
   [ds & {:keys [value-col min-cy max-cy previous-value-col diff-col group-cols]
