@@ -16,3 +16,6 @@
 /.clj-kondo/
 /.lsp/
 /.clerk
+/gc.log*
+/tmp/
+
