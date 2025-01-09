@@ -259,8 +259,8 @@
 ;; See test ns `witan.send.adroddiad.analysis-v2.alpha.summarise-domain-test` for rationale and examples.
 (defn add-previous-year-diff-to-sparse
   "Given dataset `ds` containing (potentially sparse) time-series at (integer) `:calendar-year`s
-   of values (in column `value-col`), returns a dataset with the previous years value and
-   differences added.
+   of values (in column `value-col`), returns a dataset for all years with the value,
+   previous years value and differences.
 
    To permit use within groups, if `group-cols` are specified then corresponding
    columns are also included in the returned dataset with values taken from the
