@@ -14,7 +14,7 @@
   (reduce #(into %1 [[:li.text-3xl.mb-4.mt-4 %2]]) [:ul.list-disc] seq-of-text))
 
 (defn chart-box [chart]
-  "expects a map for a veg-lite chart"
+  "expects a map for a vega-lite chart"
   (clerk/vl {::clerk/width :full}
             chart))
 
