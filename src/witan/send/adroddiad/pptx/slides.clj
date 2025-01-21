@@ -8,7 +8,7 @@
        (clojure.string/join "\n\n")))
 
 (defn chart-box [chart]
-  "expects a map for a veg-lite chart"
+  "expects a map for a vega-lite chart"
   {:slide-fn :chart-box
    :vega-lite-chart-map chart
    :y 400})
