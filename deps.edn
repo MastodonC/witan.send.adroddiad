@@ -13,6 +13,7 @@
          io.github.matthewdowney/rich-comment-tests {:git/tag "v1.0.3"
                                                      :git/sha "a8711e9"}
          com.github.mastodonc/kixi.plugsocket      {;;:git/sha     "b4cdfe31128189b750e6ae08f12577b8d7868726"
+                                                    ;; TODO update sha
                                                     :local/root  "../kixi.plugsocket/"}
  :aliases
  {:jdk-17 {:jvm-opts ["-XX:-OmitStackTraceInFastThrow"
