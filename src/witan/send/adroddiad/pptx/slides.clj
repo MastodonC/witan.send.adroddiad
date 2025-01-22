@@ -7,35 +7,63 @@
        (map #(str "- " %))
        (clojure.string/join "\n\n")))
 
-(defn chart-box [chart]
+(defn chart-box [conf]
   "expects a map for a vega-lite chart"
   {:slide-fn :chart-box
-   :vega-lite-chart-map chart
-   :y 400})
+   :vega-lite-chart-map (:chart conf)
+   :width (cond
+            (contains? conf :left-col)
+            (/ (- 1920 100) 2)
+            :else
+            (- 1920 100))
+   :y 400
+   :x (cond
+        (= :chart (:right-col conf))
+        960
+        :else
+        50)})
 
-(defn text-box [text]
+(defn text-box [conf]
   "expects a seq of strings in a vector"
   {:slide-fn :text-box
-   :text (bulleted-list text)
-   :width (- 1920 100)
-   :x 50 :y 400
+   :text (bulleted-list (:text conf))
+   :width (cond
+            (contains? conf :left-col)
+            (/ (- 1920 100) 2)
+            :else
+            (- 1920 100))
+   :x (cond
+        (= :text (:right-col conf))
+        (/ 1920 2)
+        :else
+        50)
+   :y 400
    :font-size 50.0})
 
-(defn table-box [table]
+(defn table-box [conf]
   "expects a tablecloth dataset"
   {:slide-fn :table-box
-   :ds table
-   :x 1300
+   :ds (:table conf)
+   :width (cond
+            (contains? conf :left-col)
+            (/ (- 1920 100) 2)
+            :else
+            (- 1920 100))
+   :x (cond
+        (= :table (:right-col conf))
+        1300
+        :else
+        50)
    :y 370})
 
-(defn box? [pred conf]
+(defn box? [col conf]
   (cond
-    (pred :chart)
-    (chart-box (:chart conf))
-    (pred :table)
-    (table-box (:table conf))
-    (pred :text)
-    (text-box (:text conf))))
+    (= (col conf) :chart)
+    (chart-box conf)
+    (= (col conf) :table)
+    (table-box conf)
+    (= (col conf) :text)
+    (text-box conf)))
 
 (defmulti slide :slide-type)
 
@@ -100,15 +128,19 @@
     :x 50 :y 200
     :bold? true
     :font-size 90.0}
-   (box? (partial contains? conf) conf)
+   (box? :left-col (assoc conf :left-col (cond
+                                           (contains? conf :chart)
+                                           :chart
+                                           (contains? conf :table)
+                                           :table
+                                           (contains? conf :text)
+                                           :text)))
    {:slide-fn :image-box
     :image was/mc-logo
     :x (- 1920 350)
     :y 900
     :height (partial * 1.5)
     :width (partial * 1.5)}])
-
-;; TODO: needs preds to decide how/where to place boxes based on type of input
 
 (defmethod slide ::was/title-two-columns-slide [conf]
   [{:slide-fn :text-box
@@ -117,8 +149,8 @@
     :x 50 :y 100
     :bold? true
     :font-size 70.0}
-   (box? (partial = (:left-col conf)) conf)
-   (box? (partial = (:right-col conf)) conf)
+   (box? :left-col conf)
+   (box? :right-col conf)
    {:slide-fn :image-box
     :image was/mc-logo
     :x (- 1920 350)
