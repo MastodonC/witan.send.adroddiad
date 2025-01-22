@@ -12,7 +12,7 @@
          io.github.nextjournal/clerk-slideshow      {:git/sha "f9fb86430ebf533bfc9d5cec5bf0a94ed07146f3"}
          io.github.matthewdowney/rich-comment-tests {:git/tag "v1.0.3"
                                                      :git/sha "a8711e9"}
-         com.github.mastodonc/kixi.plugsocket      {:git/sha   "d34235d32f1d156a13f7f2ce09a5a36c923cffb6"}
+         com.github.mastodonc/kixi.plugsocket      {:git/sha   "d34235d32f1d156a13f7f2ce09a5a36c923cffb6"}}
  :aliases
  {:jdk-17 {:jvm-opts ["-XX:-OmitStackTraceInFastThrow"
                       "-Xlog:gc*:gc.log"
