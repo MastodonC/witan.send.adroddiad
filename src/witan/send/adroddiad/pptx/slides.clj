@@ -35,7 +35,7 @@
     slide-minus-margins))
 
 (defn chart-box [conf]
-  "expects a map for a vega-lite chart"
+  ":chart should be a map for a vega-lite chart"
   {:slide-fn :chart-box
    :vega-lite-chart-map (:chart conf)
    :width (constrain-width conf)
@@ -47,7 +47,7 @@
         margin)})
 
 (defn text-box [conf]
-  "expects a seq of strings in a vector"
+  ":text should be a seq of strings in a vector"
   {:slide-fn :text-box
    :text (bulleted-list (:text conf))
    :width (constrain-width conf)
@@ -60,7 +60,7 @@
    :font-size 50.0})
 
 (defn table-box [conf]
-  "expects a tablecloth dataset"
+  ":table should be a tablecloth dataset"
   {:slide-fn :table-box
    :ds (:table conf)
    :width (constrain-width conf)
