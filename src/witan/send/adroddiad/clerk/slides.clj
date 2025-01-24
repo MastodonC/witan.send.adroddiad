@@ -32,6 +32,10 @@
    (clerk/html [:p.text-3xl.font-bold.text-center.font-sans (tc/dataset-name table)])
    (clerk/table table)))
 
+(defn image-box [image]
+  "expects a png filename"
+  (clerk/image image))
+
 (defn box? [pred conf]
   (cond
     (pred :chart)
@@ -39,7 +43,9 @@
     (pred :table)
     (table-box (:table conf))
     (pred :text)
-    (text-box (:text conf))))
+    (text-box (:text conf))
+    (pred :image)
+    (image-box (:image conf))))
 
 (defmulti slide :slide-type)
 
