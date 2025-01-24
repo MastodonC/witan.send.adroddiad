@@ -15,8 +15,9 @@
 
 (defn chart-box [chart]
   "expects a map for a vega-lite chart"
-  (clerk/vl {::clerk/width :full}
-            chart))
+  (clerk/vl
+   {::clerk/width :full}
+   chart))
 
 (defn text-box [text]
   "expects a seq of strings in a vector"
