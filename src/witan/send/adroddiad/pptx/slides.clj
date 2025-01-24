@@ -84,7 +84,6 @@
         margin)
    :y 400})
 
-;; TODO add image-box fn
 ;; TODO make box? fn multimethod
 
 (defn box? [col conf]
