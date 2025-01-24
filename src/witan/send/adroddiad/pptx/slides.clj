@@ -7,15 +7,18 @@
        (map #(str "- " %))
        (clojure.string/join "\n\n")))
 
+(defn constrain-width [conf]
+  (cond
+    (contains? conf :left-col)
+    (/ (- 1920 100) 2)
+    :else
+    (- 1920 100)))
+
 (defn chart-box [conf]
   "expects a map for a vega-lite chart"
   {:slide-fn :chart-box
    :vega-lite-chart-map (:chart conf)
-   :width (cond
-            (contains? conf :left-col)
-            (/ (- 1920 100) 2)
-            :else
-            (- 1920 100))
+   :width (constrain-width conf)
    :y 400
    :x (cond
         (= :chart (:right-col conf))
@@ -27,11 +30,7 @@
   "expects a seq of strings in a vector"
   {:slide-fn :text-box
    :text (bulleted-list (:text conf))
-   :width (cond
-            (contains? conf :left-col)
-            (/ (- 1920 100) 2)
-            :else
-            (- 1920 100))
+   :width (constrain-width conf)
    :x (cond
         (= :text (:right-col conf))
         (/ 1920 2)
@@ -44,11 +43,7 @@
   "expects a tablecloth dataset"
   {:slide-fn :table-box
    :ds (:table conf)
-   :width (cond
-            (contains? conf :left-col)
-            (/ (- 1920 100) 2)
-            :else
-            (- 1920 100))
+   :width (constrain-width conf)
    :x (cond
         (= :table (:right-col conf))
         1300
