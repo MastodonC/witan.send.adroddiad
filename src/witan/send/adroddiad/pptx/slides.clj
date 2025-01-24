@@ -1,5 +1,6 @@
 (ns witan.send.adroddiad.pptx.slides
-  (:require [kixi.plugsocket :as kps]
+  (:require [clojure.java.io :as io]
+            [kixi.plugsocket :as kps]
             [witan.send.adroddiad.slides :as was]))
 
 (defn bulleted-list [seq-of-text]
@@ -71,6 +72,18 @@
         margin)
    :y 370})
 
+(defn image-box [conf]
+  ":image should be a png filename"
+  {:slide-fn :image-box
+   :image (io/file (:image conf))
+   :width (constrain-width conf)
+   :x (cond
+        (= :table (:right-col conf))
+        slide-mid-point
+        :else
+        margin)
+   :y 400})
+
 ;; TODO add image-box fn
 ;; TODO make box? fn multimethod
 
@@ -81,7 +94,9 @@
     (= (col conf) :table)
     (table-box conf)
     (= (col conf) :text)
-    (text-box conf)))
+    (text-box conf)
+    (= (col conf) :image)
+    (image-box conf)))
 
 (defmulti slide :slide-type)
 
@@ -142,7 +157,9 @@
                                            (contains? conf :table)
                                            :table
                                            (contains? conf :text)
-                                           :text)))
+                                           :text
+                                           (contains? conf :image)
+                                           :image)))
    mc-logo-map])
 
 (defmethod slide ::was/title-two-columns-slide [conf]
