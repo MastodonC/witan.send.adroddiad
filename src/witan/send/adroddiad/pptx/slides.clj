@@ -56,6 +56,9 @@
         50)
    :y 370})
 
+;; TODO add image-box fn
+;; TODO make box? fn multimethod
+
 (defn box? [col conf]
   (cond
     (= (col conf) :chart)
