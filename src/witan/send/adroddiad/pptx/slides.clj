@@ -7,12 +7,32 @@
        (map #(str "- " %))
        (clojure.string/join "\n\n")))
 
+(def slide-length 1920)
+
+(def slide-height 1080)
+
+(def margin 50)
+
+(def margins (* margin 2))
+
+(def slide-minus-margins (- slide-length margins))
+
+(def slide-mid-point (/ slide-length 2))
+
+(def mc-logo-map
+  {:slide-fn :image-box
+   :image was/mc-logo
+   :x slide-minus-margins
+   :y 900
+   :height (partial * 1.5)
+   :width (partial * 1.5)})
+
 (defn constrain-width [conf]
   (cond
     (contains? conf :left-col)
-    (/ (- 1920 100) 2)
+    slide-mid-point
     :else
-    (- 1920 100)))
+    slide-minus-margins))
 
 (defn chart-box [conf]
   "expects a map for a vega-lite chart"
@@ -22,9 +42,9 @@
    :y 400
    :x (cond
         (= :chart (:right-col conf))
-        960
+        slide-mid-point
         :else
-        50)})
+        margin)})
 
 (defn text-box [conf]
   "expects a seq of strings in a vector"
@@ -33,9 +53,9 @@
    :width (constrain-width conf)
    :x (cond
         (= :text (:right-col conf))
-        (/ 1920 2)
+        slide-mid-point
         :else
-        50)
+        margin)
    :y 400
    :font-size 50.0})
 
@@ -46,9 +66,9 @@
    :width (constrain-width conf)
    :x (cond
         (= :table (:right-col conf))
-        1300
+        slide-mid-point
         :else
-        50)
+        margin)
    :y 370})
 
 ;; TODO add image-box fn
@@ -68,39 +88,34 @@
 (defmethod slide ::was/title-slide [conf]
   [{:slide-fn :text-box
     :text (:title conf)
-    :x 50 :y 10
-    :width (- 1920 100)
+    :x margin :y 10
+    :width slide-minus-margins
     :bold? true
     :font-size 120.0}
    {:slide-fn :text-box
     :text (:work-package conf)
-    :x 50 :y 330
+    :x margin :y 330
     :bold? true
     :font-size 50.0}
    {:slide-fn :text-box
     :text (:presentation-date conf)
     :italic? true
-    :x 50 :y 440
+    :x margin :y 440
     :font-size 50.0}
    {:slide-fn :text-box
     :text (format "For %s" (:client-name conf))
-    :width (- 1920 100)
-    :x 50 :y 530
+    :width slide-minus-margins
+    :x margin :y 530
     :bold? true
     :font-size 80.0}
    {:slide-fn :text-box
     :text "Presented by Mastodon C"
-    :width (- 1920 100)
-    :x 50 :y 650
+    :width slide-minus-margins
+    :x margin :y 650
     :bold? true
     :italic? true
     :font-size 50.0}
-   {:slide-fn :image-box
-    :image was/mc-logo
-    :x (- 1920 350)
-    :y 900
-    :height (partial * 1.5)
-    :width (partial * 1.5)}])
+   mc-logo-map])
 
 (defmethod slide ::was/empty-slide [conf]
   [])
@@ -110,20 +125,15 @@
     :text (:title conf)
     :bold? true
     :font-size 80.0
-    :x 50 :y 400
-    :width (- 1920 100)}
-   {:slide-fn :image-box
-    :image was/mc-logo
-    :x (- 1920 350)
-    :y 900
-    :height (partial * 1.5)
-    :width (partial * 1.5)}])
+    :x margin :y 400
+    :width slide-minus-margins}
+   mc-logo-map])
 
 (defmethod slide ::was/title-body-slide [conf]
   [{:slide-fn :text-box
     :text (:title conf)
-    :width (- 1920 100)
-    :x 50 :y 200
+    :width slide-minus-margins
+    :x margin :y 200
     :bold? true
     :font-size 90.0}
    (box? :left-col (assoc conf :left-col (cond
@@ -133,25 +143,15 @@
                                            :table
                                            (contains? conf :text)
                                            :text)))
-   {:slide-fn :image-box
-    :image was/mc-logo
-    :x (- 1920 350)
-    :y 900
-    :height (partial * 1.5)
-    :width (partial * 1.5)}])
+   mc-logo-map])
 
 (defmethod slide ::was/title-two-columns-slide [conf]
   [{:slide-fn :text-box
     :text (:title conf)
-    :width (- 1920 100)
-    :x 50 :y 100
+    :width slide-minus-margins
+    :x margin :y 100
     :bold? true
     :font-size 70.0}
    (box? :left-col conf)
    (box? :right-col conf)
-   {:slide-fn :image-box
-    :image was/mc-logo
-    :x (- 1920 350)
-    :y 900
-    :height (partial * 1.5)
-    :width (partial * 1.5)}])
+   mc-logo-map])
