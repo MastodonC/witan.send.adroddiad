@@ -1,21 +1,23 @@
 (ns witan.send.adroddiad.clerk.slides
   (:require [nextjournal.clerk :as clerk]
             [tablecloth.api :as tc]
-            [clojure.java.io :as io]))
+            [clojure.java.io :as io]
+            [witan.send.adroddiad.slides :as was]))
 
 (defn mc-logo []
   (clerk/html
    {::clerk/width :full}
    [:div.max-w-screen-2xl.font-sans
-    [:div.h-full.max-h-full.bottom-0.-right-12.absolute (clerk/image (io/resource "logo_mastodonc.png"))]]))
+    [:div.h-full.max-h-full.bottom-0.-right-12.absolute (clerk/image was/mc-logo)]]))
 
 (defn bulleted-list [seq-of-text]
   (reduce #(into %1 [[:li.text-3xl.mb-4.mt-4 %2]]) [:ul.list-disc] seq-of-text))
 
 (defn chart-box [chart]
-  "expects a map for a veg-lite chart"
-  (clerk/vl {::clerk/width :full}
-            chart))
+  "expects a map for a vega-lite chart"
+  (clerk/vl
+   {::clerk/width :full}
+   chart))
 
 (defn text-box [text]
   "expects a seq of strings in a vector"
@@ -41,7 +43,7 @@
 
 (defmulti slide :slide-type)
 
-(defmethod slide ::title-slide [conf]
+(defmethod slide ::was/title-slide [conf]
   (clerk/fragment
    (clerk/html {::clerk/width :full}
                [:div.max-w-screen-2xl.font-sans
@@ -53,19 +55,19 @@
                 [:p.text-1xl "Use arrow keys to navigate and ESC to see an overview."]])
    (mc-logo)))
 
-(defmethod slide ::empty-slide [conf]
+(defmethod slide ::was/empty-slide [conf]
   (clerk/fragment
    (clerk/md "")
    (mc-logo)))
 
-(defmethod slide ::section-header-slide [conf]
+(defmethod slide ::was/section-header-slide [conf]
   (clerk/fragment
    (clerk/html
     {::clerk/width :full}
     [:p.text-6xl.font-bold.font-sans (:title conf)])
    (mc-logo)))
 
-(defmethod slide ::title-body-slide [conf]
+(defmethod slide ::was/title-body-slide [conf]
   (clerk/fragment
    (clerk/html
     {::clerk/width :full}
@@ -73,7 +75,7 @@
    (box? (partial contains? conf) conf)
    (mc-logo)))
 
-(defmethod slide ::title-two-columns-slide [conf]
+(defmethod slide ::was/title-two-columns-slide [conf]
   (clerk/fragment
    (clerk/html
     {::clerk/width :full}
