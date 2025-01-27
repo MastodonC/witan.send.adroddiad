@@ -1,5 +1,6 @@
 (ns witan.send.adroddiad.pptx.slides
-  (:require [kixi.plugsocket :as kps]
+  (:require [clojure.java.io :as io]
+            [kixi.plugsocket :as kps]
             [witan.send.adroddiad.slides :as was]))
 
 (defn bulleted-list [seq-of-text]
@@ -35,7 +36,7 @@
     slide-minus-margins))
 
 (defn chart-box [conf]
-  "expects a map for a vega-lite chart"
+  ":chart should be a map for a vega-lite chart"
   {:slide-fn :chart-box
    :vega-lite-chart-map (:chart conf)
    :width (constrain-width conf)
@@ -47,7 +48,7 @@
         margin)})
 
 (defn text-box [conf]
-  "expects a seq of strings in a vector"
+  ":text should be a seq of strings in a vector"
   {:slide-fn :text-box
    :text (bulleted-list (:text conf))
    :width (constrain-width conf)
@@ -60,7 +61,7 @@
    :font-size 50.0})
 
 (defn table-box [conf]
-  "expects a tablecloth dataset"
+  ":table should be a tablecloth dataset"
   {:slide-fn :table-box
    :ds (:table conf)
    :width (constrain-width conf)
@@ -71,7 +72,18 @@
         margin)
    :y 370})
 
-;; TODO add image-box fn
+(defn image-box [conf]
+  ":image should be a png filename"
+  {:slide-fn :image-box
+   :image (io/file (:image conf))
+   :width (constrain-width conf)
+   :x (cond
+        (= :table (:right-col conf))
+        slide-mid-point
+        :else
+        margin)
+   :y 400})
+
 ;; TODO make box? fn multimethod
 
 (defn box? [col conf]
@@ -81,7 +93,9 @@
     (= (col conf) :table)
     (table-box conf)
     (= (col conf) :text)
-    (text-box conf)))
+    (text-box conf)
+    (= (col conf) :image)
+    (image-box conf)))
 
 (defmulti slide :slide-type)
 
@@ -142,7 +156,9 @@
                                            (contains? conf :table)
                                            :table
                                            (contains? conf :text)
-                                           :text)))
+                                           :text
+                                           (contains? conf :image)
+                                           :image)))
    mc-logo-map])
 
 (defmethod slide ::was/title-two-columns-slide [conf]
