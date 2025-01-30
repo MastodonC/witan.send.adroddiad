@@ -23,7 +23,7 @@
 (def mc-logo-map
   {:slide-fn :image-box
    :image was/mc-logo
-   :x slide-minus-margins
+   :x (- 1920 350)
    :y 900
    :height (partial * 1.5)
    :width (partial * 1.5)})
