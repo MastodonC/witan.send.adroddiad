@@ -58,35 +58,41 @@
                  :definition "Profound and multiple learning difficulty"
                  :sen2-order 4
                  :send-area  "CnL"}
-         "HI"   {:order      8
+         "DS"   {:order      8
+                 :name       "Down Syndrome"
+                 :label      "DS"
+                 :definition "Down Syndrome"
+                 :sen2-order 12
+                 :send-area  "CnL"}
+         "HI"   {:order      9
                  :name       "Hearing Impairment"
                  :label      "HI"
                  :definition "Hearing impairment"
                  :sen2-order 7
                  :send-area  "SPN"}
-         "VI"   {:order      9
+         "VI"   {:order      10
                  :name       "Vision Impairment"
                  :label      "VI"
                  :definition "Vision impairment"
                  :sen2-order 8
                  :send-area  "SPN"}
-         "MSI"  {:order      10
+         "MSI"  {:order      11
                  :name       "Multi-Sensory Impairment"
                  :label      "MSI"
                  :definition "Multi-sensory impairment"
                  :sen2-order 9
                  :send-area  "SPN"}
-         "PD"   {:order      11
+         "PD"   {:order      12
                  :name       "Physical Disability"
                  :label      "PD"
                  :definition "Physical disability"
                  :sen2-order 10
                  :send-area  "SPN"}
-         "OTH"  {:order      12
+         "OTH"  {:order      13
                  :name       "Other Difficulty"
                  :label      "OTH"
                  :definition "Other difficulty"
-                 :sen2-order 12
+                 :sen2-order 13
                  :send-area  "OTH"}} $
     (into (sorted-map-by (partial compare-mapped-keys (update-vals $ :order))) $)))
 
