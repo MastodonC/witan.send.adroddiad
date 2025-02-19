@@ -198,7 +198,7 @@
 
 (defn line-and-ribbon-and-rule-plot
   [{:keys [data group group-title colors-and-shapes order-field
-           x x-title x-scale
+           x x-title x-scale legend
            y y-title y-format y-zero
            chart-title chart-width chart-height]
     :as chart-spec}]
@@ -215,14 +215,15 @@
 ;;; All Settings
  )
 (defn total-summary-plot
-  [{:keys [data chart-title colors-and-shapes order-field label-field group-title]}]
+  [{:keys [data chart-title colors-and-shapes order-field label-field group-title legend]
+    :or {legend true}}]
   (line-and-ribbon-and-rule-plot
    {:data              (-> data
                            (tc/map-columns :calendar-year [:calendar-year] format-calendar-year))
     :chart-title       (or chart-title (str "# EHCP by " (or group-title (name label-field))))
     :chart-height      vs/full-height :chart-width vs/two-thirds-width
     :tooltip-formatf   (vsl/number-summary-tooltip {:tooltip-field :tooltip-column})
-    :colors-and-shapes colors-and-shapes
+    :colors-and-shapes colors-and-shapes :legend legend
     :x                 :calendar-year :x-title     "Census Year" :x-format    "%b %Y"
     :y-title           "# EHCPs"      :y-zero      true          :y-scale     false
     :group             label-field    :group-title (or group-title (name label-field))     :order-field order-field}))
@@ -272,4 +273,3 @@
 (defn pct-of-total-summary-plot
   [{}]
   )
-
