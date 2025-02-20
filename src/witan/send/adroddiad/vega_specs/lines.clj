@@ -20,7 +20,7 @@
 ;;; # tooltip helpers
 (defn five-number-summary-string
   "Format five number summaries [`orl` `irl` `y` `iru` `oru`] into a single string
-   of the form \"y (orl (irl↔iru) oru)\" 
+   of the form \"y (orl (irl↔iru) oru)\"
    using format `fmt` for each summary (default \"%,.0f\")
    after applying (optional) function `f` to it.
    (So for percentages specify `:fmt \"%.0f%%\" :f (partial * 100)`.)"
@@ -80,7 +80,7 @@
            tooltip-field tooltip-formatf
            group group-title
            chart-height chart-width
-           colors-and-shapes]
+           colors-and-shapes legend]
     :or   {chart-height  vs/full-height
            chart-width   vs/full-width
            y-domain      false
@@ -106,7 +106,8 @@
      :encoding {:x {:field x :title x-title :type "temporal"
                     :scale {:domain x-scale :x-xero false}
                     ;; :axis {:format ["%Y"] :tickCount {:interval "month" :step 12}}
-                    }}
+                    }
+                :color {:legend legend}}
      :layer    [{:encoding {:color (vs/color-map data group colors-and-shapes)
                             :shape (vs/shape-map data group colors-and-shapes)
                             :y     {:field y
@@ -162,7 +163,7 @@
            oru irl iru orl
            tooltip-field tooltip-formatf
            group group-title
-           colors-and-shapes]
+           colors-and-shapes legend]
     :or   {chart-height  vs/full-height
            chart-width   vs/full-width
            y-format      ",.0f"
@@ -200,7 +201,8 @@
                     :axis   {:format x-format}}
                 :y {:title y-title
                     :scale {:domain y-scale
-                            :zero   y-zero}}}
+                            :zero   y-zero}}
+                :color {:legend legend}}
      :layer    [{:mark     {:type "line"
                             :size 5}
                  :encoding {:y       {:field y :type "quantitative"}
@@ -228,7 +230,7 @@
            oru irl iru orl
            tooltip-field tooltip-formatf
            group group-title
-           colors-and-shapes]
+           colors-and-shapes legend]
     :or   {chart-height  vs/full-height
            chart-width   vs/full-width
            y-format      ",.0f"
@@ -266,7 +268,8 @@
                     :axis   {:format x-format}}
                 :y {:title y-title
                     :scale {:domain y-scale
-                            :zero   y-zero}}}
+                            :zero   y-zero}}
+                :color {:legend legend}}
      :layer    [{:mark     {:type  "line"
                             :size  2
                             :point {:filled      false
