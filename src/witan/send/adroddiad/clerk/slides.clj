@@ -13,39 +13,60 @@
 (defn bulleted-list [seq-of-text]
   (reduce #(into %1 [[:li.text-3xl.mb-4.mt-4 %2]]) [:ul.list-disc] seq-of-text))
 
-(defn chart-box [chart]
-  "expects a map for a vega-lite chart"
+(defmulti left-box :left-box)
+
+(defmethod left-box ::was/chart [conf]
   (clerk/vl
    {::clerk/width :full}
-   chart))
+   (:chart conf)))
 
-(defn text-box [text]
-  "expects a seq of strings in a vector"
+(defmethod left-box ::was/text [conf]
   (clerk/html
    {::clerk/width :full}
    [:div.text-1xl.max-w-screen-2xl.font-sans
-    (bulleted-list text)]))
+    (bulleted-list (:text conf))]))
 
-(defn table-box [table]
-  "expects a tablecloth dataset"
-  (clerk/col
-   (clerk/html [:p.text-3xl.font-bold.text-center.font-sans (tc/dataset-name table)])
-   (clerk/table table)))
+(defmethod left-box ::was/table [conf]
+  (let [table (:table conf)]
+    (clerk/col
+     (clerk/html [:p.text-3xl.font-bold.text-center.font-sans (tc/dataset-name table)])
+     (clerk/table table))))
 
-(defn image-box [image]
-  "expects a png filename"
-  (clerk/image image))
+(defmethod left-box ::was/image [conf]
+  (clerk/image (:image conf)))
 
-(defn box? [pred conf]
+(defmulti right-box :right-box)
+
+(defmethod right-box ::was/chart [conf]
+  (clerk/vl
+   {::clerk/width :full}
+   (:chart conf)))
+
+(defmethod right-box ::was/text [conf]
+  (clerk/html
+   {::clerk/width :full}
+   [:div.text-1xl.max-w-screen-2xl.font-sans
+    (bulleted-list (:text conf))]))
+
+(defmethod right-box ::was/table [conf]
+  (let [table (:table conf)]
+    (clerk/col
+     (clerk/html [:p.text-3xl.font-bold.text-center.font-sans (tc/dataset-name table)])
+     (clerk/table table))))
+
+(defmethod right-box ::was/image [conf]
+  (clerk/image (:image conf)))
+
+(defn box-type [conf]
   (cond
-    (pred :chart)
-    (chart-box (:chart conf))
-    (pred :table)
-    (table-box (:table conf))
-    (pred :text)
-    (text-box (:text conf))
-    (pred :image)
-    (image-box (:image conf))))
+    (contains? conf :chart)
+    (left-box (assoc conf :left-box ::was/chart))
+    (contains? conf :table)
+    (left-box (assoc conf :left-box ::was/table))
+    (contains? conf :text)
+    (left-box (assoc conf :left-box ::was/text))
+    (contains? conf :image)
+    (left-box (assoc conf :left-box ::was/image))))
 
 (defmulti slide :slide-type)
 
@@ -78,7 +99,7 @@
    (clerk/html
     {::clerk/width :full}
     [:p.text-6xl.font-bold.font-sans (:title conf)])
-   (box? (partial contains? conf) conf)
+   (box-type conf)
    (mc-logo)))
 
 (defmethod slide ::was/title-two-columns-slide [conf]
@@ -88,6 +109,6 @@
     [:p.text-6xl.font-bold.font-sans (:title conf)])
    (clerk/row
     {::clerk/width :full}
-    (box? (partial = (:left-col conf)) conf)
-    (box? (partial = (:right-col conf)) conf))
+    (left-box conf)
+    (right-box conf))
    (mc-logo)))
