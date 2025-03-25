@@ -80,13 +80,15 @@
            tooltip-field tooltip-formatf
            group group-title
            chart-height chart-width
-           colors-and-shapes legend]
+           colors-and-shapes
+           legend]
     :or   {chart-height  vs/full-height
            chart-width   vs/full-width
            y-domain      false
            y-zero        true
            y-format      ",.0f"
-           tooltip-field :tooltip-column}
+           tooltip-field :tooltip-column
+           legend        true}
     :as   plot-spec}]
   (let [tooltip-formatf       (or tooltip-formatf
                                   (five-number-summary-tooltip (assoc (select-keys plot-spec [:tooltip-field
@@ -103,10 +105,10 @@
      :config   {:legend {:titleFontSize 20 :labelFontSize 14 :labelLimit 0}
                 :axisX  {:titleFontSize 16 :labelFontSize 12}
                 :axisY  {:titleFontSize 16 :labelFontSize 12}}
-     :encoding {:x {:field x :title x-title :type "temporal"
-                    :scale {:domain x-scale :x-xero false}
-                    ;; :axis {:format ["%Y"] :tickCount {:interval "month" :step 12}}
-                    }
+     :encoding {:x     {:field x :title x-title :type "temporal"
+                        :scale {:domain x-scale :x-xero false}
+                        ;; :axis {:format ["%Y"] :tickCount {:interval "month" :step 12}}
+                        }
                 :color {:legend legend}}
      :layer    [{:encoding {:color (vs/color-map data group colors-and-shapes)
                             :shape (vs/shape-map data group colors-and-shapes)
@@ -163,13 +165,15 @@
            oru irl iru orl
            tooltip-field tooltip-formatf
            group group-title
-           colors-and-shapes legend]
+           colors-and-shapes
+           legend]
     :or   {chart-height  vs/full-height
            chart-width   vs/full-width
            y-format      ",.0f"
            y-zero        true
            y-scale       false
-           tooltip-field :tooltip-column}
+           tooltip-field :tooltip-column
+           legend        true}
     :as   plot-spec}]
   (let [tooltip-formatf (or tooltip-formatf
                             (five-number-summary-tooltip (assoc (select-keys plot-spec [:tooltip-field
@@ -194,14 +198,14 @@
      :data     {:values (-> data
                             tooltip-formatf
                             (tc/rows :as-maps))}
-     :encoding {:x {:field  x
-                    :title  x-title
-                    :type   "temporal"
-                    :format x-format
-                    :axis   {:format x-format}}
-                :y {:title y-title
-                    :scale {:domain y-scale
-                            :zero   y-zero}}
+     :encoding {:x     {:field  x
+                        :title  x-title
+                        :type   "temporal"
+                        :format x-format
+                        :axis   {:format x-format}}
+                :y     {:title y-title
+                        :scale {:domain y-scale
+                                :zero   y-zero}}
                 :color {:legend legend}}
      :layer    [{:mark     {:type "line"
                             :size 5}
@@ -230,13 +234,15 @@
            oru irl iru orl
            tooltip-field tooltip-formatf
            group group-title
-           colors-and-shapes legend]
+           colors-and-shapes
+           legend]
     :or   {chart-height  vs/full-height
            chart-width   vs/full-width
            y-format      ",.0f"
            y-zero        true
            y-scale       false
-           tooltip-field :tooltip-column}
+           tooltip-field :tooltip-column
+           legend        true}
     :as   plot-spec}]
   (let [tooltip-formatf (or tooltip-formatf
                             (five-number-summary-tooltip (assoc (select-keys plot-spec [:tooltip-field
@@ -261,14 +267,14 @@
      :data     {:values (-> data
                             tooltip-formatf
                             (tc/rows :as-maps))}
-     :encoding {:x {:field  x
-                    :title  x-title
-                    :type   "temporal"
-                    :format x-format
-                    :axis   {:format x-format}}
-                :y {:title y-title
-                    :scale {:domain y-scale
-                            :zero   y-zero}}
+     :encoding {:x     {:field  x
+                        :title  x-title
+                        :type   "temporal"
+                        :format x-format
+                        :axis   {:format x-format}}
+                :y     {:title y-title
+                        :scale {:domain y-scale
+                                :zero   y-zero}}
                 :color {:legend legend}}
      :layer    [{:mark     {:type  "line"
                             :size  2
