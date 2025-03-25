@@ -30,72 +30,84 @@
 
 (defn constrain-width [conf]
   (cond
-    (contains? conf :left-col)
+    (and (contains? conf :left-box)
+         (contains? conf :right-box))
     slide-mid-point
     :else
     slide-minus-margins))
 
-(defn chart-box [conf]
-  ":chart should be a map for a vega-lite chart"
+(defmulti left-box :left-box)
+
+(defmethod left-box ::was/chart [conf]
   {:slide-fn :chart-box
    :vega-lite-chart-map (:chart conf)
    :width (constrain-width conf)
    :y 400
-   :x (cond
-        (= :chart (:right-col conf))
-        slide-mid-point
-        :else
-        margin)})
+   :x margin})
 
-(defn text-box [conf]
-  ":text should be a seq of strings in a vector"
+(defmethod left-box ::was/text [conf]
   {:slide-fn :text-box
    :text (bulleted-list (:text conf))
    :width (constrain-width conf)
-   :x (cond
-        (= :text (:right-col conf))
-        slide-mid-point
-        :else
-        margin)
+   :x margin
    :y 400
    :font-size 50.0})
 
-(defn table-box [conf]
-  ":table should be a tablecloth dataset"
+(defmethod left-box ::was/table [conf]
   {:slide-fn :table-box
    :ds (:table conf)
    :width (constrain-width conf)
-   :x (cond
-        (= :table (:right-col conf))
-        slide-mid-point
-        :else
-        margin)
+   :x margin
    :y 370})
 
-(defn image-box [conf]
-  ":image should be a png filename"
+(defmethod left-box ::was/image [conf]
   {:slide-fn :image-box
    :image (io/file (:image conf))
    :width (constrain-width conf)
-   :x (cond
-        (= :table (:right-col conf))
-        slide-mid-point
-        :else
-        margin)
+   :x margin
    :y 400})
 
-;; TODO make box? fn multimethod
+(defmulti right-box :right-box)
 
-(defn box? [col conf]
+(defmethod right-box ::was/chart [conf]
+  {:slide-fn :chart-box
+   :vega-lite-chart-map (:chart conf)
+   :width (constrain-width conf)
+   :y 400
+   :x slide-mid-point})
+
+(defmethod right-box ::was/text [conf]
+  {:slide-fn :text-box
+   :text (bulleted-list (:text conf))
+   :width (constrain-width conf)
+   :x slide-mid-point
+   :y 400
+   :font-size 50.0})
+
+(defmethod right-box ::was/table [conf]
+  {:slide-fn :table-box
+   :ds (:table conf)
+   :width (constrain-width conf)
+   :x slide-mid-point
+   :y 370})
+
+(defmethod right-box ::was/image [conf]
+  {:slide-fn :image-box
+   :image (io/file (:image conf))
+   :width (constrain-width conf)
+   :x slide-mid-point
+   :y 400})
+
+(defn box-type [conf]
   (cond
-    (= (col conf) :chart)
-    (chart-box conf)
-    (= (col conf) :table)
-    (table-box conf)
-    (= (col conf) :text)
-    (text-box conf)
-    (= (col conf) :image)
-    (image-box conf)))
+    (contains? conf :chart)
+    (left-box (assoc conf :left-box ::was/chart))
+    (contains? conf :table)
+    (left-box (assoc conf :left-box ::was/table))
+    (contains? conf :text)
+    (left-box (assoc conf :left-box ::was/text))
+    (contains? conf :image)
+    (left-box (assoc conf :left-box ::was/image))))
 
 (defmulti slide :slide-type)
 
@@ -150,15 +162,7 @@
     :x margin :y 200
     :bold? true
     :font-size 90.0}
-   (box? :left-col (assoc conf :left-col (cond
-                                           (contains? conf :chart)
-                                           :chart
-                                           (contains? conf :table)
-                                           :table
-                                           (contains? conf :text)
-                                           :text
-                                           (contains? conf :image)
-                                           :image)))
+   (box-type conf)
    mc-logo-map])
 
 (defmethod slide ::was/title-two-columns-slide [conf]
@@ -168,6 +172,6 @@
     :x margin :y 100
     :bold? true
     :font-size 70.0}
-   (box? :left-col conf)
-   (box? :right-col conf)
+   (left-box conf)
+   (right-box conf)
    mc-logo-map])
