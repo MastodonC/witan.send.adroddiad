@@ -12,4 +12,12 @@
 
 ::title-two-columns-slide
 
+::chart
+
+::text
+
+::table
+
+::image
+
 (def mc-logo (io/resource "logo_mastodonc.png"))
