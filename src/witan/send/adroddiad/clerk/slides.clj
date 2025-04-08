@@ -91,14 +91,18 @@
   (clerk/fragment
    (clerk/html
     {::clerk/width :full}
-    [:p.text-6xl.font-bold.font-sans (:title conf)])
+    [:div
+     [:p.text-6xl.font-bold.font-sans (:title conf)]
+     [:p.text-4xl.font-bold.font-sans (:sub-title conf)]])
    (mc-logo)))
 
 (defmethod slide ::was/title-body-slide [conf]
   (clerk/fragment
    (clerk/html
     {::clerk/width :full}
-    [:p.text-6xl.font-bold.font-sans (:title conf)])
+    [:div
+     [:p.text-6xl.font-bold.font-sans (:title conf)]
+     [:p.text-4xl.font-bold.font-sans (:sub-title conf)]])
    (box-type conf)
    (mc-logo)))
 
@@ -106,7 +110,9 @@
   (clerk/fragment
    (clerk/html
     {::clerk/width :full}
-    [:p.text-6xl.font-bold.font-sans (:title conf)])
+    [:div
+     [:p.text-6xl.font-bold.font-sans (:title conf)]
+     [:p.text-4xl.font-bold.font-sans (:sub-title conf)]])
    (clerk/row
     {::clerk/width :full}
     (left-box conf)

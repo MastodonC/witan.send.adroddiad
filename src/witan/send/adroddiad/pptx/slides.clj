@@ -153,6 +153,12 @@
     :font-size 80.0
     :x margin :y 400
     :width slide-minus-margins}
+   {:slide-fn :text-box
+    :text (:sub-title conf)
+    :bold? true
+    :font-size 50.0
+    :x margin :y 525
+    :width slide-minus-margins}
    mc-logo-map])
 
 (defmethod slide ::was/title-body-slide [conf]
@@ -162,6 +168,12 @@
     :x margin :y 200
     :bold? true
     :font-size 90.0}
+   {:slide-fn :text-box
+    :text (:sub-title conf)
+    :width slide-minus-margins
+    :x margin :y 325
+    :bold? true
+    :font-size 50.0}
    (box-type conf)
    mc-logo-map])
 
@@ -172,6 +184,12 @@
     :x margin :y 100
     :bold? true
     :font-size 70.0}
+   {:slide-fn :text-box
+    :text (:sub-title conf)
+    :width slide-minus-margins
+    :x margin :y 225
+    :bold? true
+    :font-size 40.0}
    (left-box conf)
    (right-box conf)
    mc-logo-map])
