@@ -218,6 +218,9 @@
    :academic-year   :academic-year-label
    :academic-year-1 :academic-year-1-label
    :academic-year-2 :academic-year-2-label
+   :school-phase    :school-phase-label
+   :school-phase-1  :school-phase-1-label
+   :school-phase-2  :school-phase-2-label
    :scenario        :scenario-label})
 
 (def sweet-column-names
@@ -240,32 +243,41 @@
    :academic-year-2-label "NCY 2"
    :setting-1             "Setting 1"
    :setting-2             "Setting 2"
+   :school-phase          "School Phase"
+   :school-phase-1        "School Phase 1"
+   :school-phase-2        "School Phase 2"
    :scenario-label        "Scenario"
    :scenario              "EHCP Count"})
 
 (def axis-labels
-  {:setting "Setting"
-   :designation "Designation"
-   :need "Need"
-   :calendar-year "Calendar Year"
-   :setting-1 "Setting 1"
-   :setting-2 "Setting 2"
+  {:setting         "Setting"
+   :designation     "Designation"
+   :need            "Need"
+   :calendar-year   "Calendar Year"
+   :setting-1       "Setting 1"
+   :setting-2       "Setting 2"
    :academic-year-1 "NCY 1"
    :academic-year-2 "NCY 2"
-   :academic-year "NCY"
-   :scenario "EHCP Count"})
+   :academic-year   "NCY"
+   :school-phase    "School Phase"
+   :school-phase-1  "School Phase 1"
+   :school-phase-2  "School Phase 2"
+   :scenario        "EHCP Count"})
 
 (def sort-field
-  {:setting :setting-order
-   :setting-1 :setting-1-order
-   :setting-2 :setting-2-order
-   :designation :designation-order
-   :need :need-order
-   :need-1 :need-1-order
-   :need-2 :need-2-order
-   :academic-year :academic-year-order
+  {:setting         :setting-order
+   :setting-1       :setting-1-order
+   :setting-2       :setting-2-order
+   :designation     :designation-order
+   :need            :need-order
+   :need-1          :need-1-order
+   :need-2          :need-2-order
+   :academic-year   :academic-year-order
    :academic-year-1 :academic-year-1-order
-   :academic-year-2 :academic-year-2-order})
+   :academic-year-2 :academic-year-2-order
+   :school-phase    :school-phase-order
+   :school-phase-1  :school-phase-1-order
+   :school-phase-2  :school-phase-2-order})
 
 (def transitions-labels->census-labels
   {:setting-1       :setting
@@ -273,7 +285,9 @@
    :need-1          :need
    :need-2          :need
    :academic-year-1 :academic-year
-   :academic-year-2 :academic-year})
+   :academic-year-2 :academic-year
+   :school-phase-1  :school-phase
+   :school-phase-2  :school-phase})
 
 (defn heatmap-desc
   "Creates a map that is a description of a heatmap to pass to clerk/vl"
@@ -377,6 +391,10 @@
   [census]
   (ehcp-heatmap-per-year census :need))
 
+(defn ehcps-by-school-phase-per-year
+  [census]
+  (ehcp-heatmap-per-year census :school-phase))
+
 (defn ehcps-by-ncy-per-year
   [census]
   (ehcp-heatmap-per-year census :academic-year))
@@ -447,6 +465,10 @@
   [census]
   (ehcps-yoy-change census :need))
 
+(defn ehcps-by-school-phase-yoy-change
+  [census]
+  (ehcps-yoy-change census :school-phase))
+
 (defn ehcps-by-ncy-yoy-change
   [census]
   (ehcps-yoy-change census :academic-year))
@@ -516,6 +538,10 @@
 (defn ehcps-by-need-yoy-pct-change
   [census]
   (ehcp-yoy-pct-change census :need))
+
+(defn ehcps-by-school-phase-yoy-pct-change
+  [census]
+  (ehcp-yoy-pct-change census :school-phase))
 
 (defn ehcps-by-ncy-yoy-pct-change
   [census]
@@ -594,6 +620,10 @@
        (transitions-heatmap-per-year :scenario tr/joiner?)))
   ([transitions]
    (joiners-by-ehcp-per-year transitions {})))
+
+(defn joiners-by-school-phase-per-year
+  [transitions]
+  (transitions-heatmap-per-year transitions :school-phase-2 tr/joiner?))
 
 (defn joiners-by-ncy-per-year
   [transitions]
