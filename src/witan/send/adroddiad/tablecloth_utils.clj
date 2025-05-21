@@ -2,6 +2,9 @@
   "Library of tablecloth utilities."
   (:require [tablecloth.api :as tc]))
 
+
+
+;;; # Info
 (defn column-info
   "Selected column info, in column order"
   [ds]
@@ -29,6 +32,9 @@
       (tc/reorder-columns [:col-name :col-label])
       (tc/rename-columns (merge column-info-col-name->label {:col-label "Column Label"}))))
 
+
+
+;;; # Non-unique
 (defn select-non-unique-keys
   "Return unique combinations of `key-cols` that appear in more than one row of `ds`."
   ([ds] (select-non-unique-keys ds (tc/column-names ds)))
@@ -56,4 +62,72 @@
       (tc/ungroup)
       (tc/select-rows #(not= 1 (:num-rows-with-same-key %)))
       (tc/drop-columns [:num-rows-with-same-key])))
+
+
+
+;;; # dataset <-> map conversion
+(defn ds->hash-map
+  "Given dataset `ds`, returns a hash-map with
+   - keys from the `key-cols` of `ds`
+   - vals from the remaining columns of `ds`
+     or the `val-cols` if specified (which may overlap with `key-cols`),
+   The keys/vals in the returned map will be maps keyed by column name if
+   `key-cols`/`key-vals` identify multiple columns or
+   `single-key-col-as-map` (default `false`) or 
+   `single-val-col-as-map` (default `true`) are specified truthy, respectively."
+  [ds & {:keys [key-cols single-key-col-as-map
+                val-cols single-val-col-as-map]
+         :or   {single-key-col-as-map false
+                single-val-col-as-map false}}]
+  (let [all-cols (tc/column-names ds)
+        key-cols (or key-cols (first all-cols))
+        val-cols (or val-cols (remove (into #{} (tc/column-names ds key-cols)) all-cols))
+        get-rows (fn [ds cols single-col-as-map]
+                   (let [cols-ds (tc/select-columns ds cols)]
+                     (if (or single-col-as-map (< 1 (tc/column-count cols-ds)))
+                       (tc/rows cols-ds :as-maps)
+                       (-> (tc/columns cols-ds :as-seqs) first))))]
+    (zipmap (get-rows ds key-cols single-key-col-as-map)
+            (get-rows ds val-cols single-val-col-as-map))))
+
+(defn compare-mapped-keys
+  [m k1 k2]
+  (compare [(get m k1) k1]
+           [(get m k2) k2]))
+
+(defn ds->sorted-map-by
+  "Given dataset `ds`, returns a sorted-map with
+   - keys from the `key-cols` of `ds`
+   - vals from the remaining columns of `ds`
+     or the `val-cols` if specified (which may overlap with `key-cols`)
+   - ordered by the order of rows in the `ds`,
+     or by the values of `:order-col` if specified (which must compare).
+   The keys/vals in the returned map will be maps keyed by column name if
+   `key-cols`/`key-vals` identify multiple columns or
+   `single-key-col-as-map` (default `false`) or 
+   `single-val-col-as-map` (default `true`) are specified truthy, respectively."
+  [ds & {:keys [order-col]
+         :as   opts}]
+  (let [m  (ds->hash-map ds opts)
+        o  (zipmap (keys m)
+                   (or (get ds order-col)
+                       (range)))]
+    (into (sorted-map-by (partial compare-mapped-keys o))
+          m)))
+
+(defn map->ds
+  "Given map `m`, returns dataset with keys and vals as columns.
+   Column names via keyword parameters `:keys-col-name` & `:vals-col-name`.
+   Keys or vals that are maps are expanded into columns named by the map keys."
+  [m & {:keys [keys-col-name
+               vals-col-name]
+        :or   {keys-col-name :keys
+               vals-col-name :vals}}]
+  (->> m
+       (reduce-kv (fn [vec-of-rows-as-maps k v]
+                    (conj vec-of-rows-as-maps
+                          (merge (if (map? k) k {keys-col-name k})
+                                 (if (map? v) v {vals-col-name v}))))
+                  [])
+       tc/dataset))
 
