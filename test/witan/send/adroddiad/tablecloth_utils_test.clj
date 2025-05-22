@@ -6,6 +6,297 @@
 
 
 
+;;; # Non-unique
+(deftest non-unique-by
+  (testing "With no arguments returns non-unique rows of dataset."
+    (is (=
+         (-> (tc/dataset [{:a 1, :b 1, :c 1}
+                          {:a 1, :b 1, :c 1}
+                          {:a 1, :b 1, :c 2}
+                          {:a 1, :b 2, :c 1}
+                          {:a 2, :b 1, :c 1}])
+             tc-utils/non-unique-by)
+         (tc/dataset [{:a 1, :b 1, :c 1}
+                      {:a 1, :b 1, :c 1}]))))
+
+  (testing "Similarly with `columns-selector` `:all`."
+    (is (=
+         (-> (tc/dataset [{:a 1, :b 1, :c 1}
+                          {:a 1, :b 1, :c 1}
+                          {:a 1, :b 1, :c 2}
+                          {:a 1, :b 2, :c 1}
+                          {:a 2, :b 1, :c 1}])
+             (tc-utils/non-unique-by :all))
+         (tc/dataset [{:a 1, :b 1, :c 1}
+                      {:a 1, :b 1, :c 1}]))))
+
+  (testing "With `columns-selector` specifying a single column, returns rows with non-unique values in that column."
+    (is (=
+         (-> (tc/dataset [{:a 1, :b 1, :c 1}
+                          {:a 1, :b 1, :c 1}
+                          {:a 1, :b 1, :c 2}
+                          {:a 1, :b 2, :c 1}
+                          {:a 2, :b 1, :c 1}])
+             (tc-utils/non-unique-by :a))
+         (tc/dataset [{:a 1, :b 1, :c 1}
+                      {:a 1, :b 1, :c 1}
+                      {:a 1, :b 1, :c 2}
+                      {:a 1, :b 2, :c 1}]))))
+
+  (testing "With `columns-selector` specifying a multiple columns, returns rows with non-unique values for those columns."
+    (is (=
+         (-> (tc/dataset [{:a 1, :b 1, :c 1}
+                          {:a 1, :b 1, :c 1}
+                          {:a 1, :b 1, :c 2}
+                          {:a 1, :b 2, :c 1}
+                          {:a 2, :b 1, :c 1}])
+             (tc-utils/non-unique-by [:a :b]))
+         (tc/dataset [{:a 1, :b 1, :c 1}
+                      {:a 1, :b 1, :c 1}
+                      {:a 1, :b 1, :c 2}]))))
+
+  (testing "Works within groups of a grouped dataset (`groups->seq example`)."
+    (is (=
+         (-> (tc/dataset [{:a 1, :b 1, :c 1}
+                          {:a 1, :b 1, :c 1}
+                          {:a 1, :b 1, :c 2}
+                          {:a 1, :b 2, :c 1}
+                          {:a 2, :b 1, :c 1}])
+             (tc/group-by [:a])
+             (tc-utils/non-unique-by [:b])
+             tc/groups->seq)
+         ;; Note: Using `tc/groups->seq` to turn grouped dataset into a seq of datasets.
+         (sequence [(tc/dataset [{:a 1, :b 1, :c 1}
+                                 {:a 1, :b 1, :c 1}
+                                 {:a 1, :b 1, :c 2}])
+                    (tc/dataset nil {:column-names [:a :b :c]})]))))
+
+  (testing "Works within groups of a grouped dataset (`tc/ungroup` example)."
+    (is (=
+         (-> (tc/dataset [{:a 1, :b 1, :c 1}
+                          {:a 1, :b 1, :c 1}
+                          {:a 1, :b 1, :c 2}
+                          {:a 1, :b 2, :c 1}
+                          {:a 2, :b 1, :c 1}])
+             (tc/group-by [:a])
+             (tc-utils/non-unique-by [:b])
+             tc/ungroup)
+         (tc/dataset [{:a 1, :b 1, :c 1}
+                      {:a 1, :b 1, :c 1}
+                      {:a 1, :b 1, :c 2}]))))
+
+  (testing "Specification of `num-rows-same-colname` returns count of matching rows in that column."
+    (is (=
+         (-> (tc/dataset [{:a 1, :b 1, :c 1}
+                          {:a 1, :b 1, :c 1}
+                          {:a 1, :b 1, :c 2}
+                          {:a 1, :b 2, :c 1}
+                          {:a 2, :b 1, :c 1}])
+             (tc-utils/non-unique-by [:a :b] :num-rows-same-colname :row-count))
+         (tc/dataset [{:a 1, :b 1, :c 1, :row-count 3}
+                      {:a 1, :b 1, :c 1, :row-count 3}
+                      {:a 1, :b 1, :c 2, :row-count 3}]))))
+
+  (testing (str "If `num-rows-same-colname` is already in the dataset "
+                "then it will be overwritten!")
+    (is (=
+         (-> (tc/dataset [{:a 1, :b 1, :c 1}
+                          {:a 1, :b 1, :c 1}
+                          {:a 1, :b 1, :c 2}
+                          {:a 1, :b 2, :c 1}
+                          {:a 2, :b 1, :c 1}])
+             (tc-utils/non-unique-by [:a :b] :num-rows-same-colname :b))
+         (tc/dataset [{:a 1, :b 3, :c 1}
+                      {:a 1, :b 3, :c 1}
+                      {:a 1, :b 3, :c 2}]))))
+
+  (testing (str "If `num-rows-same-colname` is not specified, "
+                "then `:__num-rows-same` is used internally, "
+                "such that if the dataset has a column so named it will be dropped")
+    (is (=
+         (-> (tc/dataset [{:a 1, :b 1, :c 1, :__num-rows-same "*"}
+                          {:a 1, :b 1, :c 1, :__num-rows-same "*"}
+                          {:a 1, :b 1, :c 2, :__num-rows-same "*"}
+                          {:a 1, :b 2, :c 1, :__num-rows-same "*"}
+                          {:a 2, :b 1, :c 1, :__num-rows-same "*"}])
+             (tc-utils/non-unique-by [:a :b]))
+         (tc/dataset [{:a 1, :b 1, :c 1}
+                      {:a 1, :b 1, :c 1}
+                      {:a 1, :b 1, :c 2}]))))
+
+  (testing "Replaces deprecated `select-non-unique-rows` function."
+    (is (let [ds (tc/dataset [{:a 1, :b 1, :c 1}
+                              {:a 1, :b 1, :c 1}
+                              {:a 1, :b 1, :c 2}
+                              {:a 1, :b 2, :c 1}
+                              {:a 2, :b 1, :c 1}])]
+          (= (-> ds tc-utils/select-non-unique-rows)
+             (-> ds tc-utils/non-unique-by)))))
+
+  (testing "Replaces deprecated `select-non-unique-key-rows` function."
+    (is (let [ds (tc/dataset [{:a 1, :b 1, :c 1}
+                              {:a 1, :b 1, :c 1}
+                              {:a 1, :b 1, :c 2}
+                              {:a 1, :b 2, :c 1}
+                              {:a 2, :b 1, :c 1}])]
+          (= (-> ds (tc-utils/select-non-unique-key-rows [:a :b]))
+             (-> ds (tc-utils/non-unique-by [:a :b])))))))
+
+
+(deftest non-unique-by-keys
+  (testing (str "With no arguments returns a dataset containing one example of "
+                "each row that appears multiple times in the dataset.")
+    (is (=
+         (-> (tc/dataset [{:a 1, :b 1, :c 1}
+                          {:a 1, :b 1, :c 1}
+                          {:a 1, :b 1, :c 2}
+                          {:a 1, :b 2, :c 1}
+                          {:a 2, :b 1, :c 1}])
+             tc-utils/non-unique-by-keys)
+         (tc/dataset [{:a 1, :b 1, :c 1}]))))
+
+  (testing "Similarly with `columns-selector` `:all`."
+    (is (=
+         (-> (tc/dataset [{:a 1, :b 1, :c 1}
+                          {:a 1, :b 1, :c 1}
+                          {:a 1, :b 1, :c 2}
+                          {:a 1, :b 2, :c 1}
+                          {:a 2, :b 1, :c 1}])
+             (tc-utils/non-unique-by-keys :all))
+         (tc/dataset [{:a 1, :b 1, :c 1}]))))
+
+  (testing (str "Which is essentially the same as"
+                "`tc-utils/non-unique-by` followed by `tc/unique-by` "
+                "(but simpler).")
+    (is (let [ds (tc/dataset [{:a 1, :b 1, :c 1}
+                              {:a 1, :b 1, :c 1}
+                              {:a 1, :b 1, :c 2}
+                              {:a 1, :b 2, :c 1}
+                              {:a 2, :b 1, :c 1}])]
+          (= (-> ds tc-utils/non-unique-by-keys)
+             (-> ds tc-utils/non-unique-by tc/unique-by)))))
+
+  (testing (str "With a subset of columns specified, "
+                "returns a dataset with the combinations of these columns that "
+                "appear more than once in the dataset: I.e. the non-unique keys.")
+    (is (=
+         (-> (tc/dataset [{:a 1, :b 1, :c 1}
+                          {:a 1, :b 1, :c 1}
+                          {:a 1, :b 1, :c 2}
+                          {:a 1, :b 2, :c 1}
+                          {:a 2, :b 1, :c 1}])
+             (tc-utils/non-unique-by-keys [:a :b]))
+         (tc/dataset [{:a 1, :b 1}]))))
+
+  (testing (str "Which is essentially the same as"
+                "`tc-utils/non-unique-by` "
+                "followed by `tc/select-columns` for the key columns "
+                "followed by `tc/unique-by` "
+                "(but simpler).")
+    (is (let [ds (tc/dataset [{:a 1, :b 1, :c 1}
+                              {:a 1, :b 1, :c 1}
+                              {:a 1, :b 1, :c 2}
+                              {:a 1, :b 2, :c 1}
+                              {:a 2, :b 1, :c 1}])]
+          (= (-> ds (tc-utils/non-unique-by-keys [:a :b]))
+             (-> ds
+                 (tc-utils/non-unique-by [:a :b])
+                 (tc/select-columns [:a :b])
+                 tc/unique-by)))))
+  
+  (testing (str "Supports specification of columns via supported tablecloth " 
+                "`columns-selector` mechanisms, for example regex.")
+    (is (=
+         (-> (tc/dataset [{:a 1, :b 1, :c 1}
+                          {:a 1, :b 1, :c 1}
+                          {:a 1, :b 1, :c 2}
+                          {:a 1, :b 2, :c 1}
+                          {:a 2, :b 1, :c 1}])
+             (tc-utils/non-unique-by-keys #"^:[ab]$"))
+         (tc/dataset [{:a 1, :b 1}]))))
+  
+  (testing "Works within groups of a grouped dataset, but loses the grouping columns (`groups->seq example`)."
+    (is (=
+         (-> (tc/dataset [{:a 1, :b 1, :c 1}
+                          {:a 1, :b 1, :c 1}
+                          {:a 1, :b 1, :c 2}
+                          {:a 1, :b 2, :c 1}
+                          {:a 2, :b 1, :c 1}])
+             (tc/group-by [:a])
+             (tc-utils/non-unique-by-keys [:b])
+             tc/groups->seq)
+         ;; Note: 
+         ;; - Using `tc/groups->seq` to turn grouped dataset into a seq of datasets.
+         ;; - Datasets do not contain the grouping columns `:a`: possibly a tablecloth issue?
+         (sequence [(tc/dataset [{:b 1}])
+                    (tc/dataset nil {:column-names [:b]})]))))
+  
+  (testing "Works within groups of a grouped dataset, but loses the grouping columns (`tc/ungroup` example)."
+    (is (=
+         (-> (tc/dataset [{:a 1, :b 1, :c 1}
+                          {:a 1, :b 1, :c 1}
+                          {:a 1, :b 1, :c 2}
+                          {:a 1, :b 2, :c 1}
+                          {:a 2, :b 1, :c 1}])
+             (tc/group-by [:a])
+             (tc-utils/non-unique-by-keys [:b])
+             tc/ungroup)
+         ;; Note: Returned datasets does not contain the grouping column `:a`: possibly a tablecloth issue?
+         (tc/dataset [{:b 1}]))))
+  
+  (comment ;; Possible issue with `tc/ungroup` not putting grouping columns back on?
+    (-> (tc/dataset {:a 1 :b 1})
+        (tc/group-by [:a])
+        (tc/process-group-data #(tc/drop-columns % [:a]))
+        tc/ungroup)
+    ;;=> _unnamed [1 1]:
+    ;;   
+    ;;   | :b |
+    ;;   |---:|
+    ;;   |  1 |
+    ;;   
+    :rcf)
+  
+  (testing (str "For grouped data, can effect a workaround retaining the " 
+                "grouping columns by using: "
+                "`tc-utils/non-unique-by` "
+                "followed by `tc/select-columns` for the groung and key columns "
+                "followed by `tc/unique-by`.")
+    (is (=
+         (-> (tc/dataset [{:a 1, :b 1, :c 1}
+                          {:a 1, :b 1, :c 1}
+                          {:a 1, :b 1, :c 2}
+                          {:a 1, :b 2, :c 1}
+                          {:a 2, :b 1, :c 1}])
+             (tc/group-by [:a])
+             (tc-utils/non-unique-by [:b])
+             tc/ungroup
+             (tc/select-columns [:a :b])
+             tc/unique-by)
+         (tc/dataset [{:a 1, :b 1}]))))
+
+  (testing (str "Returns dataset with count of number of matching rows in column "
+                "`num-rows-same-colname` if specified")
+    (is (=
+         (-> (tc/dataset [{:a 1, :b 1, :c 1}
+                          {:a 1, :b 1, :c 1}
+                          {:a 1, :b 1, :c 2}
+                          {:a 1, :b 2, :c 1}
+                          {:a 2, :b 1, :c 1}])
+             (tc-utils/non-unique-by-keys [:a :b] :num-rows-same-colname :num-rows))
+         (tc/dataset [{:a 1, :b 1, :num-rows 3}]))))
+
+  (testing "Replaces deprecated `select-non-unique-keys` function."
+    (is (let [ds (tc/dataset [{:a 1, :b 1, :c 1}
+                              {:a 1, :b 1, :c 1}
+                              {:a 1, :b 1, :c 2}
+                              {:a 1, :b 2, :c 1}
+                              {:a 2, :b 1, :c 1}])]
+          (= (-> ds (tc-utils/select-non-unique-keys [:a :b]))
+             (-> ds (tc-utils/non-unique-by-keys [:a :b] :num-rows-same-colname :num-rows)))))))
+
+
+
 ;;; # dataset <-> map conversion
 (deftest ds->hash-map
   (testing "For two column dataset using defaults: 1st col selected for keys, second as vals."
@@ -114,6 +405,7 @@
           "c2r2" {:col-2 "c2r2"
                   :col-3 "c3r2"}}))))
 
+
 (deftest ds->sorted-map-by
   (testing "Returns a map sorted by dataset row order by default."
     (is (=
@@ -168,6 +460,7 @@
                                           :order-col             :order}))
          {"c2r2" {:col-3 "c3r2"}
           "c2r1" {:col-3 "c3r1"}}))))
+
 
 (deftest map->ds
   (testing "Basic usage for a map where keys and vals are not maps, with default column-names."
@@ -235,6 +528,9 @@
                       :v1   ["v1r1" "v1r2"]
                       :v2   ["v2r1"  nil]})))))
 
+
+
+;;; # Run tests
 (comment ;; Run tests
   (clojure.test/run-tests)
   

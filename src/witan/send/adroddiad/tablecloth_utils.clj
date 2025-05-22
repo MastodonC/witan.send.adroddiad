@@ -41,8 +41,60 @@
 
 
 ;;; # Non-unique
-(defn select-non-unique-keys
-  "Return unique combinations of `key-cols` that appear in more than one row of `ds`."
+(defn non-unique-by
+  "Remove rows which contain unique data in the key `columns-selector` (default `:all`)
+   columns, returning dataset containing only rows for which the key column
+   values appear in more than one row (i.e. are non-unique).
+   (Basically the opposite of `tc/unique-by`.)
+   Specify `num-rows-same-colname` to have the row-count of the number of rows
+   with the same values of the key columns in the dataset returned."
+  ([ds] (non-unique-by ds :all))
+  ([ds columns-selector] (non-unique-by ds columns-selector nil))
+  ([ds columns-selector & {:keys [num-rows-same-colname]
+                           :or   {num-rows-same-colname :__num-rows-same}
+                           :as   options}]
+   (if (tc/grouped? ds)
+     (tc/process-group-data ds #(non-unique-by % columns-selector options))
+     (let [by-columns (tc/column-names ds columns-selector)]
+       (-> ds
+           (tc/group-by by-columns)
+           (tc/add-column num-rows-same-colname tc/row-count)
+           tc/ungroup
+           (tc/select-rows #(-> % (get num-rows-same-colname) (> 1)))
+           ((if (:num-rows-same-colname options)
+              identity
+              #(tc/drop-columns % num-rows-same-colname))))))))
+
+(defn non-unique-by-keys
+  "Return a row for each combination of key `columns-selector` (default `:all`) 
+   column values that appear in more than one row of `ds` (i.e. are non-unique).
+   Specify `num-rows-same-colname` to have the row-count of the number of rows
+   with the same values of the key columns in the dataset returned.
+   NOTE: The current algorithm works with grouped data but loses the grouping columns."
+  ;; For grouped data, the issue seems to be with tablecloth. Until this is fixed, use:
+  ;; - `tc-utils/non-unique-by`
+  ;; - followed by `tc/select-columns` for the groung and key columns
+  ;; - followed by `tc/unique-by`.
+  ([ds] (non-unique-by-keys ds :all))
+  ([ds columns-selector] (non-unique-by-keys ds columns-selector nil))
+  ([ds columns-selector & {:keys [num-rows-same-colname]
+                           :or   {num-rows-same-colname :__num-rows-same}
+                           :as   options}]
+   (if (tc/grouped? ds)
+     (tc/process-group-data ds #(non-unique-by-keys % columns-selector options))
+     (let [by-columns (tc/column-names ds columns-selector)]
+       (-> ds
+           (tc/group-by by-columns)
+           (tc/aggregate {num-rows-same-colname tc/row-count})
+           (tc/select-rows #(-> % (get num-rows-same-colname) (> 1)))
+           ((if (:num-rows-same-colname options)
+              identity
+              #(tc/drop-columns % num-rows-same-colname))))))))
+
+(defn ^:deprecated select-non-unique-keys
+  "Return unique combinations of `key-cols` that appear in more than one row of `ds`.
+   DEPRECATED: Replaced by `select-non-unique-by`
+               with option `{:num-rows-with-same-key-colname :num-rows}`."
   ([ds] (select-non-unique-keys ds (tc/column-names ds)))
   ([ds key-cols] (-> ds
                      (tc/group-by key-cols)
@@ -50,8 +102,9 @@
                      (tc/select-rows #(not= 1 (:num-rows %)))
                      (tc/reorder-columns (conj [:num-rows] key-cols)))))
 
-(defn select-non-unique-rows
-  "Select non-unique rows of `ds`."
+(defn ^:deprecated select-non-unique-rows
+  "Select non-unique rows of `ds`.
+   DEPRECATED: Replaced by `non-unique-by`."
   [ds]
   (-> (tc/group-by ds (tc/column-names ds))
       (tc/add-column :num-rows-same tc/row-count)
@@ -59,8 +112,9 @@
       (tc/select-rows #(not= 1 (:num-rows-same %)))
       (tc/drop-columns [:num-rows-same])))
 
-(defn select-non-unique-key-rows
-  "Select rows of `ds` with non-unique values of `key-cols`."
+(defn ^:deprecated select-non-unique-key-rows
+  "Select rows of `ds` with non-unique values of `key-cols`.
+   DEPRECATED: Replaced by `non-unique-by`."
   [ds key-cols]
   (-> ds
       (tc/group-by key-cols)
