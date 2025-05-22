@@ -5,31 +5,37 @@
 
 
 ;;; # Info
-(defn column-info
-  "Selected column info, in column order"
+(defn ^:deprecated column-info
+  "Selected column info, in column order.
+   DEPRECATED: `tc/info` (since tc 7.x) returns column info in column order,
+   so all this provides now is selection of info columns."
   [ds]
-  (let [column-name->order (zipmap (tc/column-names ds) (iterate inc 1))]
-    (-> ds
-        (tc/info)
-        (tc/select-columns [:col-name :datatype :n-valid :n-missing :min :max])
-        (tc/order-by #(column-name->order (:col-name %))))))
+  (-> ds
+      tc/info
+      (tc/select-columns [:col-name :datatype :n-valid :n-missing :min :max])))
 
 (def column-info-col-name->label
   "Column info column labels for display"
-  {:col-name  "Column Name"
-   :datatype  "Data Type"
-   :n-valid   "# Valid"
-   :n-missing "# Missing"
-   :min       "Min"
-   :max       "Max"})
+  {:col-name           "Column Name"
+   :datatype           "Data Type"
+   :n-valid            "# Valid"
+   :n-missing          "# Missing"
+   :min                "Min"
+   :mean               "Mean"
+   :mode               "Mode"
+   :max                "Max"
+   :standard-deviation "Std. Dev."
+   :skew               "Skew"
+   :first              "First"
+   :last               "Last"})
 
 (defn column-info-with-labels
   "Selected column info, in column order, with labels."
   [ds ds-col-name->label]
   (-> ds
-      column-info
+      tc/info
       (tc/map-columns :col-label [:col-name] ds-col-name->label)
-      (tc/reorder-columns [:col-name :col-label])
+      (tc/select-columns [:col-name :col-label :datatype :n-valid :n-missing :min :max])
       (tc/rename-columns (merge column-info-col-name->label {:col-label "Column Label"}))))
 
 
