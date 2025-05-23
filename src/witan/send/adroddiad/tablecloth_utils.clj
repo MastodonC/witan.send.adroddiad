@@ -46,8 +46,12 @@
    columns, returning dataset containing only rows for which the key column
    values appear in more than one row (i.e. are non-unique).
    (Basically the opposite of `tc/unique-by`.)
+   
    Specify `num-rows-same-colname` to have the row-count of the number of rows
-   with the same values of the key columns in the dataset returned."
+   with the same values of the key columns in the dataset returned.
+   
+   Works within groups for grouped datasets.
+   "
   ([ds] (non-unique-by ds :all))
   ([ds columns-selector] (non-unique-by ds columns-selector nil))
   ([ds columns-selector & {:keys [num-rows-same-colname]
@@ -68,21 +72,34 @@
 (defn non-unique-by-keys
   "Return a row for each combination of key `columns-selector` (default `:all`) 
    column values that appear in more than one row of `ds` (i.e. are non-unique).
+   
    Specify `num-rows-same-colname` to have the row-count of the number of rows
    with the same values of the key columns in the dataset returned.
-   NOTE: The current algorithm works with grouped data but loses the grouping columns."
-  ;; For grouped data, the issue seems to be with tablecloth. Until this is fixed, use:
-  ;; - `tc-utils/non-unique-by`
-  ;; - followed by `tc/select-columns` for the groung and key columns
-  ;; - followed by `tc/unique-by`.
+   
+   Works within groups for grouped datasets, but unless the grouping columns are
+   included in the `columns-selector` (or option `include-grouping-columns` is
+   specified truthy) they will not be retained in the individual group datasets.
+   (Though they can be reinstated on ungrouping by using the 
+   `:add-group-as-column` option of `tc/ungroup.)
+   "
   ([ds] (non-unique-by-keys ds :all))
   ([ds columns-selector] (non-unique-by-keys ds columns-selector nil))
-  ([ds columns-selector & {:keys [num-rows-same-colname]
-                           :or   {num-rows-same-colname :__num-rows-same}
+  ([ds columns-selector & {:keys [num-rows-same-colname
+                                  include-grouping-columns]
+                           :or   {num-rows-same-colname    :__num-rows-same
+                                  include-grouping-columns false}
                            :as   options}]
-   (if (tc/grouped? ds)
-     (tc/process-group-data ds #(non-unique-by-keys % columns-selector options))
-     (let [by-columns (tc/column-names ds columns-selector)]
+   (let [by-columns (tc/column-names ds columns-selector)]
+     (if (tc/grouped? ds)
+       (let [grouping-columns (->> ds :name (map keys) (apply concat) distinct)]
+         ;; Process each group, 
+         ;; including the `grouping-columns` with the `by-columns` if requested
+         (tc/process-group-data ds
+                                #(non-unique-by-keys %
+                                                     (concat
+                                                      (when include-grouping-columns grouping-columns)
+                                                      by-columns)
+                                                     options)))
        (-> ds
            (tc/group-by by-columns)
            (tc/aggregate {num-rows-same-colname tc/row-count})

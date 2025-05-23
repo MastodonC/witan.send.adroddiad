@@ -55,6 +55,19 @@
                       {:a 1, :b 1, :c 1}
                       {:a 1, :b 1, :c 2}]))))
 
+  (testing (str "Supports specification of columns via supported tablecloth "
+                "`columns-selector` mechanisms, for example regex.")
+    (is (=
+         (-> (tc/dataset [{:a 1, :b 1, :c 1}
+                          {:a 1, :b 1, :c 1}
+                          {:a 1, :b 1, :c 2}
+                          {:a 1, :b 2, :c 1}
+                          {:a 2, :b 1, :c 1}])
+             (tc-utils/non-unique-by #"^:[ab]$"))
+         (tc/dataset [{:a 1, :b 1, :c 1}
+                      {:a 1, :b 1, :c 1}
+                      {:a 1, :b 1, :c 2}])))) 
+
   (testing "Works within groups of a grouped dataset (`groups->seq example`)."
     (is (=
          (-> (tc/dataset [{:a 1, :b 1, :c 1}
@@ -203,8 +216,8 @@
                  (tc-utils/non-unique-by [:a :b])
                  (tc/select-columns [:a :b])
                  tc/unique-by)))))
-  
-  (testing (str "Supports specification of columns via supported tablecloth " 
+
+  (testing (str "Supports specification of columns via supported tablecloth "
                 "`columns-selector` mechanisms, for example regex.")
     (is (=
          (-> (tc/dataset [{:a 1, :b 1, :c 1}
@@ -214,8 +227,33 @@
                           {:a 2, :b 1, :c 1}])
              (tc-utils/non-unique-by-keys #"^:[ab]$"))
          (tc/dataset [{:a 1, :b 1}]))))
+
+  (testing (str "Note that the `columns-selector` may result in re-ordering "
+                "of the selected columns, for example if specified as a vector.")
+    (is (=
+         (-> (tc/dataset [{:a 1, :b 1, :c 1}
+                          {:a 1, :b 1, :c 1}
+                          {:a 1, :b 1, :c 2}
+                          {:a 1, :b 2, :c 1}
+                          {:a 2, :b 1, :c 1}])
+             (tc-utils/non-unique-by-keys [:b :a])
+             tc/column-names)
+         '(:b :a))))
   
-  (testing "Works within groups of a grouped dataset, but loses the grouping columns (`groups->seq example`)."
+  (testing "Use a predicate `columns-selector` to retain the odering of the columns."
+    (is (=
+         (-> (tc/dataset [{:a 1, :b 1, :c 1}
+                          {:a 1, :b 1, :c 1}
+                          {:a 1, :b 1, :c 2}
+                          {:a 1, :b 2, :c 1}
+                          {:a 2, :b 1, :c 1}])
+             (tc-utils/non-unique-by-keys #{:b :a})
+             tc/column-names)
+         '(:a :b))))
+  
+  (testing (str "Works within groups of a grouped dataset, "
+                "but note that by default any grouping columns not also "
+                "included in the `columns-selector` will be dropped.")
     (is (=
          (-> (tc/dataset [{:a 1, :b 1, :c 1}
                           {:a 1, :b 1, :c 1}
@@ -225,13 +263,11 @@
              (tc/group-by [:a])
              (tc-utils/non-unique-by-keys [:b])
              tc/groups->seq)
-         ;; Note: 
-         ;; - Using `tc/groups->seq` to turn grouped dataset into a seq of datasets.
-         ;; - Datasets do not contain the grouping columns `:a`: possibly a tablecloth issue?
          (sequence [(tc/dataset [{:b 1}])
                     (tc/dataset nil {:column-names [:b]})]))))
-  
-  (testing "Works within groups of a grouped dataset, but loses the grouping columns (`tc/ungroup` example)."
+
+  (testing (str "The grouping columns can be reinstated on ungrouping " 
+                "using the `:add-group-as-column` options of `tc/ungroup`.")
     (is (=
          (-> (tc/dataset [{:a 1, :b 1, :c 1}
                           {:a 1, :b 1, :c 1}
@@ -240,28 +276,11 @@
                           {:a 2, :b 1, :c 1}])
              (tc/group-by [:a])
              (tc-utils/non-unique-by-keys [:b])
-             tc/ungroup)
-         ;; Note: Returned datasets does not contain the grouping column `:a`: possibly a tablecloth issue?
-         (tc/dataset [{:b 1}]))))
+             (tc/ungroup {:add-group-as-column true}))
+         (tc/dataset [{:a 1, :b 1}]))))
   
-  (comment ;; Possible issue with `tc/ungroup` not putting grouping columns back on?
-    (-> (tc/dataset {:a 1 :b 1})
-        (tc/group-by [:a])
-        (tc/process-group-data #(tc/drop-columns % [:a]))
-        tc/ungroup)
-    ;;=> _unnamed [1 1]:
-    ;;   
-    ;;   | :b |
-    ;;   |---:|
-    ;;   |  1 |
-    ;;   
-    :rcf)
-  
-  (testing (str "For grouped data, can effect a workaround retaining the " 
-                "grouping columns by using: "
-                "`tc-utils/non-unique-by` "
-                "followed by `tc/select-columns` for the groung and key columns "
-                "followed by `tc/unique-by`.")
+  (testing (str "Or the grouping columns can be retained " 
+                "by including them in the the `columns-selector`." )
     (is (=
          (-> (tc/dataset [{:a 1, :b 1, :c 1}
                           {:a 1, :b 1, :c 1}
@@ -269,13 +288,39 @@
                           {:a 1, :b 2, :c 1}
                           {:a 2, :b 1, :c 1}])
              (tc/group-by [:a])
-             (tc-utils/non-unique-by [:b])
-             tc/ungroup
-             (tc/select-columns [:a :b])
-             tc/unique-by)
-         (tc/dataset [{:a 1, :b 1}]))))
+             (tc-utils/non-unique-by-keys [:a :b])
+             tc/groups->seq)
+         (sequence [(tc/dataset [{:a 1, :b 1}])
+                    (tc/dataset nil {:column-names [:a :b]})]))))
+  
+  (testing (str "Or specify `:include-grouping-columns` option truthy " 
+                "to have `non-unique-by-keys` include the grouping keys in " 
+                "the `columns-selector` for you.")
+    (is (=
+         (-> (tc/dataset [{:a 1, :b 1, :c 1}
+                          {:a 1, :b 1, :c 1}
+                          {:a 1, :b 1, :c 2}
+                          {:a 1, :b 2, :c 1}
+                          {:a 2, :b 1, :c 1}])
+             (tc/group-by [:a])
+             (tc-utils/non-unique-by-keys [:b]
+                                          {:include-grouping-columns true})
+             tc/groups->seq)
+         (sequence [(tc/dataset [{:a 1, :b 1}])
+                    (tc/dataset nil {:column-names [:a :b]})]))))
+  
+  (testing (str "Though note that when using the "
+                "`:include-grouping-columns` option truthy option the "
+                "grouping columns will be moved to the start of the dataset.")
+    (is (=
+         (-> (tc/dataset [{:a 1, :b 1, :c 1}])
+             (tc/group-by [:c])
+             (tc-utils/non-unique-by-keys #{:b :a}
+                                          {:include-grouping-columns true})
+             tc/column-names)
+         '(:c :a :b))))
 
-  (testing (str "Returns dataset with count of number of matching rows in column "
+    (testing (str "Returns dataset with count of number of matching rows in column "
                 "`num-rows-same-colname` if specified")
     (is (=
          (-> (tc/dataset [{:a 1, :b 1, :c 1}
