@@ -2,35 +2,117 @@
   "Library of tablecloth utilities."
   (:require [tablecloth.api :as tc]))
 
-(defn column-info
-  "Selected column info, in column order"
+
+
+;;; # Info
+(defn ^:deprecated column-info
+  "Selected column info, in column order.
+   DEPRECATED: `tc/info` (since tc 7.x) returns column info in column order,
+   so all this provides now is selection of info columns."
   [ds]
-  (let [column-name->order (zipmap (tc/column-names ds) (iterate inc 1))]
-    (-> ds
-        (tc/info)
-        (tc/select-columns [:col-name :datatype :n-valid :n-missing :min :max])
-        (tc/order-by #(column-name->order (:col-name %))))))
+  (-> ds
+      tc/info
+      (tc/select-columns [:col-name :datatype :n-valid :n-missing :min :max])))
 
 (def column-info-col-name->label
   "Column info column labels for display"
-  {:col-name  "Column Name"
-   :datatype  "Data Type"
-   :n-valid   "# Valid"
-   :n-missing "# Missing"
-   :min       "Min"
-   :max       "Max"})
+  {:col-name           "Column Name"
+   :datatype           "Data Type"
+   :n-valid            "# Valid"
+   :n-missing          "# Missing"
+   :min                "Min"
+   :mean               "Mean"
+   :mode               "Mode"
+   :max                "Max"
+   :standard-deviation "Std. Dev."
+   :skew               "Skew"
+   :first              "First"
+   :last               "Last"})
 
 (defn column-info-with-labels
   "Selected column info, in column order, with labels."
   [ds ds-col-name->label]
   (-> ds
-      column-info
+      tc/info
       (tc/map-columns :col-label [:col-name] ds-col-name->label)
-      (tc/reorder-columns [:col-name :col-label])
+      (tc/select-columns [:col-name :col-label :datatype :n-valid :n-missing :min :max])
       (tc/rename-columns (merge column-info-col-name->label {:col-label "Column Label"}))))
 
-(defn select-non-unique-keys
-  "Return unique combinations of `key-cols` that appear in more than one row of `ds`."
+
+
+;;; # Non-unique
+(defn non-unique-by
+  "Remove rows which contain unique data in the key `columns-selector` (default `:all`)
+   columns, returning dataset containing only rows for which the key column
+   values appear in more than one row (i.e. are non-unique).
+   (Basically the opposite of `tc/unique-by`.)
+   
+   Specify `num-rows-same-colname` to have the row-count of the number of rows
+   with the same values of the key columns in the dataset returned.
+   
+   Works within groups for grouped datasets.
+   "
+  ([ds] (non-unique-by ds :all))
+  ([ds columns-selector] (non-unique-by ds columns-selector nil))
+  ([ds columns-selector & {:keys [num-rows-same-colname]
+                           :or   {num-rows-same-colname :__num-rows-same}
+                           :as   options}]
+   (if (tc/grouped? ds)
+     (tc/process-group-data ds #(non-unique-by % columns-selector options))
+     (let [by-columns (tc/column-names ds columns-selector)]
+       (-> ds
+           (tc/group-by by-columns)
+           (tc/add-column num-rows-same-colname tc/row-count)
+           tc/ungroup
+           (tc/select-rows #(-> % (get num-rows-same-colname) (> 1)))
+           (cond-> (not (:num-rows-same-colname options)) (tc/drop-columns num-rows-same-colname))
+           #_((if (:num-rows-same-colname options)
+              identity
+              #(tc/drop-columns % num-rows-same-colname))))))))
+
+(defn non-unique-by-keys
+  "Return a row for each combination of key `columns-selector` (default `:all`) 
+   column values that appear in more than one row of `ds` (i.e. are non-unique).
+   
+   Specify `num-rows-same-colname` to have the row-count of the number of rows
+   with the same values of the key columns in the dataset returned.
+   
+   Works within groups for grouped datasets, but unless the grouping columns are
+   included in the `columns-selector` (or option `include-grouping-columns` is
+   specified truthy) they will not be retained in the individual group datasets.
+   (Though they can be reinstated on ungrouping by using the 
+   `:add-group-as-column` option of `tc/ungroup.)
+   "
+  ([ds] (non-unique-by-keys ds :all))
+  ([ds columns-selector] (non-unique-by-keys ds columns-selector nil))
+  ([ds columns-selector & {:keys [num-rows-same-colname
+                                  include-grouping-columns]
+                           :or   {num-rows-same-colname    :__num-rows-same
+                                  include-grouping-columns false}
+                           :as   options}]
+   (let [by-columns (tc/column-names ds columns-selector)]
+     (if (tc/grouped? ds)
+       (let [grouping-columns (->> ds :name (map keys) (apply concat) distinct)]
+         ;; Process each group, 
+         ;; including the `grouping-columns` with the `by-columns` if requested
+         (tc/process-group-data ds
+                                #(non-unique-by-keys %
+                                                     (concat
+                                                      (when include-grouping-columns grouping-columns)
+                                                      by-columns)
+                                                     options)))
+       (-> ds
+           (tc/group-by by-columns)
+           (tc/aggregate {num-rows-same-colname tc/row-count})
+           (tc/select-rows #(-> % (get num-rows-same-colname) (> 1)))
+           ((if (:num-rows-same-colname options)
+              identity
+              #(tc/drop-columns % num-rows-same-colname))))))))
+
+(defn ^:deprecated select-non-unique-keys
+  "Return unique combinations of `key-cols` that appear in more than one row of `ds`.
+   DEPRECATED: Replaced by `select-non-unique-by`
+               with option `{:num-rows-with-same-key-colname :num-rows}`."
   ([ds] (select-non-unique-keys ds (tc/column-names ds)))
   ([ds key-cols] (-> ds
                      (tc/group-by key-cols)
@@ -38,8 +120,9 @@
                      (tc/select-rows #(not= 1 (:num-rows %)))
                      (tc/reorder-columns (conj [:num-rows] key-cols)))))
 
-(defn select-non-unique-rows
-  "Select non-unique rows of `ds`."
+(defn ^:deprecated select-non-unique-rows
+  "Select non-unique rows of `ds`.
+   DEPRECATED: Replaced by `non-unique-by`."
   [ds]
   (-> (tc/group-by ds (tc/column-names ds))
       (tc/add-column :num-rows-same tc/row-count)
@@ -47,8 +130,9 @@
       (tc/select-rows #(not= 1 (:num-rows-same %)))
       (tc/drop-columns [:num-rows-same])))
 
-(defn select-non-unique-key-rows
-  "Select rows of `ds` with non-unique values of `key-cols`."
+(defn ^:deprecated select-non-unique-key-rows
+  "Select rows of `ds` with non-unique values of `key-cols`.
+   DEPRECATED: Replaced by `non-unique-by`."
   [ds key-cols]
   (-> ds
       (tc/group-by key-cols)
@@ -56,4 +140,72 @@
       (tc/ungroup)
       (tc/select-rows #(not= 1 (:num-rows-with-same-key %)))
       (tc/drop-columns [:num-rows-with-same-key])))
+
+
+
+;;; # dataset <-> map conversion
+(defn ds->hash-map
+  "Given dataset `ds`, returns a hash-map with
+   - keys from the `key-cols` of `ds`
+   - vals from the remaining columns of `ds`
+     or the `val-cols` if specified (which may overlap with `key-cols`),
+   The keys/vals in the returned map will be maps keyed by column name if
+   `key-cols`/`key-vals` identify multiple columns or
+   `single-key-col-as-map` (default `false`) or 
+   `single-val-col-as-map` (default `true`) are specified truthy, respectively."
+  [ds & {:keys [key-cols single-key-col-as-map
+                val-cols single-val-col-as-map]
+         :or   {single-key-col-as-map false
+                single-val-col-as-map false}}]
+  (let [all-cols (tc/column-names ds)
+        key-cols (or key-cols (first all-cols))
+        val-cols (or val-cols (remove (into #{} (tc/column-names ds key-cols)) all-cols))
+        get-rows (fn [ds cols single-col-as-map]
+                   (let [cols-ds (tc/select-columns ds cols)]
+                     (if (or single-col-as-map (< 1 (tc/column-count cols-ds)))
+                       (tc/rows cols-ds :as-maps)
+                       (-> (tc/columns cols-ds :as-seqs) first))))]
+    (zipmap (get-rows ds key-cols single-key-col-as-map)
+            (get-rows ds val-cols single-val-col-as-map))))
+
+(defn compare-mapped-keys
+  [m k1 k2]
+  (compare [(get m k1) k1]
+           [(get m k2) k2]))
+
+(defn ds->sorted-map-by
+  "Given dataset `ds`, returns a sorted-map with
+   - keys from the `key-cols` of `ds`
+   - vals from the remaining columns of `ds`
+     or the `val-cols` if specified (which may overlap with `key-cols`)
+   - ordered by the order of rows in the `ds`,
+     or by the values of `:order-col` if specified (which must compare).
+   The keys/vals in the returned map will be maps keyed by column name if
+   `key-cols`/`key-vals` identify multiple columns or
+   `single-key-col-as-map` (default `false`) or 
+   `single-val-col-as-map` (default `true`) are specified truthy, respectively."
+  [ds & {:keys [order-col]
+         :as   opts}]
+  (let [m  (ds->hash-map ds opts)
+        o  (zipmap (keys m)
+                   (or (get ds order-col)
+                       (range)))]
+    (into (sorted-map-by (partial compare-mapped-keys o))
+          m)))
+
+(defn map->ds
+  "Given map `m`, returns dataset with keys and vals as columns.
+   Column names via keyword parameters `:keys-col-name` & `:vals-col-name`.
+   Keys or vals that are maps are expanded into columns named by the map keys."
+  [m & {:keys [keys-col-name
+               vals-col-name]
+        :or   {keys-col-name :keys
+               vals-col-name :vals}}]
+  (->> m
+       (reduce-kv (fn [vec-of-rows-as-maps k v]
+                    (conj vec-of-rows-as-maps
+                          (merge (if (map? k) k {keys-col-name k})
+                                 (if (map? v) v {vals-col-name v}))))
+                  [])
+       tc/dataset))
 
