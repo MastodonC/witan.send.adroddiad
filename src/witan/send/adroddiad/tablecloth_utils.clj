@@ -65,7 +65,8 @@
            (tc/add-column num-rows-same-colname tc/row-count)
            tc/ungroup
            (tc/select-rows #(-> % (get num-rows-same-colname) (> 1)))
-           ((if (:num-rows-same-colname options)
+           (cond-> (not (:num-rows-same-colname options)) (tc/drop-columns num-rows-same-colname))
+           #_((if (:num-rows-same-colname options)
               identity
               #(tc/drop-columns % num-rows-same-colname))))))))
 

@@ -179,8 +179,7 @@
          (tc/dataset [{:a 1, :b 1, :c 1}]))))
 
   (testing (str "Which is essentially the same as"
-                "`tc-utils/non-unique-by` followed by `tc/unique-by` "
-                "(but simpler).")
+                "`tc-utils/non-unique-by` followed by `tc/unique-by`.")
     (is (let [ds (tc/dataset [{:a 1, :b 1, :c 1}
                               {:a 1, :b 1, :c 1}
                               {:a 1, :b 1, :c 2}
@@ -204,8 +203,7 @@
   (testing (str "Which is essentially the same as"
                 "`tc-utils/non-unique-by` "
                 "followed by `tc/select-columns` for the key columns "
-                "followed by `tc/unique-by` "
-                "(but simpler).")
+                "followed by `tc/unique-by`.")
     (is (let [ds (tc/dataset [{:a 1, :b 1, :c 1}
                               {:a 1, :b 1, :c 1}
                               {:a 1, :b 1, :c 2}
