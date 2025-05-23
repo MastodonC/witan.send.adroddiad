@@ -119,3 +119,15 @@
       (tc/set-dataset-name "scap-send-planning-areas")))
 
 
+
+;;; # Functions for summarising simulations for SCAP SEND provision forecasts
+(defn scap-send-provision-type-census-transform-fn
+  "Given function mapping setting abbreviations to scap-send-provision-type,
+   returns census-transform-fn suitable for preparing simulated census
+   for summarisation for SCAP."
+  [setting->scap-send-provision-type]
+  (fn [census-ds]
+    (-> census-ds
+        (tc/select-rows (comp (into #{} (range 0 12)) :academic-year))
+        (tc/map-columns :scap-send-provision-type [:setting] setting->scap-send-provision-type)
+        (tc/drop-missing [:scap-send-provision-type]))))
