@@ -18,4 +18,6 @@
 /.clerk
 /gc.log*
 /tmp/
-
+.vscode/
+*.code-workspace
+.calva/
