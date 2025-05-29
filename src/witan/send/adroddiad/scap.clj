@@ -5,14 +5,14 @@
             [tablecloth.api :as tc]
             [witan.send.adroddiad.school-phase :as school-phase]))
 
-
-
-;;; # SCAP SEND Provision Types
 (defn compare-mapped-keys
   [m k1 k2]
   (compare [(get m k1) k1]
            [(get m k2) k2]))
 
+
+
+;;; # SCAP SEND Provision Types
 (def scap-send-provision-types
   "SCAP SEND provision types."
   (as-> {"UR" {:order       1,
