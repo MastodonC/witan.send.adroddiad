@@ -1,6 +1,7 @@
 (ns witan.send.adroddiad.tablecloth-utils-test
   "Testing for library of tablecloth utilities."
-  (:require [clojure.test :refer [deftest testing is]]
+  (:require [clojure.set]
+            [clojure.test :refer [deftest testing is]]
             [witan.send.adroddiad.tablecloth-utils :as tc-utils]
             [tablecloth.api :as tc]))
 
@@ -341,170 +342,6 @@
 
 
 ;;; # dataset <-> map conversion
-(deftest ds->hash-map
-  (testing "For two column dataset using defaults: 1st col selected for keys, second as vals."
-    (is (=
-         (-> (tc/dataset {:col-1 ["c1r1" "c1r2"]
-                          :col-2 ["c2r1" "c2r2"]})
-             tc-utils/ds->hash-map)
-         {"c1r1" "c2r1"
-          "c1r2" "c2r2"})))
-
-  (testing "Returned map is a clojure.lang.PersistentArrayMap."
-    (is (=
-         (-> (tc/dataset {:col-1 ["c1r1" "c1r2"]
-                          :col-2 ["c2r1" "c2r2"]})
-             tc-utils/ds->hash-map
-             type
-             str)
-         "class clojure.lang.PersistentArrayMap")))
-
-  (testing "For three column dataset using defaults: 1st col selected for keys, remaining (as row maps) as vals."
-    (is (=
-         (-> (tc/dataset {:col-1 ["c1r1" "c1r2"]
-                          :col-2 ["c2r1" "c2r2"]
-                          :col-3 ["c3r1" "c3r2"]})
-             tc-utils/ds->hash-map)
-         {"c1r1" {:col-2 "c2r1"
-                  :col-3 "c3r1"}
-          "c1r2" {:col-2 "c2r2"
-                  :col-3 "c3r2"}})))
-
-  (testing "Specify a single `key-cols`: That col selected for keys, remaining (as row maps) as vals."
-    (is (=
-         (-> (tc/dataset {:col-1 ["c1r1" "c1r2"]
-                          :col-2 ["c2r1" "c2r2"]
-                          :col-3 ["c3r1" "c3r2"]
-                          :col-4 ["c4r1" "c4r2"]})
-             (tc-utils/ds->hash-map :key-cols :col-2))
-         {"c2r1" {:col-1 "c1r1"
-                  :col-3 "c3r1"
-                  :col-4 "c4r1"}
-          "c2r2" {:col-1 "c1r2"
-                  :col-3 "c3r2"
-                  :col-4 "c4r2"}})))
-
-  (testing "Specify subset of remaining columns as `val-col`s."
-    (is (=
-         (-> (tc/dataset {:col-1 ["c1r1" "c1r2"]
-                          :col-2 ["c2r1" "c2r2"]
-                          :col-3 ["c3r1" "c3r2"]
-                          :col-4 ["c4r1" "c4r2"]})
-             (tc-utils/ds->hash-map {:key-cols :col-2
-                                     :val-cols [:col-3 :col-4]}))
-         {"c2r1" {:col-3 "c3r1"
-                  :col-4 "c4r1"}
-          "c2r2" {:col-3 "c3r2"
-                  :col-4 "c4r2"}})))
-
-  (testing "Specify `val-col`s using a regex (passed to `tc/column-names.`)"
-    (is (=
-         (-> (tc/dataset {:col-1 ["c1r1" "c1r2"]
-                          :col-2 ["c2r1" "c2r2"]
-                          :col-3 ["c3r1" "c3r2"]
-                          :col-4 ["c4r1" "c4r2"]})
-             (tc-utils/ds->hash-map {:key-cols :col-2
-                                     :val-cols #"^:col-[34]$"}))
-         {"c2r1" {:col-3 "c3r1"
-                  :col-4 "c4r1"}
-          "c2r2" {:col-3 "c3r2"
-                  :col-4 "c4r2"}})))
-
-  (testing "Ask for vals from single `val-cols` to be returned as row maps."
-    (is (=
-         (-> (tc/dataset {:col-1 ["c1r1" "c1r2"]
-                          :col-2 ["c2r1" "c2r2"]
-                          :col-3 ["c3r1" "c3r2"]
-                          :col-4 ["c4r1" "c4r2"]})
-             (tc-utils/ds->hash-map {:key-cols              :col-2
-                                     :val-cols              [:col-3]
-                                     :single-val-col-as-map true}))
-         {"c2r1" {:col-3 "c3r1"}
-          "c2r2" {:col-3 "c3r2"}})))
-
-  (testing "Ask for keys from a single `key-cols` to be returned as row maps."
-    (is (=
-         (-> (tc/dataset {:col-1 ["c1r1" "c1r2"]
-                          :col-2 ["c2r1" "c2r2"]
-                          :col-3 ["c3r1" "c3r2"]
-                          :col-4 ["c4r1" "c4r2"]})
-             (tc-utils/ds->hash-map {:key-cols              :col-2
-                                     :val-cols              [:col-3]
-                                     :single-key-col-as-map true
-                                     :single-val-col-as-map true}))
-         {{:col-2 "c2r1"} {:col-3 "c3r1"}
-          {:col-2 "c2r2"} {:col-3 "c3r2"}})))
-
-  (testing "Include key columns in the value maps."
-    (is (=
-         (-> (tc/dataset {:col-1 ["c1r1" "c1r2"]
-                          :col-2 ["c2r1" "c2r2"]
-                          :col-3 ["c3r1" "c3r2"]
-                          :col-4 ["c4r1" "c4r2"]})
-             (tc-utils/ds->hash-map {:key-cols :col-2
-                                     :val-cols [:col-2 :col-3]}))
-         {"c2r1" {:col-2 "c2r1"
-                  :col-3 "c3r1"}
-          "c2r2" {:col-2 "c2r2"
-                  :col-3 "c3r2"}}))))
-
-
-(deftest ds->sorted-map-by
-  (testing "Returns a map sorted by dataset row order by default."
-    (is (=
-         (-> (tc/dataset {:col-1 ["c1r1" "c1r2"]
-                          :col-2 ["c2r1" "c2r2"]})
-             tc-utils/ds->sorted-map-by)
-         {"c1r1" "c2r1"
-          "c1r2" "c2r2"})))
-
-  (testing "Returned map is a clojure.lang.PersistentTreeMap."
-    (is (=
-         (-> (tc/dataset {:col-1 ["c1r1" "c1r2"]
-                          :col-2 ["c2r1" "c2r2"]})
-             tc-utils/ds->sorted-map-by
-             type
-             str)
-         "class clojure.lang.PersistentTreeMap")))
-
-  (testing "Specify an order column (which by default is included in the vals maps)."
-    (is (=
-         (-> (tc/dataset {:col-1 ["c1r1" "c1r2"]
-                          :col-2 ["c2r1" "c2r2"]
-                          :order [1      2]})
-             (tc-utils/ds->sorted-map-by :order-col :order))
-         {"c1r1" {:col-2 "c2r1"
-                  :order 1}
-          "c1r2" {:col-2 "c2r2"
-                  :order 2}})))
-
-  (testing "With an ordering other than the dataset order."
-    (is (=
-         (-> (tc/dataset {:col-1 ["c1r1" "c1r2"]
-                          :col-2 ["c2r1" "c2r2"]
-                          :order [2      1]})
-             (tc-utils/ds->sorted-map-by :order-col :order))
-         {"c1r2" {:col-2 "c2r2"
-                  :order 1}
-          "c1r1" {:col-2 "c2r1"
-                  :order 2}})))
-
-  (testing "Other trailing keyword-value arguments pass through to `ds->hash-map`."
-    (is (=
-         (-> (tc/dataset {:col-1 ["c1r1" "c1r2"]
-                          :col-2 ["c2r1" "c2r2"]
-                          :col-3 ["c3r1" "c3r2"]
-                          :col-4 ["c4r1" "c4r2"]
-                          :order [2      1]})
-             (tc-utils/ds->sorted-map-by {:key-cols              :col-2
-                                          :val-cols              [:col-3]
-                                          :single-key-col-as-map false
-                                          :single-val-col-as-map true
-                                          :order-col             :order}))
-         {"c2r2" {:col-3 "c3r2"}
-          "c2r1" {:col-3 "c3r1"}}))))
-
-
 (deftest map->ds
   (testing "Basic usage for a map where keys and vals are not maps, with default column-names."
     (is (=
@@ -572,6 +409,224 @@
                       :v2   ["v2r1"  nil]})))))
 
 
+(deftest sorted-map-by-key-order
+
+  (testing "Returned map is a clojure.lang.PersistentTreeMap."
+    (is (=
+         (-> (tc-utils/sorted-map-by-key-order #{} identity)
+             type
+             str)
+         "class clojure.lang.PersistentTreeMap")))
+
+  (testing "Returns map with keys sorted by a `key->order` map."
+    (let [m {:c "c", :a "a", :b "b"}]
+      (is (= (-> m
+                 keys)
+             ;; Note: hash-map key order here is as specified
+             '(:c :a :b)))
+      (is (= (-> m
+                 (tc-utils/sorted-map-by-key-order (zipmap [:a :c :b] (range)))
+                 keys)
+             ;; Note: keys now ordered as requested
+             '(:a :c :b)))
+      (is (= (-> m
+                 (tc-utils/sorted-map-by-key-order (clojure.set/map-invert [:b :c :a]))
+                 keys)
+             ;; Note: keys now ordered as requested
+             '(:b :c :a)))))
+
+  (testing "Returns map with keys sorted by a `key->order` function."
+    (let [m {:_3 "3", :_1 "1", :_2 "2"}]
+      (is (= (-> m
+                 keys)
+             ;; Note: hash-map key order here is as specified
+             '(:_3 :_1 :_2)))
+      (is (= (-> m
+                 (tc-utils/sorted-map-by-key-order #(-> % name (subs 1) parse-long -))
+                 keys)
+             ;; Note: keys now ordered as requested, in descending order of the integer
+             '(:_3 :_2 :_1)))))
+
+  (testing "Ordering a map by its (unique) values."
+    (let [m {:c2 2, :b1 1, :a3 3}]
+      (is (= (-> m
+                 keys)
+             ;; Note: hash-map key order here is as specified
+             '(:c2 :b1 :a3)))
+      (is (= (-> m
+                 (tc-utils/sorted-map-by-key-order m)
+                 keys)
+             ;; Note: keys now ordered as requested by values
+             '(:b1 :c2 :a3)))))
+
+  (testing "Ordering a map by its (non-unique) values."
+    (let [m {:c2 2, :b1 1, :a2 2}]
+      (is (= (-> m
+                 keys)
+             ;; Note: hash-map key order here is as specified
+             '(:c2 :b1 :a2)))
+      (is (= (-> m
+                 (tc-utils/sorted-map-by-key-order m)
+                 keys)
+             ;; Note: keys now ordered as requested by values with ties broken by keys
+             '(:b1 :a2 :c2)))))
+
+  (testing "Using `identity` as `key-fn` gives the same effect as `sorted-map`."
+    (let [m {:_3 "3", :_1 "1", :_2 "2"}]
+      (is (= (-> m
+                 keys)
+             ;; Note: hash-map key order here is as specified
+             '(:_3 :_1 :_2)))
+      (is (= (-> m
+                 (tc-utils/sorted-map-by-key-order identity)
+                 keys)
+             ;; Note: keys now ordered
+             '(:_1 :_2 :_3)))
+      (is (= (-> m
+                 (tc-utils/sorted-map-by-key-order identity))
+             ;; Note: keys now ordered
+             (into (sorted-map) m))))))
+
+
+(deftest ds->map
+
+  (testing "Returned map is a clojure.lang.PersistentTreeMap."
+    (is (= (-> (tc/dataset)
+               (tc-utils/ds->map)
+               type
+               str)
+           "class clojure.lang.PersistentTreeMap")))
+
+  (testing (str "By default, for a 2 column dataset, "
+                "returns map with first column as keys and "
+                "second column as values.")
+    (is (= (-> (tc/dataset {:col-1 ["c1r1" "c1r2" "c1r3"]
+                            :col-2 ["c2r1" "c2r2" "c2r3"]})
+               tc-utils/ds->map)
+           {"c1r1" "c2r1"
+            "c1r2" "c2r2"
+            "c1r3" "c2r3"})))
+
+  (testing (str "By default, for a 3+ column dataset, "
+                "returns map with first column as keys and "
+                "remaining columns (as maps) as values.")
+    (is (= (-> (tc/dataset {:col-1 ["c1r1" "c1r2" "c1r3"]
+                            :col-2 ["c2r1" "c2r2" "c2r3"]
+                            :col-3 ["c3r1" "c3r2" "c3r3"]})
+               tc-utils/ds->map)
+           {"c1r1" {:col-2 "c2r1", :col-3 "c3r1"}
+            "c1r2" {:col-2 "c2r2", :col-3 "c3r2"}
+            "c1r3" {:col-2 "c2r3", :col-3 "c3r3"}})))
+
+  (testing (str "Specify a single `key-cols`: "
+                "That col selected for keys, remaining (as row maps) as vals.")
+    (is (= (-> (tc/dataset {:col-1 ["c1r1" "c1r2" "c1r3"]
+                            :col-2 ["c2r1" "c2r2" "c2r3"]
+                            :col-3 ["c3r1" "c3r2" "c3r3"]
+                            :col-4 ["c4r1" "c4r2" "c4r3"]})
+               (tc-utils/ds->map :key-cols :col-2))
+           {"c2r1" {:col-1 "c1r1", :col-3 "c3r1", :col-4 "c4r1"}
+            "c2r2" {:col-1 "c1r2", :col-3 "c3r2", :col-4 "c4r2"}
+            "c2r3" {:col-1 "c1r3", :col-3 "c3r3", :col-4 "c4r3"}})))
+
+  (testing (str "Specify subset of remaining columns as `val-col`s:"
+                "Only those cols are used for vals.")
+    (is (= (-> (tc/dataset {:col-1 ["c1r1" "c1r2" "c1r3"]
+                            :col-2 ["c2r1" "c2r2" "c2r3"]
+                            :col-3 ["c3r1" "c3r2" "c3r3"]
+                            :col-4 ["c4r1" "c4r2" "c4r3"]})
+               (tc-utils/ds->map {:key-cols :col-2
+                                  :val-cols [:col-3 :col-4]}))
+           {"c2r1" {:col-3 "c3r1", :col-4 "c4r1"}
+            "c2r2" {:col-3 "c3r2", :col-4 "c4r2"}
+            "c2r3" {:col-3 "c3r3", :col-4 "c4r3"}})))
+
+  (testing "Specify `val-col`s using a regex (passed to `tc/column-names.`)"
+    (is (= (-> (tc/dataset {:col-1 ["c1r1" "c1r2" "c1r3"]
+                            :col-2 ["c2r1" "c2r2" "c2r3"]
+                            :col-3 ["c3r1" "c3r2" "c3r3"]
+                            :col-4 ["c4r1" "c4r2" "c4r3"]})
+               (tc-utils/ds->map {:key-cols :col-2
+                                  :val-cols #"^:col-[34]$"}))
+           {"c2r1" {:col-3 "c3r1", :col-4 "c4r1"}
+            "c2r2" {:col-3 "c3r2", :col-4 "c4r2"}
+            "c2r3" {:col-3 "c3r3", :col-4 "c4r3"}})))
+
+  (testing (str "Specify a single column as `val-cols`:"
+                "Only this column is used for vals, by default not as a maps.")
+    (is (= (-> (tc/dataset {:col-1 ["c1r1" "c1r2" "c1r3" "c1r3"]
+                            :col-2 ["c2r1" "c2r2" "c2r3" "c2r3"]
+                            :col-3 ["c3r1" "c3r2" "c3r3" "c3r3"]
+                            :col-4 ["c4r1" "c4r2" "c4r3" "c4r3"]})
+               (tc-utils/ds->map {:key-cols              :col-2
+                                  :val-cols              :col-3}))
+           {"c2r1" "c3r1"
+            "c2r2" "c3r2"
+            "c2r3" "c3r3"})))
+
+  (testing "Override defaults to have keys/vals from single row/column returned as maps."
+    (is (= (-> (tc/dataset {:col-1 ["c1r1" "c1r2" "c1r3" "c1r3"]
+                            :col-2 ["c2r1" "c2r2" "c2r3" "c2r3"]
+                            :col-3 ["c3r1" "c3r2" "c3r3" "c3r3"]
+                            :col-4 ["c4r1" "c4r2" "c4r3" "c4r3"]})
+               (tc-utils/ds->map {:key-cols              :col-2
+                                  :val-cols              :col-3
+                                  :single-key-col-as-map true
+                                  :single-val-col-as-map true}))
+           {{:col-2 "c2r1"} {:col-3 "c3r1"}
+            {:col-2 "c2r2"} {:col-3 "c3r2"}
+            {:col-2 "c2r3"} {:col-3 "c3r3"}})))
+
+  (testing "Include key columns in the value maps."
+    (is (= (-> (tc/dataset {:col-1 ["c1r1" "c1r2" "c1r3"]
+                            :col-2 ["c2r1" "c2r2" "c2r3"]
+                            :col-3 ["c3r1" "c3r2" "c3r3"]
+                            :col-4 ["c4r1" "c4r2" "c4r3"]})
+               (tc-utils/ds->map {:key-cols  :col-2
+                                  :val-cols [:col-2 :col-3]}))
+           {"c2r1" {:col-2 "c2r1", :col-3 "c3r1"}
+            "c2r2" {:col-2 "c2r2", :col-3 "c3r2"}
+            "c2r3" {:col-2 "c2r3", :col-3 "c3r3"}})))
+
+  (testing "Simple zipmap doesn't necessarily retain row order."
+    (let [ks '(:first, :second, :third, :fourth, :fifth, :sixth, :seventh, :eighth, :ninth)
+          vs '(+1      +2       +3      +4       +5      +6      +7        +8       +9)
+          ds (tc/dataset {:col-1 ks, :col-2 vs})]
+      (is (not= (-> (zipmap (:col-1 ds)
+                            (:col-2 ds))
+                    keys)
+                ks))))
+
+  (testing "By default `ds->map` retains row order."
+    (let [ks '(:first, :second, :third, :fourth, :fifth, :sixth, :seventh, :eighth, :ninth)
+          vs '(+1      +2       +3      +4       +5      +6      +7        +8       +9)
+          ds (tc/dataset {:col-1 ks, :col-2 vs})]
+      (is (= (-> ds
+                 tc-utils/ds->map
+                 keys)
+             ks))))
+  
+  (testing "Ordering by a column in the dataset."
+    (let [ks '(:first, :second, :third, :fourth, :fifth, :sixth, :seventh, :eighth, :ninth)
+          vs '(+1      +2       +3      +4       +5      +6      +7        +8       +9)
+          os '(-1      -2       -3      -4       -5      -6      -7        -8       -9)
+          ds (tc/dataset {:col-1 ks, :col-2 vs, :col-3 os})]
+      (is (= (-> ds
+                 (tc-utils/ds->map {:key-cols :col-1
+                                    :val-cols :col-2
+                                    :order-col :col-3})
+                 ((partial take 3)))
+             ;; Note: Taking the first three key-value pairs for illustration
+             '([:ninth 9] [:eighth 8] [:seventh 7])))
+      (is (= (-> ds
+                 (tc-utils/ds->map {:key-cols :col-1
+                                    :val-cols :col-2
+                                    :order-col :col-3})
+                 keys)
+             ;; Note: `os` is reversing the row order
+             (reverse ks)))))
+    
+  )
 
 ;;; # Run tests
 (comment ;; Run tests

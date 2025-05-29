@@ -144,55 +144,6 @@
 
 
 ;;; # dataset <-> map conversion
-(defn ds->hash-map
-  "Given dataset `ds`, returns a hash-map with
-   - keys from the `key-cols` of `ds`
-   - vals from the remaining columns of `ds`
-     or the `val-cols` if specified (which may overlap with `key-cols`),
-   The keys/vals in the returned map will be maps keyed by column name if
-   `key-cols`/`key-vals` identify multiple columns or
-   `single-key-col-as-map` (default `false`) or 
-   `single-val-col-as-map` (default `true`) are specified truthy, respectively."
-  [ds & {:keys [key-cols single-key-col-as-map
-                val-cols single-val-col-as-map]
-         :or   {single-key-col-as-map false
-                single-val-col-as-map false}}]
-  (let [all-cols (tc/column-names ds)
-        key-cols (or key-cols (first all-cols))
-        val-cols (or val-cols (remove (into #{} (tc/column-names ds key-cols)) all-cols))
-        get-rows (fn [ds cols single-col-as-map]
-                   (let [cols-ds (tc/select-columns ds cols)]
-                     (if (or single-col-as-map (< 1 (tc/column-count cols-ds)))
-                       (tc/rows cols-ds :as-maps)
-                       (-> (tc/columns cols-ds :as-seqs) first))))]
-    (zipmap (get-rows ds key-cols single-key-col-as-map)
-            (get-rows ds val-cols single-val-col-as-map))))
-
-(defn compare-mapped-keys
-  [m k1 k2]
-  (compare [(get m k1) k1]
-           [(get m k2) k2]))
-
-(defn ds->sorted-map-by
-  "Given dataset `ds`, returns a sorted-map with
-   - keys from the `key-cols` of `ds`
-   - vals from the remaining columns of `ds`
-     or the `val-cols` if specified (which may overlap with `key-cols`)
-   - ordered by the order of rows in the `ds`,
-     or by the values of `:order-col` if specified (which must compare).
-   The keys/vals in the returned map will be maps keyed by column name if
-   `key-cols`/`key-vals` identify multiple columns or
-   `single-key-col-as-map` (default `false`) or 
-   `single-val-col-as-map` (default `true`) are specified truthy, respectively."
-  [ds & {:keys [order-col]
-         :as   opts}]
-  (let [m  (ds->hash-map ds opts)
-        o  (zipmap (keys m)
-                   (or (get ds order-col)
-                       (range)))]
-    (into (sorted-map-by (partial compare-mapped-keys o))
-          m)))
-
 (defn map->ds
   "Given map `m`, returns dataset with keys and vals as columns.
    Column names via keyword parameters `:keys-col-name` & `:vals-col-name`.
@@ -208,4 +159,55 @@
                                  (if (map? v) v {vals-col-name v}))))
                   [])
        tc/dataset))
+
+(defn key-comparator-fn-by
+  "Returns function for ordering keys of a hash-map based on fn `key->order` 
+   (mapping key to order) that is suitable for use in the specification
+   of a custom sorted map via `sorted-map-by`.
+   Per ClojureDocs example for `sorted-map-by` https://clojuredocs.org/clojure.core/sorted-map-by,
+   the keys are included in the comparison to break ties where the `key-fn`
+   does not return unique values for each key."
+  [key->order]
+  (fn [k1 k2]
+    (compare [(key->order k1) k1]
+             [(key->order k2) k2])))
+
+(defn sorted-map-by-key-order
+  "Given map `m` and function/map `key->order` that returns an ordering value
+   for each key, returns a sorted map ordered by the mapped keys."
+  [m key->order]
+  (into (sorted-map-by (key-comparator-fn-by key->order)) m))
+
+(defn ds->map
+  "Given dataset `ds`, returns a (sorted) map with
+   - keys from the `key-cols` of `ds`
+   - vals from the remaining columns of `ds`
+     or the `val-cols` if specified (which may overlap with `key-cols`)
+   - ordered by the order of rows in the `ds`,
+     or by the values of `order-col` if specified.
+   The keys/vals in the returned map will be maps keyed by column name if
+   `key-cols`/`key-vals` identify multiple columns or
+   `single-key-col-as-map` (default `false`) or 
+   `single-val-col-as-map` (default `true` ) are specified truthy, respectively.
+   If `order-col` contains non-unique values then ties are broken using the `key-cols`."
+
+  [ds & {:keys [key-cols single-key-col-as-map
+                val-cols single-val-col-as-map
+                order-col]
+         :or   {single-key-col-as-map false
+                single-val-col-as-map false}}]
+  (let [all-cols (tc/column-names ds)
+        key-cols (or key-cols (first all-cols))
+        val-cols (or val-cols (remove (into #{} (tc/column-names ds key-cols)) all-cols))
+        get-rows (fn [ds cols single-col-as-map]
+                   (let [cols-ds (tc/select-columns ds cols)]
+                     (if (or single-col-as-map (< 1 (tc/column-count cols-ds)))
+                       (tc/rows cols-ds :as-maps)
+                       (-> (tc/columns cols-ds :as-seqs) first))))
+        ks       (get-rows ds key-cols single-key-col-as-map)
+        vs       (get-rows ds val-cols single-val-col-as-map)
+        os       (or (get ds order-col)
+                     (range (tc/row-count ds)))]
+    (sorted-map-by-key-order (zipmap ks vs)
+                             (zipmap ks os))))
 
