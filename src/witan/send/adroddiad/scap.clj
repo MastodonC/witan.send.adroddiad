@@ -112,10 +112,10 @@
       tc/dataset
       (tc/order-by [:scap-planning-area])
       (tc/add-column :order (iterate inc 1))
-      (as-> $ (tc/reorder-columns $ (concat [:scap-planning-area :order]
-                                            (for [prefix [nil "school-phase" "scap-send-provision-type"]
-                                                  suffix [nil "name" "label" "definition"]]
-                                              (keyword (str prefix (when (and prefix suffix) "-") suffix))))))
+      (tc/reorder-columns (concat [:scap-planning-area :order]
+                                  (for [prefix [nil "school-phase" "scap-send-provision-type"]
+                                        suffix [nil "name" "label" "definition"]]
+                                    (keyword (str prefix (when (and prefix suffix) "-") suffix)))))
       (tc/set-dataset-name "scap-send-planning-areas")))
 
 (defn scap-send-planning-areas-ds
