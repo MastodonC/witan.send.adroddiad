@@ -412,11 +412,8 @@
 (deftest sorted-map-by-key-order
 
   (testing "Returned map is a clojure.lang.PersistentTreeMap."
-    (is (=
-         (-> (tc-utils/sorted-map-by-key-order #{} identity)
-             type
-             str)
-         "class clojure.lang.PersistentTreeMap")))
+    (is (instance? clojure.lang.PersistentTreeMap
+                   (tc-utils/sorted-map-by-key-order #{} identity))))
 
   (testing "Returns map with keys sorted by a `key->order` map."
     (let [m {:c "c", :a "a", :b "b"}]
@@ -491,11 +488,8 @@
 (deftest ds->map
 
   (testing "Returned map is a clojure.lang.PersistentTreeMap."
-    (is (= (-> (tc/dataset)
-               (tc-utils/ds->map)
-               type
-               str)
-           "class clojure.lang.PersistentTreeMap")))
+    (is (instance? clojure.lang.PersistentTreeMap
+                   (-> (tc/dataset) (tc-utils/ds->map)))))
 
   (testing (str "By default, for a 2 column dataset, "
                 "returns map with first column as keys and "
