@@ -358,20 +358,27 @@
 
 ;;; # Helper functions
 (defn plot-spec-by-group->plot-spec-by-group-label
-  "Converts a plot spec with `group`s identified by abbreviations to use labels:
-   Uses `:label` column from `colors-and-shapes` (if present) update `data` `group` `colors-and-shapes`
-   in a `plot-spec` to group by the labelled values.
-   If the `colors-and-shapes` dataset in the `plot-spec` contains a `:label` column:
-   - The (domain) values in the `group` column are mapped to the corresponding labels
-     according to the `colors-and-shapes` `:domain-value` -> `:label` mapping.
+  "Converts a `plot-spec` with `group`s identified by abbreviations to use labels:
+   Uses `:label` column from `colors-and-shapes` (if present) to update `data` 
+   `group` `colors-and-shapes` in a `plot-spec` to group by the labelled values
+   as follows:
+   - The (domain) values in the `group` column of the `data` are mapped to the 
+     corresponding labels using the `colors-and-shapes` `:domain-value` -> `:label` 
+     mapping.
+   - These group labels are added to the `data` in column `group-label`.
+     - Any pre-existing column of this name will be overwritten.
+     - Specify as the `group` column to have the `group` column abbreviations
+       replaced with labels.
+     - Defaults to name of `group` column with `-label` appended (if keyword).
    - The `colors-and-shapes` dataset is updated with the `:label`s as new `:domain-values`.
-   - If a `group-label` column is specified then the labels are put in that column,
-     the `group` key updated to refer to the new `group-label` column,
-     and the `group-label` key removed from the `plot-spec`."
+   - The `group` key is updated to refer to the new `group-label` column.
+   - Any `group-label` key provided is removed from the `plot-spec`."
   [{:keys [data group colors-and-shapes group-label]
     :or   {group-label nil}
     :as   plot-spec}]
-  (let [group-label (or group-label group)]
+  (let [group-label (or group-label
+                        (cond (keyword? group) (-> group name (str "-label") keyword)
+                                (string?  group) (-> group (str " Label"))))]
     (-> plot-spec
         (dissoc :group-label)
         (merge (when (some #{:label} (tc/column-names colors-and-shapes))
