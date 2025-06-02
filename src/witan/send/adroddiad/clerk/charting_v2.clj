@@ -679,6 +679,14 @@
   ([transitions]
    (leavers-by-ehcp-per-year transitions {})))
 
+(defn leavers-by-school-phase-per-year
+  [transitions]
+  (transitions-heatmap-per-year transitions :school-phase-1 tr/leaver?))
+
+(defn leavers-by-key-stage-per-year
+  [transitions]
+  (transitions-heatmap-per-year transitions :key-stage-1 tr/leaver?))
+
 (defn leavers-by-ncy-per-year
   [transitions]
   (transitions-heatmap-per-year transitions :academic-year-1 tr/leaver?))
