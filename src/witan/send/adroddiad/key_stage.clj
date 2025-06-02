@@ -9,10 +9,12 @@
 
 
 ;;; # Utility functions
-(defn compare-mapped-keys
-  [m k1 k2]
-  (compare [(get m k1) k1]
-           [(get m k2) k2]))
+(defn key-comparator-fn-by
+  [key->order]
+  (fn [k1 k2]
+    (compare [(key->order k1) k1]
+             [(key->order k2) k2])))
+
 
 
 ;;; # Key Stage
@@ -67,7 +69,7 @@
                       :ncy-from   15
                       :ncy-to     20}}
       (update-vals (fn [m] (assoc m :ncys (into (sorted-set) (range (:ncy-from m) (inc (:ncy-to m)))))))
-      (as-> $ (into (sorted-map-by (partial compare-mapped-keys (update-vals $ :order))) $))))
+      (as-> $ (into (sorted-map-by (key-comparator-fn-by (update-vals $ :order))) $))))
 
 (def key-stages-ds
   "Mastodon C National Curriculum Key Stage definitions as a dataset."
