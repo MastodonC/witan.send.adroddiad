@@ -88,7 +88,7 @@
    returns the abbreviation for the MC School Phase containing it.
   `school-phases` must be a map with keys the school phase
    and values maps containing a `:ncys` key whose value is a collection of the NCYs for that school phase.
-   Defaults to the namespace `school-phase` if not specified."
+   Defaults to the namespace `school-phases` if not specified."
   ([x] (ncy->school-phase x school-phases))
   ([x school-phases]
    (some (fn [[k {:keys [ncys]}]]
