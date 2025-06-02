@@ -218,6 +218,9 @@
    :academic-year   :academic-year-label
    :academic-year-1 :academic-year-1-label
    :academic-year-2 :academic-year-2-label
+   :key-stage       :key-stage-label
+   :key-stage-1     :key-stage-1-label
+   :key-stage-2     :key-stage-2-label
    :school-phase    :school-phase-label
    :school-phase-1  :school-phase-1-label
    :school-phase-2  :school-phase-2-label
@@ -243,6 +246,9 @@
    :academic-year-2-label "NCY 2"
    :setting-1             "Setting 1"
    :setting-2             "Setting 2"
+   :key-stage             "Key Stage"
+   :key-stage-1           "Key Stage (from)"
+   :key-stage-2           "Key Stage (to)"
    :school-phase          "School Phase"
    :school-phase-1        "School Phase 1"
    :school-phase-2        "School Phase 2"
@@ -259,6 +265,9 @@
    :academic-year-1 "NCY 1"
    :academic-year-2 "NCY 2"
    :academic-year   "NCY"
+   :key-stage       "Key Stage"
+   :key-stage-1     "Key Stage (from)"
+   :key-stage-2     "Key Stage (to)"
    :school-phase    "School Phase"
    :school-phase-1  "School Phase 1"
    :school-phase-2  "School Phase 2"
@@ -275,6 +284,9 @@
    :academic-year   :academic-year-order
    :academic-year-1 :academic-year-1-order
    :academic-year-2 :academic-year-2-order
+   :key-stage       :key-stage-order
+   :key-stage-1     :key-stage-1-order
+   :key-stage-2     :key-stage-2-order
    :school-phase    :school-phase-order
    :school-phase-1  :school-phase-1-order
    :school-phase-2  :school-phase-2-order})
@@ -286,6 +298,8 @@
    :need-2          :need
    :academic-year-1 :academic-year
    :academic-year-2 :academic-year
+   :key-stage-1     :key-stage
+   :key-stage-2     :key-stage
    :school-phase-1  :school-phase
    :school-phase-2  :school-phase})
 
@@ -395,6 +409,10 @@
   [census]
   (ehcp-heatmap-per-year census :school-phase))
 
+(defn ehcps-by-key-stage-per-year
+  [census]
+  (ehcp-heatmap-per-year census :key-stage))
+
 (defn ehcps-by-ncy-per-year
   [census]
   (ehcp-heatmap-per-year census :academic-year))
@@ -469,6 +487,10 @@
   [census]
   (ehcps-yoy-change census :school-phase))
 
+(defn ehcps-by-key-stage-yoy-change
+  [census]
+  (ehcps-yoy-change census :key-stage))
+
 (defn ehcps-by-ncy-yoy-change
   [census]
   (ehcps-yoy-change census :academic-year))
@@ -542,6 +564,14 @@
 (defn ehcps-by-school-phase-yoy-pct-change
   [census]
   (ehcp-yoy-pct-change census :school-phase))
+
+(defn ehcps-by-key-stage-yoy-pct-change
+  [census]
+  (ehcp-yoy-pct-change census :key-stage))
+
+(defn ehcps-by-key-stage-yoy-pct-change
+  [census]
+  (ehcp-yoy-pct-change census :key-stage))
 
 (defn ehcps-by-ncy-yoy-pct-change
   [census]
@@ -625,6 +655,10 @@
   [transitions]
   (transitions-heatmap-per-year transitions :school-phase-2 tr/joiner?))
 
+(defn joiners-by-key-stage-per-year
+  [transitions]
+  (transitions-heatmap-per-year transitions :key-stage-2 tr/joiner?))
+
 (defn joiners-by-ncy-per-year
   [transitions]
   (transitions-heatmap-per-year transitions :academic-year-2 tr/joiner?))
@@ -644,6 +678,14 @@
        (transitions-heatmap-per-year :scenario witan.send.adroddiad.transitions/leaver?)))
   ([transitions]
    (leavers-by-ehcp-per-year transitions {})))
+
+(defn leavers-by-school-phase-per-year
+  [transitions]
+  (transitions-heatmap-per-year transitions :school-phase-1 tr/leaver?))
+
+(defn leavers-by-key-stage-per-year
+  [transitions]
+  (transitions-heatmap-per-year transitions :key-stage-1 tr/leaver?))
 
 (defn leavers-by-ncy-per-year
   [transitions]
@@ -807,6 +849,14 @@
                                 most-recent-year (inc most-recent-year)
                                 y-field-label x-field-label)
        :white-text-test white-text-test}))))
+
+(defn joiners-by-setting-and-school-phase
+  [transitions]
+  (joiners-by-two-domains transitions :school-phase-2 :setting-2))
+
+(defn joiners-by-setting-and-key-stage
+  [transitions]
+  (joiners-by-two-domains transitions :key-stage-2 :setting-2))
 
 (defn joiners-by-setting-and-ncy
   [transitions]
