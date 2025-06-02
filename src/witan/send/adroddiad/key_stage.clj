@@ -83,7 +83,7 @@
 (defn ncy->key-stage
   "Given National Curriculum Year `x` and [optional] map of `key-stages`,
    returns the MC abbreviation for the Key Stage containing it.
-  `ket-stages` must be a map with keys the key stage
+  `key-stages` must be a map with keys the key stage
    and values maps containing a `:ncys` key whose value is a collection of the NCYs for that key stage.
    Defaults to the namespace `key-stages` if not specified."
   ([x] (ncy->key-stage x key-stages))
