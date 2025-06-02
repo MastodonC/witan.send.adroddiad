@@ -80,15 +80,24 @@
 
 
 ;;; # Functions to manipulate key-stages
+(defn ncy->key-stage-map
+  "Given [optional] `key-stages` definition map (defaults to namespace definition) 
+   mapping each key-stage to a map containing a `:ncys` key whose value is a 
+   collection of the NCYs for that key stage, returns a map mapping NCY to key-stage.
+   Note that if an NCY is (erronously) specified in multiple key-stages then the
+   first defined is used."
+  ([] (ncy->key-stage-map key-stages))
+  ([key-stages]
+   (into (sorted-map)
+         (map (fn [[k {:keys [ncys]}]]
+                (zipmap ncys (repeat k))))
+         (reverse key-stages))))
+
 (defn ncy->key-stage
-  "Given National Curriculum Year `x` and [optional] map of `key-stages`,
-   returns the MC abbreviation for the Key Stage containing it.
-  `key-stages` must be a map with keys the key stage
-   and values maps containing a `:ncys` key whose value is a collection of the NCYs for that key stage.
-   Defaults to the namespace `key-stages` if not specified."
+  "Given National Curriculum Year `x` and [optional] `key-stages` definition map
+   mapping each key-stage to a map containing a `:ncys` key whose value is a 
+   collection of the NCYs for that key stage, returns the key-stage (key) for
+   containing it. `key-stages` defaults fo the namespace definition if not specified."
   ([x] (ncy->key-stage x key-stages))
   ([x key-stages]
-   (some (fn [[k {:keys [ncys]}]]
-           (when (contains? ncys x) k))
-         key-stages)))
-
+   (get (ncy->key-stage-map key-stages) x)))

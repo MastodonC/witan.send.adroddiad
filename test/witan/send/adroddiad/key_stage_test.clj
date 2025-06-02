@@ -2,6 +2,79 @@
   (:require [clojure.test :refer [deftest testing is]]
             [witan.send.adroddiad.key-stage :as key-stage]))
 
+(deftest ncy->key-stage-map
+  (testing "Default mapping of NCY to key stage."
+    (is (= (key-stage/ncy->key-stage-map)
+           (merge (zipmap [-4 -3 -2 -1 0]     (repeat "early-years"))
+                  (zipmap [1 2]               (repeat "key-stage-1"))
+                  (zipmap [3 4 5 6]           (repeat "key-stage-2"))
+                  (zipmap [7 8 9]             (repeat "key-stage-3"))
+                  (zipmap [10 11]             (repeat "key-stage-4"))
+                  (zipmap [12 13 14]          (repeat "key-stage-5"))
+                  (zipmap [15 16 17 18 19 20] (repeat "post-19"))))))
+
+  (testing "Custom `key-stages` definitions, with `:ncys` as sets."
+    (is (= (-> {"Stage A" {:ncys #{109 108}}
+                "Stage B" {:ncys #{110 111 112}}}
+               key-stage/ncy->key-stage-map)
+           ;; Note: Map is sorted by NCY
+           (sorted-map 108 "Stage A"
+                       109 "Stage A"
+                       110 "Stage B"
+                       111 "Stage B"
+                       112 "Stage B"))))
+  
+  (testing "Custom `key-stages` definitions, with `:ncys` as vector and sequence."
+    (is (= (-> {"Stage A" {:ncys [109 108]}
+                "Stage B" {:ncys '(110 111 112)}}
+               key-stage/ncy->key-stage-map)
+           ;; Note: Map is sorted by NCY
+           (sorted-map 108 "Stage A"
+                       109 "Stage A"
+                       110 "Stage B"
+                       111 "Stage B"
+                       112 "Stage B"))))
+
+  (testing "First key-stage defined containing NCY is used when there are overlaps."
+    (is (= (-> (sorted-map
+                "Stage A" {:ncys [108 109 110]}
+                "Stage B" {:ncys [110 111 112]})
+               keys)
+           ;; Note: Map sorted by keys, so "Stage A" is defined first
+           '("Stage A" "Stage B")))
+    (is (= (-> (sorted-map
+                "Stage A" {:ncys [108 109 110]}
+                "Stage B" {:ncys [110 111 112]})
+               key-stage/ncy->key-stage-map)
+           ;; Note: So key-stage for NCY 110 is "Stage A"
+           (sorted-map 108 "Stage A"
+                       109 "Stage A"
+                       110 "Stage A"
+                       111 "Stage B"
+                       112 "Stage B")))
+    ;; Reversing the definition order
+    (is (= (-> (sorted-map-by #(compare %2 %1)
+                              "Stage A" {:ncys [108 109 110]}
+                              "Stage B" {:ncys [110 111 112]})
+               keys)
+           ;; Note: Map sorted by keys descending, so "Stage B" is defined first
+           '("Stage B" "Stage A")))
+    (is (= (-> (sorted-map-by #(compare %2 %1)
+                              "Stage A" {:ncys [108 109 110]}
+                              "Stage B" {:ncys [110 111 112]})
+               key-stage/ncy->key-stage-map)
+           ;; Note: So key-stage for NCY 110 is "Stage B"
+           (sorted-map 108 "Stage A"
+                       109 "Stage A"
+                       110 "Stage B"
+                       111 "Stage B"
+                       112 "Stage B"))))
+
+  (testing "Repetition of NCY within a definition is ignored."
+    (is (= (-> {"Stage C" {:ncys [120 120 120]}}
+               key-stage/ncy->key-stage-map)
+           {120 "Stage C"}))))
+
 (deftest ncy->key-stage
   (testing "For NCY not in (range -4 (inc 20)), key-stage should be nil."
     (is (->> nil key-stage/ncy->key-stage nil?))
