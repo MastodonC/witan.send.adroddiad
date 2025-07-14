@@ -304,19 +304,20 @@
            chart-title
            chart-height chart-width
            x x-title x-format
-           y y-title y-format y-scale y-zero y-axis-format
+           y y-title y-format y-scale y-zero y-tooltip-format
            group group-title
            colors-and-shapes
            legend]
     :or   {chart-height vs/full-height
            chart-width  vs/full-width
-           y-format     ".0f"
+           y-format     ",.0f"
            y-zero       true
            y-scale      false
            legend       true}}]
-  (let [tooltip [{:field group :title group-title}
-                 {:field x :title x-title :format x-format :type "temporal"}
-                 {:field y :title y-title :format y-format :type "quantitative"}]]
+  (let [y-tooltip-format (or y-tooltip-format y-format)
+        tooltip          [{:field group :title group-title}
+                          {:field x :title x-title :type "temporal"     :format x-format}
+                          {:field y :title y-title :type "quantitative" :format y-tooltip-format}]]
     {:height   chart-height
      :width    chart-width
      :title    {:text     chart-title
@@ -341,7 +342,7 @@
                 :y     {:title y-title
                         :scale {:domain y-scale
                                 :zero   y-zero}
-                        :axis   {:format (or y-axis-format y-format)}}
+                        :axis   {:format y-format}}
                 :color {:legend legend}}
      :layer    [{:mark     {:type  "line"
                             :size  2
