@@ -75,7 +75,7 @@
   [{:keys [data
            chart-title
            x x-title x-format x-scale
-           y y-title y-format y-scale y-zero
+           y y-title y-format y-scale y-zero y-tooltip-format
            orl irl iru oru
            tooltip-field tooltip-formatf
            group group-title
@@ -90,10 +90,11 @@
            tooltip-field :tooltip-column
            legend        true}
     :as   plot-spec}]
-  (let [tooltip-formatf       (or tooltip-formatf
+  (let [y-tooltip-format      (or y-tooltip-format y-format)
+        tooltip-formatf       (or tooltip-formatf
                                   (five-number-summary-tooltip (assoc (select-keys plot-spec [:tooltip-field
                                                                                               :orl :irl :y :iru :oru])
-                                                                      :fmt (str "%" (str/replace y-format #"%" "%%")))))
+                                                                      :fmt (str "%" (str/replace y-tooltip-format #"%" "%%")))))
         tooltip-group-formatf (fn [g] (str g " " (->> g
                                                       (get (as-> colors-and-shapes $
                                                              (zipmap (:domain-value $) (:unicode-shape $)))))))]
@@ -161,7 +162,7 @@
            chart-title
            chart-height chart-width
            x x-title x-format
-           y y-title y-format y-zero y-scale
+           y y-title y-format y-scale y-zero y-tooltip-format
            oru irl iru orl
            tooltip-field tooltip-formatf
            group group-title
@@ -175,13 +176,14 @@
            tooltip-field :tooltip-column
            legend        true}
     :as   plot-spec}]
-  (let [tooltip-formatf (or tooltip-formatf
+  (let [y-tooltip-format (or y-tooltip-format y-format)
+        tooltip-formatf  (or tooltip-formatf
                             (five-number-summary-tooltip (assoc (select-keys plot-spec [:tooltip-field
                                                                                         :orl :irl :y :iru :oru])
-                                                                :fmt (str "%" (str/replace y-format #"%" "%%"))
+                                                                 :fmt (str "%" (str/replace y-tooltip-format #"%" "%%"))
                                                                 :f   identity)))
-        tooltip         [{:field group :title group-title}
-                         {:field x :title x-title :type "temporal" :format x-format }
+        tooltip          [{:field group :title group-title}
+                          {:field x :title x-title :type "temporal" :format x-format}
                          {:field tooltip-field :title y-title}
                          {:field y :title y-title}]]
     {:height   chart-height
@@ -205,7 +207,8 @@
                         :axis   {:format x-format}}
                 :y     {:title y-title
                         :scale {:domain y-scale
-                                :zero   y-zero}}
+                                :zero   y-zero}
+                        :axis   {:format y-format}}
                 :color {:legend legend}}
      :layer    [{:mark     {:type "line"
                             :size 5}
@@ -230,7 +233,7 @@
            chart-title
            chart-height chart-width
            x x-title x-format
-           y y-title y-format y-zero y-scale
+           y y-title y-format y-scale y-zero y-tooltip-format
            oru irl iru orl
            tooltip-field tooltip-formatf
            group group-title
@@ -244,13 +247,14 @@
            tooltip-field :tooltip-column
            legend        true}
     :as   plot-spec}]
-  (let [tooltip-formatf (or tooltip-formatf
+  (let [y-tooltip-format (or y-tooltip-format y-format)
+        tooltip-formatf  (or tooltip-formatf
                             (five-number-summary-tooltip (assoc (select-keys plot-spec [:tooltip-field
                                                                                         :orl :irl :y :iru :oru])
-                                                                :fmt (str "%" (str/replace y-format #"%" "%%"))
+                                                                 :fmt (str "%" (str/replace y-tooltip-format #"%" "%%"))
                                                                 :f   identity)))
         tooltip         [{:field group :title group-title}
-                         {:field x :title x-title :type "temporal" :format x-format }
+                         {:field x :title x-title :type "temporal" :format x-format}
                          {:field tooltip-field :title y-title}
                          {:field y :title y-title}]]
     {:height   chart-height
@@ -274,7 +278,8 @@
                         :axis   {:format x-format}}
                 :y     {:title y-title
                         :scale {:domain y-scale
-                                :zero   y-zero}}
+                                :zero   y-zero}
+                        :axis   {:format y-format}}
                 :color {:legend legend}}
      :layer    [{:mark     {:type  "line"
                             :size  2
