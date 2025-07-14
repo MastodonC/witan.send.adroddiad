@@ -304,7 +304,7 @@
            chart-title
            chart-height chart-width
            x x-title x-format
-           y y-title y-format y-zero y-scale
+           y y-title y-format y-scale y-zero y-axis-format
            group group-title
            colors-and-shapes
            legend]
@@ -340,7 +340,8 @@
                         :axis   {:format x-format}}
                 :y     {:title y-title
                         :scale {:domain y-scale
-                                :zero   y-zero}}
+                                :zero   y-zero}
+                        :axis   {:format (or y-axis-format y-format)}}
                 :color {:legend legend}}
      :layer    [{:mark     {:type  "line"
                             :size  2
