@@ -75,7 +75,7 @@
   [{:keys [data
            chart-title
            x x-title x-format x-scale
-           y y-title y-format y-scale y-zero
+           y y-title y-format y-scale y-zero y-tooltip-format
            orl irl iru oru
            tooltip-field tooltip-formatf
            group group-title
@@ -90,10 +90,11 @@
            tooltip-field :tooltip-column
            legend        true}
     :as   plot-spec}]
-  (let [tooltip-formatf       (or tooltip-formatf
+  (let [y-tooltip-format      (or y-tooltip-format y-format)
+        tooltip-formatf       (or tooltip-formatf
                                   (five-number-summary-tooltip (assoc (select-keys plot-spec [:tooltip-field
                                                                                               :orl :irl :y :iru :oru])
-                                                                      :fmt (str "%" (str/replace y-format #"%" "%%")))))
+                                                                      :fmt (str "%" (str/replace y-tooltip-format #"%" "%%")))))
         tooltip-group-formatf (fn [g] (str g " " (->> g
                                                       (get (as-> colors-and-shapes $
                                                              (zipmap (:domain-value $) (:unicode-shape $)))))))]
@@ -116,12 +117,7 @@
                                     :type  "quantitative"
                                     :axis  {:format y-format}
                                     :scale {:domain y-scale :zero y-zero}}}
-                 :layer    [{:mark {:type  "line"
-                                    :size  5
-                                    :point {:filled      true #_false
-                                            :size        150
-                                            :strokewidth 0.5}}}
-                            {:mark     "errorband"
+                 :layer    [{:mark     "errorband"
                              :encoding {:y       {:field oru :title y-title :type "quantitative"}
                                         :y2      {:field orl}
                                         :color   {:field group :title group-title}
@@ -131,6 +127,11 @@
                                         :y2      {:field irl}
                                         :color   {:field group :title group-title}
                                         :tooltip nil}}
+                            {:mark {:type  "line"
+                                    :size  5
+                                    :point {:filled      true #_false
+                                            :size        150
+                                            :strokewidth 0.5}}}
                             {:transform [{:filter {:param "hover" :empty false}}] :mark {:type "point" :size 200 :strokeWidth 5}}]}
                 {:data     {:values (-> data
                                         tooltip-formatf
@@ -161,7 +162,7 @@
            chart-title
            chart-height chart-width
            x x-title x-format
-           y y-title y-format y-zero y-scale
+           y y-title y-format y-scale y-zero y-tooltip-format
            oru irl iru orl
            tooltip-field tooltip-formatf
            group group-title
@@ -175,15 +176,16 @@
            tooltip-field :tooltip-column
            legend        true}
     :as   plot-spec}]
-  (let [tooltip-formatf (or tooltip-formatf
-                            (five-number-summary-tooltip (assoc (select-keys plot-spec [:tooltip-field
-                                                                                        :orl :irl :y :iru :oru])
-                                                                :fmt (str "%" (str/replace y-format #"%" "%%"))
-                                                                :f   identity)))
-        tooltip         [{:field group :title group-title}
-                         {:field x :title x-title :type "temporal" :format x-format }
-                         {:field tooltip-field :title y-title}
-                         {:field y :title y-title}]]
+  (let [y-tooltip-format (or y-tooltip-format y-format)
+        tooltip-formatf  (or tooltip-formatf
+                             (five-number-summary-tooltip (assoc (select-keys plot-spec [:tooltip-field
+                                                                                         :orl :irl :y :iru :oru])
+                                                                 :fmt (str "%" (str/replace y-tooltip-format #"%" "%%"))
+                                                                 :f   identity)))
+        tooltip          [{:field group :title group-title}
+                          {:field x :title x-title :type "temporal" :format x-format}
+                          {:field tooltip-field :title y-title}
+                          {:field y :title y-title}]]
     {:height   chart-height
      :width    chart-width
      :title    {:text     chart-title
@@ -205,23 +207,24 @@
                         :axis   {:format x-format}}
                 :y     {:title y-title
                         :scale {:domain y-scale
-                                :zero   y-zero}}
+                                :zero   y-zero}
+                        :axis   {:format y-format}}
                 :color {:legend legend}}
-     :layer    [{:mark     {:type "line"
-                            :size 5}
-                 :encoding {:y       {:field y :type "quantitative"}
-                            ;; color and shape scale and range must be specified or you get extra things in the legend
-                            :color   (vs/color-map data group colors-and-shapes)
+     :layer    [{:mark     "errorband"
+                 :encoding {:y       {:field oru :type "quantitative"}
+                            :y2      {:field orl}
+                            :color   {:field group :title group-title}
                             :tooltip tooltip}}
                 {:mark     "errorband"
                  :encoding {:y       {:field iru :type "quantitative"}
                             :y2      {:field irl}
                             :color   {:field group :title group-title}
                             :tooltip tooltip}}
-                {:mark     "errorband"
-                 :encoding {:y       {:field oru :type "quantitative"}
-                            :y2      {:field orl}
-                            :color   {:field group :title group-title}
+                {:mark     {:type "line"
+                            :size 5}
+                 :encoding {:y       {:field y :type "quantitative"}
+                            ;; color and shape scale and range must be specified or you get extra things in the legend
+                            :color   (vs/color-map data group colors-and-shapes)
                             :tooltip tooltip}}]}))
 
 (defn line-shape-and-ribbon-plot
@@ -230,7 +233,7 @@
            chart-title
            chart-height chart-width
            x x-title x-format
-           y y-title y-format y-zero y-scale
+           y y-title y-format y-scale y-zero y-tooltip-format
            oru irl iru orl
            tooltip-field tooltip-formatf
            group group-title
@@ -244,13 +247,14 @@
            tooltip-field :tooltip-column
            legend        true}
     :as   plot-spec}]
-  (let [tooltip-formatf (or tooltip-formatf
-                            (five-number-summary-tooltip (assoc (select-keys plot-spec [:tooltip-field
-                                                                                        :orl :irl :y :iru :oru])
-                                                                :fmt (str "%" (str/replace y-format #"%" "%%"))
-                                                                :f   identity)))
+  (let [y-tooltip-format (or y-tooltip-format y-format)
+        tooltip-formatf  (or tooltip-formatf
+                             (five-number-summary-tooltip (assoc (select-keys plot-spec [:tooltip-field
+                                                                                         :orl :irl :y :iru :oru])
+                                                                 :fmt (str "%" (str/replace y-tooltip-format #"%" "%%"))
+                                                                 :f   identity)))
         tooltip         [{:field group :title group-title}
-                         {:field x :title x-title :type "temporal" :format x-format }
+                         {:field x :title x-title :type "temporal" :format x-format}
                          {:field tooltip-field :title y-title}
                          {:field y :title y-title}]]
     {:height   chart-height
@@ -274,9 +278,20 @@
                         :axis   {:format x-format}}
                 :y     {:title y-title
                         :scale {:domain y-scale
-                                :zero   y-zero}}
+                                :zero   y-zero}
+                        :axis   {:format y-format}}
                 :color {:legend legend}}
-     :layer    [{:mark     {:type  "line"
+     :layer    [{:mark     "errorband"
+                 :encoding {:y       {:field oru :type "quantitative"}
+                            :y2      {:field orl}
+                            :color   {:field group :title group-title}
+                            :tooltip tooltip}}
+                {:mark     "errorband"
+                 :encoding {:y       {:field iru :type "quantitative"}
+                            :y2      {:field irl}
+                            :color   {:field group :title group-title}
+                            :tooltip tooltip}}
+                {:mark     {:type  "line"
                             :size  2
                             :point {:filled      false
                                     :fill        "white"
@@ -286,16 +301,6 @@
                             ;; color and shape scale and range must be specified or you get extra things in the legend
                             :color   (vs/color-map data group colors-and-shapes)
                             :shape   (vs/shape-map data group colors-and-shapes)
-                            :tooltip tooltip}}
-                {:mark     "errorband"
-                 :encoding {:y       {:field iru :type "quantitative"}
-                            :y2      {:field irl}
-                            :color   {:field group :title group-title}
-                            :tooltip tooltip}}
-                {:mark     "errorband"
-                 :encoding {:y       {:field oru :type "quantitative"}
-                            :y2      {:field orl}
-                            :color   {:field group :title group-title}
                             :tooltip tooltip}}]}))
 
 (defn line-plot
@@ -304,19 +309,20 @@
            chart-title
            chart-height chart-width
            x x-title x-format
-           y y-title y-format y-zero y-scale
+           y y-title y-format y-scale y-zero y-tooltip-format
            group group-title
            colors-and-shapes
            legend]
     :or   {chart-height vs/full-height
            chart-width  vs/full-width
-           #_#_y-format ".0f"
+           y-format     ",.0f"
            y-zero       true
            y-scale      false
            legend       true}}]
-  (let [tooltip [{:field group :title group-title}
-                 {:field x :title x-title :format x-format :type "temporal"}
-                 {:field y :title y-title #_#_:format y-format}]]
+  (let [y-tooltip-format (or y-tooltip-format y-format)
+        tooltip          [{:field group :title group-title}
+                          {:field x :title x-title :type "temporal"     :format x-format}
+                          {:field y :title y-title :type "quantitative" :format y-tooltip-format}]]
     {:height   chart-height
      :width    chart-width
      :title    {:text     chart-title
@@ -340,7 +346,8 @@
                         :axis   {:format x-format}}
                 :y     {:title y-title
                         :scale {:domain y-scale
-                                :zero   y-zero}}
+                                :zero   y-zero}
+                        :axis   {:format y-format}}
                 :color {:legend legend}}
      :layer    [{:mark     {:type  "line"
                             :size  2
