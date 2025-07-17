@@ -31,7 +31,7 @@
    :x-format    "Jan %Y"
    :y           :population
    :y-title     "Population"
-   :y-format    "%,.0f"
+   :y-format    ",.0f"
    :y-zero      true
    :group       :academic-year
    :group-title "NCY"

@@ -162,8 +162,8 @@
 ;;; ## National Curriculum Year Table
 (comment
   (-> (tc/dataset {:ncy ncys})
-      (tc/map-columns :age-at-start-of-school-year [:ncy] #(ncy->age-at-start-of-school-year %))
-      (tc/map-columns :age-at-end-of-school-year [:age-at-start-of-school-year] #(inc %))
+      (tc/map-columns :age-at-start-of-school-year [:ncy] ncy->age-at-start-of-school-year)
+      (tc/map-columns :age-at-end-of-school-year [:age-at-start-of-school-year] inc)
       (tc/set-dataset-name "National Curriculum Year Table"))
   ;; => National Curriculum Year Table [25 3]:
   ;;    | :ncy | :age-at-start-of-school-year | :age-at-end-of-school-year |
