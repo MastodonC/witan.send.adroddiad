@@ -50,8 +50,7 @@
    Specify `num-rows-same-colname` to have the row-count of the number of rows
    with the same values of the key columns in the dataset returned.
    
-   Works within groups for grouped datasets.
-   "
+   Works within groups for grouped datasets."
   ([ds] (non-unique-by ds :all))
   ([ds columns-selector] (non-unique-by ds columns-selector nil))
   ([ds columns-selector & {:keys [num-rows-same-colname]
@@ -65,10 +64,8 @@
            (tc/add-column num-rows-same-colname tc/row-count)
            tc/ungroup
            (tc/select-rows #(-> % (get num-rows-same-colname) (> 1)))
-           (cond-> (not (:num-rows-same-colname options)) (tc/drop-columns num-rows-same-colname))
-           #_((if (:num-rows-same-colname options)
-              identity
-              #(tc/drop-columns % num-rows-same-colname))))))))
+           (tc/reorder-columns (concat (tc/column-names ds) [num-rows-same-colname]))
+           (cond-> (not (:num-rows-same-colname options)) (tc/drop-columns num-rows-same-colname)))))))
 
 (defn non-unique-by-keys
   "Return a row for each combination of key `columns-selector` (default `:all`) 
@@ -81,8 +78,7 @@
    included in the `columns-selector` (or option `include-grouping-columns` is
    specified truthy) they will not be retained in the individual group datasets.
    (Though they can be reinstated on ungrouping by using the 
-   `:add-group-as-column` option of `tc/ungroup.)
-   "
+   `:add-group-as-column` option of `tc/ungroup.)"
   ([ds] (non-unique-by-keys ds :all))
   ([ds columns-selector] (non-unique-by-keys ds columns-selector nil))
   ([ds columns-selector & {:keys [num-rows-same-colname
@@ -91,10 +87,10 @@
                                   include-grouping-columns false}
                            :as   options}]
    (let [by-columns (tc/column-names ds columns-selector)]
+     
      (if (tc/grouped? ds)
+       ;; Process each group, including the `grouping-columns` with the `by-columns` if requested
        (let [grouping-columns (->> ds :name (map keys) (apply concat) distinct)]
-         ;; Process each group, 
-         ;; including the `grouping-columns` with the `by-columns` if requested
          (tc/process-group-data ds
                                 #(non-unique-by-keys %
                                                      (concat
@@ -105,9 +101,8 @@
            (tc/group-by by-columns)
            (tc/aggregate {num-rows-same-colname tc/row-count})
            (tc/select-rows #(-> % (get num-rows-same-colname) (> 1)))
-           ((if (:num-rows-same-colname options)
-              identity
-              #(tc/drop-columns % num-rows-same-colname))))))))
+           (tc/reorder-columns (concat (tc/column-names ds) [num-rows-same-colname]))
+           (cond-> (not (:num-rows-same-colname options)) (tc/drop-columns num-rows-same-colname)))))))
 
 (defn ^:deprecated select-non-unique-keys
   "Return unique combinations of `key-cols` that appear in more than one row of `ds`.
