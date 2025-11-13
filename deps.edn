@@ -17,7 +17,7 @@
                       "-XX:+UseZGC"
                       "--add-modules" "jdk.incubator.foreign,jdk.incubator.vector"
                       "--enable-native-access=ALL-UNNAMED"]}
-  :dev    {:extra-paths ["notebooks" "dev" "test"]
+  :dev    {:extra-paths ["notebooks" "dev"]
            :extra-deps  {}}
   :test   {:extra-paths ["test"]
            :extra-deps  {org.clojure/test.check {:mvn/version "1.1.0"}}}}}
