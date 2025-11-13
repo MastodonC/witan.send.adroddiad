@@ -1,8 +1,8 @@
 {:paths ["src" "resources"]
- :deps  {org.clojure/clojure                        {:mvn/version "1.11.1"}
+ :deps  {org.clojure/clojure                        {:mvn/version "1.12.3"}
          org.clojure/core.async                     {:mvn/version "1.6.681"}
-         techascent/tech.ml.dataset                 {:mvn/version "7.060"}
-         scicloj/tablecloth                         {:mvn/version "7.059"}
+         techascent/tech.ml.dataset                 {:mvn/version "7.067"}
+         scicloj/tablecloth                         {:mvn/version "7.062"}
          com.github.MastodonC/kixi.plot             {:sha "e1c744daddd248ad01c673eab4bfa6fb01d5f7e6"}
          com.github.MastodonC/kixi.large            {:sha "bda0812f692b8521e8273ff8c7754499ee834b5e"}
          com.github.MastodonC/witan.send            {:git/sha "e5a719800d7a66fa186e0ffe67d86c21948f7648"}
