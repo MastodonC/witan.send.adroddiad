@@ -1,8 +1,8 @@
 {:paths ["src" "resources"]
- :deps  {org.clojure/clojure                        {:mvn/version "1.11.1"}
+ :deps  {org.clojure/clojure                        {:mvn/version "1.12.3"}
          org.clojure/core.async                     {:mvn/version "1.6.681"}
-         techascent/tech.ml.dataset                 {:mvn/version "7.060"}
-         scicloj/tablecloth                         {:mvn/version "7.059"}
+         techascent/tech.ml.dataset                 {:mvn/version "7.067"}
+         scicloj/tablecloth                         {:mvn/version "7.062"}
          com.github.MastodonC/kixi.plot             {:sha "e1c744daddd248ad01c673eab4bfa6fb01d5f7e6"}
          com.github.MastodonC/kixi.large            {:sha "bda0812f692b8521e8273ff8c7754499ee834b5e"}
          com.github.MastodonC/witan.send            {:git/sha "e5a719800d7a66fa186e0ffe67d86c21948f7648"}
@@ -10,16 +10,14 @@
          com.cognitect/transit-clj                  {:mvn/version "1.0.324"}
          io.github.nextjournal/clerk                {:mvn/version "0.17.1102"}
          io.github.nextjournal/clerk-slideshow      {:git/sha "f9fb86430ebf533bfc9d5cec5bf0a94ed07146f3"}
-         io.github.matthewdowney/rich-comment-tests {:git/tag "v1.0.3"
-                                                     :git/sha "a8711e9"}
-         com.github.mastodonc/kixi.plugsocket      {:git/sha   "d34235d32f1d156a13f7f2ce09a5a36c923cffb6"}}
+         com.github.mastodonc/kixi.plugsocket       {:git/sha "d34235d32f1d156a13f7f2ce09a5a36c923cffb6"}}
  :aliases
  {:jdk-17 {:jvm-opts ["-XX:-OmitStackTraceInFastThrow"
                       "-Xlog:gc*:gc.log"
                       "-XX:+UseZGC"
                       "--add-modules" "jdk.incubator.foreign,jdk.incubator.vector"
                       "--enable-native-access=ALL-UNNAMED"]}
-  :dev    {:extra-paths ["notebooks" "dev" "test"]
+  :dev    {:extra-paths ["notebooks" "dev"]
            :extra-deps  {}}
   :test   {:extra-paths ["test"]
            :extra-deps  {org.clojure/test.check {:mvn/version "1.1.0"}}}}}
