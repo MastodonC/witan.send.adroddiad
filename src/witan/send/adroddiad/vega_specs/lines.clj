@@ -84,7 +84,6 @@
            legend]
     :or   {chart-height  vs/full-height
            chart-width   vs/full-width
-           y-domain      false
            y-zero        true
            y-format      ",.0f"
            tooltip-field :tooltip-column
@@ -98,41 +97,55 @@
         tooltip-group-formatf (fn [g] (str g " " (->> g
                                                       (get (as-> colors-and-shapes $
                                                              (zipmap (:domain-value $) (:unicode-shape $)))))))]
-    {:data     {:values (-> data
-                            (tc/rows :as-maps))}
+    {:$schema "https://vega.github.io/schema/vega-lite/v6.json"
+     :title    {:text chart-title :fontSize 24}
+     :data     {:values (-> data (tc/rows :as-maps))}
      :height   chart-height
      :width    chart-width
-     :title    {:text chart-title :fontSize 24}
      :config   {:legend {:titleFontSize 20 :labelFontSize 14 :labelLimit 0}
                 :axisX  {:titleFontSize 16 :labelFontSize 12}
                 :axisY  {:titleFontSize 16 :labelFontSize 12}}
-     :encoding {:x     {:field x :title x-title :type "temporal"
-                        :scale {:domain x-scale :x-xero false}
-                        ;; :axis {:format ["%Y"] :tickCount {:interval "month" :step 12}}
-                        }
-                :color {:legend legend}}
+     :encoding (cond->
+                {:x {:title x-title
+                     :field x
+                     :type  "temporal"
+                     :scale {:zero false}
+                     :axis  {:format    x-format
+                             :tickCount {:interval "month"
+                                         :step     12}}}
+                 :y {:title y-title
+                     :type  "quantitative"
+                     :axis  {:format y-format}
+                     :scale {:zero y-zero}}}
+                 (boolean x-scale) (assoc-in [:x :scale :domain] x-scale)
+                 (boolean y-scale) (assoc-in [:y :scale :domain] y-scale)
+                 (not legend)    (assoc :color {:legend nil}))
      :layer    [{:encoding {:color (vs/color-map data group colors-and-shapes)
-                            :shape (vs/shape-map data group colors-and-shapes)
-                            :y     {:field y
-                                    :type  "quantitative"
-                                    :axis  {:format y-format}
-                                    :scale {:domain y-scale :zero y-zero}}}
+                            :shape (vs/shape-map data group colors-and-shapes)}
                  :layer    [{:mark     "errorband"
-                             :encoding {:y       {:field oru :title y-title :type "quantitative"}
-                                        :y2      {:field orl}
-                                        :color   {:field group :title group-title}
+                             :encoding {:y     {:field oru}
+                                        :y2    {:field orl}
+                                        :color {:field group
+                                                :title group-title}
                                         :tooltip nil}}
                             {:mark     "errorband"
-                             :encoding {:y       {:field iru :title y-title :type "quantitative"}
-                                        :y2      {:field irl}
-                                        :color   {:field group :title group-title}
+                             :encoding {:y     {:field iru}
+                                        :y2    {:field irl}
+                                        :color {:field group
+                                                :title group-title}
                                         :tooltip nil}}
-                            {:mark {:type  "line"
-                                    :size  5
-                                    :point {:filled      true #_false
-                                            :size        150
-                                            :strokewidth 0.5}}}
-                            {:transform [{:filter {:param "hover" :empty false}}] :mark {:type "point" :size 200 :strokeWidth 5}}]}
+                            {:mark     {:type  "line"
+                                        :size  3
+                                        :point {:filled      true
+                                                :size        150
+                                                :strokeWidth 1}}
+                             :encoding {:y {:field y}}}
+                            {:transform [{:filter {:param "hover"
+                                                   :empty false}}]
+                             :mark      {:type        "point"
+                                         :size        200
+                                         :strokeWidth 5}
+                             :encoding  {:y {:field y}}}]}
                 {:data     {:values (-> data
                                         tooltip-formatf
                                         (tc/order-by [x])
@@ -142,17 +155,16 @@
                                         (tc/replace-missing :all :value "")
                                         (tc/reorder-columns (cons x (:domain-value colors-and-shapes)))
                                         (tc/rows :as-maps))}
-                 :mark     {:type "rule" :strokeWidth 4}
+                 :mark     {:type "rule" :strokeWidth 10} ;; <- use wide rule while `:nearest` below isn't working
                  :encoding {:opacity {:condition {:value 0.3 :param "hover" :empty false}
-                                      :value     0}
+                                      :value     0.01}
                             :tooltip (into [{:field x :type "temporal" :format x-format :title x-title}]
-                                           (map (fn [g] {:field (tooltip-group-formatf g)}))
+                                           (map (fn [g] {:field (tooltip-group-formatf g) :type "nominal"}))
                                            (keep (into #{} (get data group)) (get colors-and-shapes :domain-value)))}
                  :params   [{:name   "hover"
                              :select {:type    "point"
-                                      :size    200
                                       :fields  [x]
-                                      :nearest true
+                                      :nearest false #_ true ;; <- `true` resulted in `undefined` ToolTip values for groups
                                       :on      "pointerover"
                                       :clear   "pointerout"}}]}]}))
 
@@ -184,9 +196,9 @@
                                                                  :f   identity)))
         tooltip          [{:field group :title group-title}
                           {:field x :title x-title :type "temporal" :format x-format}
-                          {:field tooltip-field :title y-title}
-                          {:field y :title y-title}]]
-    {:height   chart-height
+                          {:field tooltip-field :title y-title}]]
+    {:$schema "https://vega.github.io/schema/vega-lite/v6.json"
+     :height   chart-height
      :width    chart-width
      :title    {:text     chart-title
                 :fontSize 24}
@@ -255,9 +267,9 @@
                                                                  :f   identity)))
         tooltip         [{:field group :title group-title}
                          {:field x :title x-title :type "temporal" :format x-format}
-                         {:field tooltip-field :title y-title}
-                         {:field y :title y-title}]]
-    {:height   chart-height
+                         {:field tooltip-field :title y-title}]]
+    {:$schema "https://vega.github.io/schema/vega-lite/v6.json"
+     :height   chart-height
      :width    chart-width
      :title    {:text     chart-title
                 :fontSize 24}
