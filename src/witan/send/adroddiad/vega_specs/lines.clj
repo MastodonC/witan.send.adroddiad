@@ -82,12 +82,11 @@
            chart-height chart-width
            colors-and-shapes
            legend]
-    :or   {chart-height  vs/full-height
-           chart-width   vs/full-width
-           y-domain      false
+    :or   {y-format      ",.0f"
            y-zero        true
-           y-format      ",.0f"
            tooltip-field :tooltip-column
+           chart-height  vs/full-height
+           chart-width   vs/full-width
            legend        true}
     :as   plot-spec}]
   (let [y-tooltip-format      (or y-tooltip-format y-format)
@@ -98,41 +97,50 @@
         tooltip-group-formatf (fn [g] (str g " " (->> g
                                                       (get (as-> colors-and-shapes $
                                                              (zipmap (:domain-value $) (:unicode-shape $)))))))]
-    {:data     {:values (-> data
-                            (tc/rows :as-maps))}
+    {:$schema "https://vega.github.io/schema/vega-lite/v6.json"
+     :title    {:text chart-title :fontSize 24}
+     :data     {:values (-> data (tc/rows :as-maps))}
      :height   chart-height
      :width    chart-width
-     :title    {:text chart-title :fontSize 24}
      :config   {:legend {:titleFontSize 20 :labelFontSize 14 :labelLimit 0}
                 :axisX  {:titleFontSize 16 :labelFontSize 12}
                 :axisY  {:titleFontSize 16 :labelFontSize 12}}
-     :encoding {:x     {:field x :title x-title :type "temporal"
-                        :scale {:domain x-scale :x-xero false}
-                        ;; :axis {:format ["%Y"] :tickCount {:interval "month" :step 12}}
-                        }
-                :color {:legend legend}}
-     :layer    [{:encoding {:color (vs/color-map data group colors-and-shapes)
-                            :shape (vs/shape-map data group colors-and-shapes)
-                            :y     {:field y
-                                    :type  "quantitative"
-                                    :axis  {:format y-format}
-                                    :scale {:domain y-scale :zero y-zero}}}
+     :encoding (cond->
+                {:x {:title x-title
+                     :field x
+                     :type  "temporal"
+                     :axis  {:format x-format :tickCount {:interval "month" :step 12}}}
+                 :y {:title y-title
+                     :type  "quantitative"
+                     :axis  {:format y-format}
+                     :scale {:zero y-zero}}}
+                 (boolean x-scale) (assoc-in [:x :scale :domain] x-scale)
+                 (boolean y-scale) (assoc-in [:y :scale :domain] y-scale)
+                 (not legend)      (assoc :color {:legend nil}))
+     :layer    [{:encoding {:color (vs/color-map data group colors-and-shapes)}
                  :layer    [{:mark     "errorband"
-                             :encoding {:y       {:field oru :title y-title :type "quantitative"}
-                                        :y2      {:field orl}
-                                        :color   {:field group :title group-title}
+                             :encoding {:y     {:field oru}
+                                        :y2    {:field orl}
+                                        :color {:field group :title group-title}
                                         :tooltip nil}}
                             {:mark     "errorband"
-                             :encoding {:y       {:field iru :title y-title :type "quantitative"}
-                                        :y2      {:field irl}
-                                        :color   {:field group :title group-title}
+                             :encoding {:y     {:field iru}
+                                        :y2    {:field irl}
+                                        :color {:field group :title group-title}
                                         :tooltip nil}}
-                            {:mark {:type  "line"
-                                    :size  5
-                                    :point {:filled      true #_false
-                                            :size        150
-                                            :strokewidth 0.5}}}
-                            {:transform [{:filter {:param "hover" :empty false}}] :mark {:type "point" :size 200 :strokeWidth 5}}]}
+                            {:mark     {:type  "line"
+                                        :size  3
+                                        :point {:filled      true
+                                                :size        150
+                                                :strokeWidth 2}}
+                             :encoding {:y {:field y}}}
+                            {:transform [{:filter {:param "hover"
+                                                   :empty false}}]
+                             :mark      {:type        "point"
+                                         :size        200
+                                         :strokeWidth 5}
+                             :encoding  {:y     {:field y}
+                                         :shape (vs/shape-map data group colors-and-shapes)}}]}
                 {:data     {:values (-> data
                                         tooltip-formatf
                                         (tc/order-by [x])
@@ -142,164 +150,153 @@
                                         (tc/replace-missing :all :value "")
                                         (tc/reorder-columns (cons x (:domain-value colors-and-shapes)))
                                         (tc/rows :as-maps))}
-                 :mark     {:type "rule" :strokeWidth 4}
-                 :encoding {:opacity {:condition {:value 0.3 :param "hover" :empty false}
-                                      :value     0}
-                            :tooltip (into [{:field x :type "temporal" :format x-format :title x-title}]
-                                           (map (fn [g] {:field (tooltip-group-formatf g)}))
+                 :encoding {:tooltip (into [{:field x :type "temporal" :format x-format :title x-title}]
+                                           (map (fn [g] {:field (tooltip-group-formatf g) :type "nominal"}))
                                            (keep (into #{} (get data group)) (get colors-and-shapes :domain-value)))}
-                 :params   [{:name   "hover"
-                             :select {:type    "point"
-                                      :size    200
-                                      :fields  [x]
-                                      :nearest true
-                                      :on      "pointerover"
-                                      :clear   "pointerout"}}]}]}))
+                 :layer [{:mark {:type "rule" :strokeWidth 30 :color "#ffffff"} ;; <- use wide translucent rule for hover while `:nearest` below isn't working
+                          :encoding {:opacity {:value 0.01}}
+                          :params [{:name   "hover"
+                                    :select {:type    "point"
+                                             :fields  [x]
+                                             :nearest false #_true ;; <- `true` resulted in `undefined` ToolTip values for groups
+                                             :on      "pointerover"
+                                             :clear   "pointerout"}}]}
+                         {:mark {:type "rule" :strokeWidth 2 :strokeDash [8 4] :color "#222222"} ;; <- Thin rule to show up on hover over the thick rule above
+                          :encoding {:opacity {:condition {:value 1 :param "hover" :empty false}
+                                               :value     0}}}]}]}))
 
 (defn line-and-ribbon-plot
   "Vega-Lite specs for a line and ribbon plot, by `group`."
   [{:keys [data
            chart-title
-           chart-height chart-width
-           x x-title x-format
+           x x-title x-format x-scale
            y y-title y-format y-scale y-zero y-tooltip-format
-           oru irl iru orl
+           orl irl iru oru
            tooltip-field tooltip-formatf
            group group-title
+           chart-height chart-width
            colors-and-shapes
            legend]
-    :or   {chart-height  vs/full-height
-           chart-width   vs/full-width
-           y-format      ",.0f"
+    :or   {y-format      ",.0f"
            y-zero        true
-           y-scale       false
            tooltip-field :tooltip-column
+           chart-height  vs/full-height
+           chart-width   vs/full-width
            legend        true}
     :as   plot-spec}]
   (let [y-tooltip-format (or y-tooltip-format y-format)
         tooltip-formatf  (or tooltip-formatf
                              (five-number-summary-tooltip (assoc (select-keys plot-spec [:tooltip-field
                                                                                          :orl :irl :y :iru :oru])
-                                                                 :fmt (str "%" (str/replace y-tooltip-format #"%" "%%"))
-                                                                 :f   identity)))
+                                                                 :fmt (str "%" (str/replace y-tooltip-format #"%" "%%")))))
         tooltip          [{:field group :title group-title}
                           {:field x :title x-title :type "temporal" :format x-format}
-                          {:field tooltip-field :title y-title}
-                          {:field y :title y-title}]]
-    {:height   chart-height
-     :width    chart-width
-     :title    {:text     chart-title
-                :fontSize 24}
-     :config   {:legend {:titleFontSize 20
-                         :labelFontSize 14
-                         :labelLimit    0}
-                :axisX  {:titleFontSize 16
-                         :labelFontSize 12}
-                :axisY  {:titleFontSize 16
-                         :labelFontSize 12}}
+                          {:field tooltip-field :title y-title}]]
+    {:$schema "https://vega.github.io/schema/vega-lite/v6.json"
+     :title    {:text chart-title :fontSize 24}
      :data     {:values (-> data
                             tooltip-formatf
                             (tc/rows :as-maps))}
-     :encoding {:x     {:field  x
-                        :title  x-title
-                        :type   "temporal"
-                        :format x-format
-                        :axis   {:format x-format}}
-                :y     {:title y-title
-                        :scale {:domain y-scale
-                                :zero   y-zero}
-                        :axis   {:format y-format}}
-                :color {:legend legend}}
+     :height   chart-height
+     :width    chart-width
+     :config   {:legend {:titleFontSize 20 :labelFontSize 14 :labelLimit 0}
+                :axisX  {:titleFontSize 16 :labelFontSize 12}
+                :axisY  {:titleFontSize 16 :labelFontSize 12}}
+     :encoding (cond->
+                {:x     {:title  x-title
+                         :field  x
+                         :type   "temporal"
+                         :axis   {:format x-format :tickCount {:interval "month" :step 12}}}
+                 :y     {:title y-title
+                         :type  "quantitative"
+                         :axis  {:format y-format}
+                         :scale {:zero y-zero}}
+                 :color (vs/color-map data group colors-and-shapes)}
+                 (boolean x-scale) (assoc-in [:x :scale :domain] x-scale)
+                 (boolean y-scale) (assoc-in [:y :scale :domain] y-scale)
+                 (not legend)      (assoc :color {:legend nil}))
      :layer    [{:mark     "errorband"
-                 :encoding {:y       {:field oru :type "quantitative"}
+                 :encoding {:y       {:field oru}
                             :y2      {:field orl}
                             :color   {:field group :title group-title}
                             :tooltip tooltip}}
                 {:mark     "errorband"
-                 :encoding {:y       {:field iru :type "quantitative"}
+                 :encoding {:y       {:field iru}
                             :y2      {:field irl}
                             :color   {:field group :title group-title}
                             :tooltip tooltip}}
                 {:mark     {:type "line"
-                            :size 5}
-                 :encoding {:y       {:field y :type "quantitative"}
-                            ;; color and shape scale and range must be specified or you get extra things in the legend
-                            :color   (vs/color-map data group colors-and-shapes)
+                            :size 3}
+                 :encoding {:y       {:field y}
                             :tooltip tooltip}}]}))
 
 (defn line-shape-and-ribbon-plot
   "Vega-Lite specs for a line, shape and ribbon plot, by `group`."
   [{:keys [data
            chart-title
-           chart-height chart-width
-           x x-title x-format
+           x x-title x-format x-scale
            y y-title y-format y-scale y-zero y-tooltip-format
-           oru irl iru orl
+           orl irl iru oru
            tooltip-field tooltip-formatf
            group group-title
+           chart-height chart-width
            colors-and-shapes
            legend]
-    :or   {chart-height  vs/full-height
-           chart-width   vs/full-width
-           y-format      ",.0f"
+    :or   {y-format      ",.0f"
            y-zero        true
-           y-scale       false
            tooltip-field :tooltip-column
+           chart-height  vs/full-height
+           chart-width   vs/full-width
            legend        true}
     :as   plot-spec}]
   (let [y-tooltip-format (or y-tooltip-format y-format)
         tooltip-formatf  (or tooltip-formatf
                              (five-number-summary-tooltip (assoc (select-keys plot-spec [:tooltip-field
                                                                                          :orl :irl :y :iru :oru])
-                                                                 :fmt (str "%" (str/replace y-tooltip-format #"%" "%%"))
-                                                                 :f   identity)))
+                                                                 :fmt (str "%" (str/replace y-tooltip-format #"%" "%%")))))
         tooltip         [{:field group :title group-title}
                          {:field x :title x-title :type "temporal" :format x-format}
-                         {:field tooltip-field :title y-title}
-                         {:field y :title y-title}]]
-    {:height   chart-height
-     :width    chart-width
-     :title    {:text     chart-title
-                :fontSize 24}
-     :config   {:legend {:titleFontSize 20
-                         :labelFontSize 14
-                         :labelLimit    0}
-                :axisX  {:titleFontSize 16
-                         :labelFontSize 12}
-                :axisY  {:titleFontSize 16
-                         :labelFontSize 12}}
+                         {:field tooltip-field :title y-title}]]
+    {:$schema "https://vega.github.io/schema/vega-lite/v6.json"
+     :title    {:text chart-title :fontSize 24}
      :data     {:values (-> data
                             tooltip-formatf
                             (tc/rows :as-maps))}
-     :encoding {:x     {:field  x
-                        :title  x-title
-                        :type   "temporal"
-                        :format x-format
-                        :axis   {:format x-format}}
-                :y     {:title y-title
-                        :scale {:domain y-scale
-                                :zero   y-zero}
-                        :axis   {:format y-format}}
-                :color {:legend legend}}
+     :height   chart-height
+     :width    chart-width
+     :config   {:legend {:titleFontSize 20 :labelFontSize 14 :labelLimit 0}
+                :axisX  {:titleFontSize 16 :labelFontSize 12}
+                :axisY  {:titleFontSize 16 :labelFontSize 12}}
+     :encoding (cond->
+                {:x     {:title x-title
+                         :field x
+                         :type  "temporal"
+                         :axis  {:format x-format :tickCount {:interval "month" :step 12}}}
+                 :y     {:title y-title
+                         :type  "quantitative"
+                         :axis  {:format y-format}
+                         :scale {:zero   y-zero}}
+                 :color (vs/color-map data group colors-and-shapes)}
+                 (boolean x-scale) (assoc-in [:x :scale :domain] x-scale)
+                 (boolean y-scale) (assoc-in [:y :scale :domain] y-scale)
+                 (not legend)      (assoc :color {:legend nil}))
      :layer    [{:mark     "errorband"
-                 :encoding {:y       {:field oru :type "quantitative"}
+                 :encoding {:y       {:field oru}
                             :y2      {:field orl}
                             :color   {:field group :title group-title}
                             :tooltip tooltip}}
                 {:mark     "errorband"
-                 :encoding {:y       {:field iru :type "quantitative"}
+                 :encoding {:y       {:field iru}
                             :y2      {:field irl}
                             :color   {:field group :title group-title}
                             :tooltip tooltip}}
                 {:mark     {:type  "line"
-                            :size  2
+                            :size  3
                             :point {:filled      false
                                     :fill        "white"
-                                    :size        50
-                                    :strokewidth 0.5}}
-                 :encoding {:y       {:field y :type "quantitative"}
-                            ;; color and shape scale and range must be specified or you get extra things in the legend
-                            :color   (vs/color-map data group colors-and-shapes)
+                                    :size        150
+                                    :strokeWidth 2}}
+                 :encoding {:y       {:field y}
                             :shape   (vs/shape-map data group colors-and-shapes)
                             :tooltip tooltip}}]}))
 
@@ -307,57 +304,52 @@
   "Vega-Lite specs for a shape and line plot, by `group`."
   [{:keys [data
            chart-title
-           chart-height chart-width
-           x x-title x-format
+           x x-title x-format x-scale
            y y-title y-format y-scale y-zero y-tooltip-format
            group group-title
+           chart-height chart-width
            colors-and-shapes
            legend]
-    :or   {chart-height vs/full-height
-           chart-width  vs/full-width
-           y-format     ",.0f"
+    :or   {y-format     ",.0f"
            y-zero       true
            y-scale      false
+           chart-height vs/full-height
+           chart-width  vs/full-width
            legend       true}}]
   (let [y-tooltip-format (or y-tooltip-format y-format)
         tooltip          [{:field group :title group-title}
                           {:field x :title x-title :type "temporal"     :format x-format}
                           {:field y :title y-title :type "quantitative" :format y-tooltip-format}]]
-    {:height   chart-height
-     :width    chart-width
-     :title    {:text     chart-title
-                :fontSize 24}
-     :config   {:legend {:titleFontSize 20
-                         :labelFontSize 14
-                         :labelLimit    0}
-                :axisX  {:tickcount     7
-                         :tickExtra     true
-                         :labelalign    "center"
-                         :titleFontSize 16
-                         :labelFontSize 12}
-                :axisY  {:titleFontSize 16
-                         :labelFontSize 12}}
+    {:title    {:text chart-title :fontSize 24}
      :data     {:values (-> data
                             (tc/rows :as-maps))}
-     :encoding {:x     {:field  x
-                        :title  x-title
-                        :type   "temporal"
-                        :format x-format
-                        :axis   {:format x-format}}
-                :y     {:title y-title
-                        :scale {:domain y-scale
-                                :zero   y-zero}
-                        :axis   {:format y-format}}
-                :color {:legend legend}}
+     :height   chart-height
+     :width    chart-width
+     :config   {:legend {:titleFontSize 20 :labelFontSize 14 :labelLimit 0}
+                :axisX  {:titleFontSize 16 :labelFontSize 12}
+                :axisY  {:titleFontSize 16 :labelFontSize 12}}
+     :encoding (cond->
+                {:x     {:title  x-title
+                         :field  x
+                         :type   "temporal"
+                         :axis  {:format x-format :tickCount {:interval "month" :step 12}}}
+                 :y     {:title y-title
+                         :type  "quantitative"
+                         :axis  {:format y-format}
+                         :scale {:zero   y-zero}}
+                 :color (vs/color-map data group colors-and-shapes)}
+                 (boolean x-scale) (assoc-in [:x :scale :domain] x-scale)
+                 (boolean y-scale) (assoc-in [:y :scale :domain] y-scale)
+                 (not legend)      (assoc :color {:legend nil}))
      :layer    [{:mark     {:type  "line"
-                            :size  2
+                            :size  3
                             :point {:filled      false
                                     :fill        "white"
-                                    :size        50
-                                    :strokewidth 0.5}}
-                 :encoding {:y       {:field y :type "quantitative"}
-                            ;; color and shape scale and range must be specified or you get extra things in the legend
-                            :color   (assoc (vs/color-map data group colors-and-shapes) :title group-title)
+                                    :size        150
+                                    :strokeWidth 2}}
+                 :encoding {:y       {:field y}
+                            #_#_:color   (assoc (vs/color-map data group colors-and-shapes) :title group-title)
+                            :color   {:field group :title group-title}
                             :shape   (vs/shape-map data group colors-and-shapes)
                             :tooltip tooltip}}]}))
 
