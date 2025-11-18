@@ -155,18 +155,20 @@
                                         (tc/replace-missing :all :value "")
                                         (tc/reorder-columns (cons x (:domain-value colors-and-shapes)))
                                         (tc/rows :as-maps))}
-                 :mark     {:type "rule" :strokeWidth 10} ;; <- use wide rule while `:nearest` below isn't working
-                 :encoding {:opacity {:condition {:value 0.3 :param "hover" :empty false}
-                                      :value     0.01}
-                            :tooltip (into [{:field x :type "temporal" :format x-format :title x-title}]
+                 :encoding {:tooltip (into [{:field x :type "temporal" :format x-format :title x-title}]
                                            (map (fn [g] {:field (tooltip-group-formatf g) :type "nominal"}))
                                            (keep (into #{} (get data group)) (get colors-and-shapes :domain-value)))}
-                 :params   [{:name   "hover"
-                             :select {:type    "point"
-                                      :fields  [x]
-                                      :nearest false #_ true ;; <- `true` resulted in `undefined` ToolTip values for groups
-                                      :on      "pointerover"
-                                      :clear   "pointerout"}}]}]}))
+                 :layer [{:mark {:type "rule" :strokeWidth 30 :color "#ffffff"} ;; <- use wide translucent rule for hover while `:nearest` below isn't working
+                          :encoding {:opacity {:value 0.01}}
+                          :params [{:name   "hover"
+                                    :select {:type    "point"
+                                             :fields  [x]
+                                             :nearest false #_true ;; <- `true` resulted in `undefined` ToolTip values for groups
+                                             :on      "pointerover"
+                                             :clear   "pointerout"}}]}
+                         {:mark {:type "rule" :strokeWidth 2 :strokeDash [8 4] :color "#ff0000"} ;; <- Thin rule to show up on hover over the thick rule above
+                          :encoding {:opacity {:condition {:value 1 :param "hover" :empty false}
+                                               :value     0}}}]}]}))
 
 (defn line-and-ribbon-plot
   "Vega-Lite specs for a line and ribbon plot, by `group`."
