@@ -166,7 +166,7 @@
                                              :nearest false #_true ;; <- `true` resulted in `undefined` ToolTip values for groups
                                              :on      "pointerover"
                                              :clear   "pointerout"}}]}
-                         {:mark {:type "rule" :strokeWidth 2 :strokeDash [8 4] :color "#ff0000"} ;; <- Thin rule to show up on hover over the thick rule above
+                         {:mark {:type "rule" :strokeWidth 2 :strokeDash [8 4] :color "#222222"} ;; <- Thin rule to show up on hover over the thick rule above
                           :encoding {:opacity {:condition {:value 1 :param "hover" :empty false}
                                                :value     0}}}]}]}))
 
