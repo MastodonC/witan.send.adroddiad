@@ -88,16 +88,18 @@
       (ds->color-and-shape-lookup :domain-value)))
 
 (defn color-map [plot-data color-field color-lookup]
-  (let [group-keys (into (sorted-set) (get plot-data color-field))
+  (let [group-keys      (into (sorted-set) (get plot-data color-field))
         filtered-colors (tc/select-rows color-lookup #(group-keys (get % :domain-value)))]
     {:field color-field
-     :scale {:range (into [] (:color filtered-colors))
+     :type  "nominal"
+     :scale {:range  (into [] (:color filtered-colors))
              :domain (into [] (:domain-value filtered-colors))}}))
 
 (defn shape-map [plot-data shape-field shape-lookup]
-  (let [group-keys (into (sorted-set) (get plot-data shape-field))
+  (let [group-keys      (into (sorted-set) (get plot-data shape-field))
         filtered-shapes (tc/select-rows shape-lookup #(group-keys (get % :domain-value)))]
     {:field shape-field
-     :scale {:range (into [] (:shape filtered-shapes))
+     :type  "nominal"
+     :scale {:range  (into [] (:shape filtered-shapes))
              :domain (into [] (:domain-value filtered-shapes))}}))
 
