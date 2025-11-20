@@ -111,35 +111,34 @@
                      :type  "temporal"
                      :axis  {:format x-format :tickCount {:interval "month" :step 12}}}
                  :y {:title y-title
-                     :type  "quantitative"
                      :axis  {:format y-format}
                      :scale {:zero y-zero}}}
                  (boolean x-scale) (assoc-in [:x :scale :domain] x-scale)
                  (boolean y-scale) (assoc-in [:y :scale :domain] y-scale)
                  (not legend)      (assoc :color {:legend nil}))
-     :layer    [{:encoding {:color (vs/color-map data group colors-and-shapes)}
+     :layer    [{:encoding {:color (merge {:title group-title}
+                                          (vs/color-map data group colors-and-shapes))}
                  :layer    [{:mark     "errorband"
-                             :encoding {:y     {:field oru}
-                                        :y2    {:field orl}
-                                        :color {:field group :title group-title}
+                             :encoding {:y     {:field oru :type "quantitative"}
+                                        :y2    {:field orl :type "quantitative"}
                                         :tooltip nil}}
                             {:mark     "errorband"
-                             :encoding {:y     {:field iru}
-                                        :y2    {:field irl}
-                                        :color {:field group :title group-title}
+                             :encoding {:y     {:field iru :type "quantitative"}
+                                        :y2    {:field irl :type "quantitative"}
                                         :tooltip nil}}
                             {:mark     {:type  "line"
                                         :size  3
                                         :point {:filled      true
                                                 :size        150
                                                 :strokeWidth 2}}
-                             :encoding {:y {:field y}}}
+                             :encoding {:y     {:field y :type "quantitative"}
+                                        :shape (vs/shape-map data group colors-and-shapes)}}
                             {:transform [{:filter {:param "hover"
                                                    :empty false}}]
                              :mark      {:type        "point"
                                          :size        200
                                          :strokeWidth 5}
-                             :encoding  {:y     {:field y}
+                             :encoding  {:y     {:field y :type "quantitative"}
                                          :shape (vs/shape-map data group colors-and-shapes)}}]}
                 {:data     {:values (-> data
                                         tooltip-formatf
@@ -208,26 +207,24 @@
                          :type   "temporal"
                          :axis   {:format x-format :tickCount {:interval "month" :step 12}}}
                  :y     {:title y-title
-                         :type  "quantitative"
                          :axis  {:format y-format}
                          :scale {:zero y-zero}}
-                 :color (vs/color-map data group colors-and-shapes)}
+                 :color (merge {:title group-title}
+                               (vs/color-map data group colors-and-shapes))}
                  (boolean x-scale) (assoc-in [:x :scale :domain] x-scale)
                  (boolean y-scale) (assoc-in [:y :scale :domain] y-scale)
                  (not legend)      (assoc :color {:legend nil}))
      :layer    [{:mark     "errorband"
-                 :encoding {:y       {:field oru}
-                            :y2      {:field orl}
-                            :color   {:field group :title group-title}
+                 :encoding {:y       {:field oru :type "quantitative"}
+                            :y2      {:field orl :type "quantitative"}
                             :tooltip tooltip}}
                 {:mark     "errorband"
-                 :encoding {:y       {:field iru}
-                            :y2      {:field irl}
-                            :color   {:field group :title group-title}
+                 :encoding {:y       {:field iru :type "quantitative"}
+                            :y2      {:field irl :type "quantitative"}
                             :tooltip tooltip}}
                 {:mark     {:type "line"
                             :size 3}
-                 :encoding {:y       {:field y}
+                 :encoding {:y       {:field y :type "quantitative"}
                             :tooltip tooltip}}]}))
 
 (defn line-shape-and-ribbon-plot
@@ -273,22 +270,20 @@
                          :type  "temporal"
                          :axis  {:format x-format :tickCount {:interval "month" :step 12}}}
                  :y     {:title y-title
-                         :type  "quantitative"
                          :axis  {:format y-format}
                          :scale {:zero   y-zero}}
-                 :color (vs/color-map data group colors-and-shapes)}
+                 :color (merge {:title group-title}
+                               (vs/color-map data group colors-and-shapes))}
                  (boolean x-scale) (assoc-in [:x :scale :domain] x-scale)
                  (boolean y-scale) (assoc-in [:y :scale :domain] y-scale)
                  (not legend)      (assoc :color {:legend nil}))
      :layer    [{:mark     "errorband"
-                 :encoding {:y       {:field oru}
-                            :y2      {:field orl}
-                            :color   {:field group :title group-title}
+                 :encoding {:y       {:field oru :type "quantitative"}
+                            :y2      {:field orl :type "quantitative"}
                             :tooltip tooltip}}
                 {:mark     "errorband"
-                 :encoding {:y       {:field iru}
-                            :y2      {:field irl}
-                            :color   {:field group :title group-title}
+                 :encoding {:y       {:field iru :type "quantitative"}
+                            :y2      {:field irl :type "quantitative"}
                             :tooltip tooltip}}
                 {:mark     {:type  "line"
                             :size  3
@@ -296,7 +291,7 @@
                                     :fill        "white"
                                     :size        150
                                     :strokeWidth 2}}
-                 :encoding {:y       {:field y}
+                 :encoding {:y       {:field y :type "quantitative"}
                             :shape   (vs/shape-map data group colors-and-shapes)
                             :tooltip tooltip}}]}))
 
@@ -334,10 +329,10 @@
                          :type   "temporal"
                          :axis  {:format x-format :tickCount {:interval "month" :step 12}}}
                  :y     {:title y-title
-                         :type  "quantitative"
                          :axis  {:format y-format}
                          :scale {:zero   y-zero}}
-                 :color (vs/color-map data group colors-and-shapes)}
+                 :color (merge {:title group-title}
+                               (vs/color-map data group colors-and-shapes))}
                  (boolean x-scale) (assoc-in [:x :scale :domain] x-scale)
                  (boolean y-scale) (assoc-in [:y :scale :domain] y-scale)
                  (not legend)      (assoc :color {:legend nil}))
@@ -347,9 +342,7 @@
                                     :fill        "white"
                                     :size        150
                                     :strokeWidth 2}}
-                 :encoding {:y       {:field y}
-                            #_#_:color   (assoc (vs/color-map data group colors-and-shapes) :title group-title)
-                            :color   {:field group :title group-title}
+                 :encoding {:y       {:field y :type  "quantitative"}
                             :shape   (vs/shape-map data group colors-and-shapes)
                             :tooltip tooltip}}]}))
 
@@ -398,9 +391,10 @@
    - Set any remaining `:tooltip` values to `nil`."
   [chart]
   (as-> chart $
-    ;; Remove "hover" rule layer
-    (update $ :layer (partial remove (fn [m] (and (some->> m :mark :type (= "rule"))
-                                                  (some->> m :params (some #(some->> % :name (= "hover"))))))))
+    ;; Remove "hover" rule sub-layer
+    (update $ :layer (partial remove (fn [m] (and (some->> m :data)
+                                                  (some->> m :layer (some #(some->> % :mark :type (= "rule"))))
+                                                  (some->> m :layer (some #(some->> % :params first :name (= "hover"))))))))
     ;; Remove any `:transform` layers within layers
     (update $ :layer (partial mapv (fn [m] (if (contains? m :layer)
                                              (update m :layer (partial remove #(contains? % :transform)))
