@@ -386,20 +386,24 @@
      (These are added as tooltip by `line-and-ribbon-and-rule-plot`s.)
    - Set any remaining `:tooltip` values to `nil`."
   [chart]
-  (as-> chart $
-    ;; Remove "hover" rule sub-layer
-    (update $ :layer (partial remove (fn [m] (and (some->> m :data)
-                                                  (some->> m :layer (some #(some->> % :mark :type (= "rule"))))
-                                                  (some->> m :layer (some #(some->> % :params first :name (= "hover"))))))))
-    ;; Remove any `:transform` layers within layers
-    (update $ :layer (partial mapv (fn [m] (if (contains? m :layer)
-                                             (update m :layer (partial remove #(contains? % :transform)))
-                                             m))))
-    ;; Disable any remaining `:tooltip`s by setting value to `nil`
-    (walk/prewalk (fn [e] (if (and (map-entry? e) (= (key e) :tooltip))
-                            [(key e) nil]
-                            e))
-                  $)))
+  (cond
+    (contains? chart :layer)
+    (as-> chart $
+     ;; Remove "hover" rule sub-layer
+     (update $ :layer (partial remove (fn [m] (and (some->> m :data)
+                                                   (some->> m :layer (some #(some->> % :mark :type (= "rule"))))
+                                                   (some->> m :layer (some #(some->> % :params first :name (= "hover"))))))))
+     ;; Remove any `:transform` layers within layers
+     (update $ :layer (partial mapv (fn [m] (if (contains? m :layer)
+                                              (update m :layer (partial remove #(contains? % :transform)))
+                                              m))))
+     ;; Disable any remaining `:tooltip`s by setting value to `nil`
+     (walk/prewalk (fn [e] (if (and (map-entry? e) (= (key e) :tooltip))
+                             [(key e) nil]
+                             e))
+                   $))
+    :else
+    chart))
 
 (defn process-colors-and-shapes
   "Processes a `plot-spec` to:
