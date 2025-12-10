@@ -3,7 +3,7 @@
   (:require [clojure.math :as math]
             [clojure.set :as set]
             [tablecloth.api :as tc]
-            [witan.send.adroddiad.school-phase :as school-phase]))
+            [witan.send.adroddiad.domain.school-phase :as school-phase]))
 
 (defn compare-mapped-keys
   [m k1 k2]
@@ -81,7 +81,7 @@
    to customise names, labels and definitions."
   [& {:keys [school-phases
              scap-send-provision-types]
-      :or   {school-phases             school-phase/school-phases
+      :or   {school-phases             school-phase/dictionary
              scap-send-provision-types scap-send-provision-types}}]
   (into (sorted-map)
         (map (fn [[k v]]

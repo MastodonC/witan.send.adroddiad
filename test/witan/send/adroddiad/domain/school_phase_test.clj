@@ -1,6 +1,6 @@
-(ns witan.send.adroddiad.school-phase-test
+(ns witan.send.adroddiad.domain.school-phase-test
   (:require [clojure.test :refer [deftest testing is]]
-            [witan.send.adroddiad.school-phase :as school-phase]))
+            [witan.send.adroddiad.domain.school-phase :as school-phase]))
 
 (deftest ncy->school-phase-map
   (testing "Default mapping of NCY to key stage."

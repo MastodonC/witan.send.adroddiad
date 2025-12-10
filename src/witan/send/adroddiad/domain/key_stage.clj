@@ -1,4 +1,4 @@
-(ns witan.send.adroddiad.key-stage
+(ns witan.send.adroddiad.domain.key-stage
   "Definitions and functions for handling Mastodon C's definitions of National Curriculum Key Stage.
    - KS1-4 from https://www.gov.uk/national-curriculum
    - Early Years as 'from birth to 5 years old' per https://www.gov.uk/early-years-foundation-stage
@@ -23,8 +23,8 @@
 ;; - Keys are abbreviations rather than keywords, to facilitate use in datasets & files as strings.
 ;; - Abbreviations are hyphenated so "keyword friendly" and can be converted to keywords if required.
 ;; - The map is sorted so that `(keys key-stages)` returns the school phases in the correct order.
-(def key-stages
-  "Mastodon C National Curriculum Key Stage definitions as a sorted map."
+(def dictionary
+  "Mastodon C National Curriculum Key Stage dictionary"
   (-> {"early-years" {:order      0
                       :name       "Early Years Foundation Stage"
                       :label      "Early Years"
@@ -71,24 +71,33 @@
       (update-vals (fn [m] (assoc m :ncys (into (sorted-set) (range (:ncy-from m) (inc (:ncy-to m)))))))
       (as-> $ (into (sorted-map-by (key-comparator-fn-by (update-vals $ :order))) $))))
 
-(def key-stages-ds
-  "Mastodon C National Curriculum Key Stage definitions as a dataset."
-  (as-> key-stages $
+(def ^:deprecated key-stages dictionary)
+
+(def abbreviations
+  "Mastodon C National Curriculum Key Stage abbreviations as a sorted set"
+  (into (sorted-set-by (key-comparator-fn-by (update-vals dictionary :order)))
+        (keys dictionary)))
+
+(def dataset
+  "Mastodon C National Curriculum Key Stage dictionary as a dataset."
+  (as-> dictionary $
     (map (fn [[k v]] (assoc v :abbreviation k)) $)
     (tc/dataset $)
     (tc/reorder-columns $ [:abbreviation])
     (tc/set-dataset-name $ "key-stages")))
 
+(def ^:deprecated key-stages-ds dataset)
+
 
 
 ;;; # Functions to manipulate key-stages
 (defn ncy->key-stage-map
-  "Given [optional] `key-stages` definition map (defaults to namespace definition) 
-   mapping each key-stage to a map containing a `:ncys` key whose value is a 
-   collection of the NCYs for that key stage, returns a map mapping NCY to key-stage.
+  "Given [optional] `dictionary` (defaults to namespace definition) mapping each
+   key-stage to a map containing a `:ncys` key whose value is a collection of 
+   the NCYs for that key stage, returns a map mapping NCY to key-stage.
    Note that if an NCY is (erronously) specified in multiple key-stages then the
    first defined is used."
-  ([] (ncy->key-stage-map key-stages))
+  ([] (ncy->key-stage-map dictionary))
   ([key-stages]
    (into (sorted-map)
          (map (fn [[k {:keys [ncys]}]]
@@ -96,10 +105,10 @@
          (reverse key-stages))))
 
 (defn ncy->key-stage
-  "Given National Curriculum Year `x` and [optional] `key-stages` definition map
-   mapping each key-stage to a map containing a `:ncys` key whose value is a 
-   collection of the NCYs for that key stage, returns the key-stage (key) for
-   containing it. `key-stages` defaults fo the namespace definition if not specified."
-  ([x] (ncy->key-stage x key-stages))
+  "Given National Curriculum Year `x` and [optional] `dictionary` mapping each
+   key-stage to a map containing a `:ncys` key whose value is a collection of
+   the NCYs for that key stage, returns the key-stage (key) containing it.
+   The `dictionary` defaults fo the namespace definition if not specified."
+  ([x] (ncy->key-stage x dictionary))
   ([x key-stages]
    (get (ncy->key-stage-map key-stages) x)))

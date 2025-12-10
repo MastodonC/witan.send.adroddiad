@@ -1,22 +1,22 @@
-(ns witan.send.adroddiad.need
+(ns witan.send.adroddiad.domain.need
   "Definitions and functions for handling EHCP needs."
   (:require [tablecloth.api :as tc]))
 
 
 
 ;;; # Utility functions
-(defn compare-mapped-keys
-  [m k1 k2]
-  (compare [(get m k1) k1]
-           [(get m k2) k2]))
+(defn key-comparator-fn-by
+  [key->order]
+  (fn [k1 k2]
+    (compare [(key->order k1) k1]
+             [(key->order k2) k2])))
 
 
 
 ;;; # Needs
-(def needs
-  "EHCP need definitions."
-  (as-> {
-         "ASD"  {:order      1
+(def dictionary
+  "EHCP need dictionary"
+  (as-> {"ASD"  {:order      1
                  :name       "Autistic Spectrum Disorder"
                  :label      "ASD"
                  :definition "Autistic spectrum disorder"
@@ -94,13 +94,21 @@
                  :definition "Other difficulty"
                  :sen2-order 13
                  :send-area  "OTH"}} $
-    (into (sorted-map-by (partial compare-mapped-keys (update-vals $ :order))) $)))
+    (into (sorted-map-by (key-comparator-fn-by (update-vals $ :order))) $)))
 
-(def needs-ds
-  "EHCP need definitions as a dataset."
-  (as-> needs $
+(def ^:deprecated needs dictionary)
+
+(def abbreviations
+  "EHCP need abbreviations as a sorted set"
+  (into (sorted-set-by (key-comparator-fn-by (update-vals dictionary :order)))
+        (keys dictionary)))
+
+(def dataset
+  "EHCP need dictionary as a dataset."
+  (as-> dictionary $
     (map (fn [[k v]] (assoc v :abbreviation k)) $)
     (tc/dataset $)
     (tc/reorder-columns $ [:abbreviation])
     (tc/set-dataset-name $ "needs")))
 
+(def ^:deprecated needs-ds dataset)

@@ -1,6 +1,6 @@
-(ns witan.send.adroddiad.key-stage-test
+(ns witan.send.adroddiad.domain.key-stage-test
   (:require [clojure.test :refer [deftest testing is]]
-            [witan.send.adroddiad.key-stage :as key-stage]))
+            [witan.send.adroddiad.domain.key-stage :as key-stage]))
 
 (deftest ncy->key-stage-map
   (testing "Default mapping of NCY to key stage."
