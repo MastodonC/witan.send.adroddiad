@@ -1,4 +1,4 @@
-(ns witan.send.adroddiad.school-phase
+(ns witan.send.adroddiad.domain.school-phase
   "Definitions and functions for handling Mastodon C's definitions of school phase for SEND reporting and planning:
    Note that:
    - early-childhood is everything before starting school in reception
@@ -39,8 +39,8 @@
 ;; - Abbreviations are hyphenated so "keyword friendly" and can be converted to keywords if required.
 ;; - The map is sorted so that `(keys school-phases)` returns the school phases in the correct order.
 
-(def school-phases
-  "Mastodon C School Phase definitions as a sorted map."
+(def dictionary
+  "Mastodon C School Phase dictionary"
   (-> {"early-childhood" {:order      0
                           :name       "Early Childhood Education and Care"
                           :label      "Early Childhood"
@@ -74,35 +74,44 @@
       (update-vals (fn [m] (assoc m :ncys (into (sorted-set) (range (:ncy-from m) (inc (:ncy-to m)))))))
       (as-> $ (into (sorted-map-by (key-comparator-fn-by (update-vals $ :order))) $))))
 
-(def school-phases-ds
+(def ^:deprecated school-phases dictionary)
+
+(def abbreviations
+  "Mastodon C School Phase abbreviations as a sorted set"
+  (into (sorted-set-by (key-comparator-fn-by (update-vals dictionary :order)))
+        (keys dictionary)))
+
+(def dataset
   "Mastodon C School Phase definitions as a dataset."
-  (as-> school-phases $
+  (as-> dictionary $
     (map (fn [[k v]] (assoc v :abbreviation k)) $)
     (tc/dataset $)
     (tc/reorder-columns $ [:abbreviation])
     (tc/set-dataset-name $ "school-phases")))
 
+(def ^:deprecated school-phases-ds dataset)
+
 
 
 ;;; # Functions to manipulate school-phases
 (defn ncy->school-phase-map
-  "Given [optional] `school-phases` definition map (defaults to namespace definition) 
-   mapping each school-phase to a map containing a `:ncys` key whose value is a 
-   collection of the NCYs for that school phase, returns a map mapping NCY to school-phase.
+  "Given [optional] `dictionary` (defaults to namespace definition) mapping each
+   school-phase to a map containing a `:ncys` key whose value is a collection of
+   the NCYs for that school phase, returns a map mapping NCY to school-phase.
    Note that if an NCY is (erronously) specified in multiple school-phases then the
    first defined is used."
-  ([] (ncy->school-phase-map school-phases))
-  ([school-phases]
+  ([] (ncy->school-phase-map dictionary))
+  ([dictionary]
    (into (sorted-map)
          (map (fn [[k {:keys [ncys]}]]
                 (zipmap ncys (repeat k))))
-         (reverse school-phases))))
+         (reverse dictionary))))
 
 (defn ncy->school-phase
-  "Given National Curriculum Year `x` and [optional] `school-phases` definition map
-   mapping each school-phase to a map containing a `:ncys` key whose value is a 
-   collection of the NCYs for that school phase, returns the school-phase (key) for
-   containing it. `school-phases` defaults fo the namespace definition if not specified."
-  ([x] (ncy->school-phase x school-phases))
-  ([x school-phases]
-   (get (ncy->school-phase-map school-phases) x)))
+  "Given National Curriculum Year `x` and [optional] `dictionary` mapping each
+   school-phase to a map containing a `:ncys` key whose value is a collection of
+   the NCYs for that school phase, returns the school-phase (key) containing it.
+   The `dictionary` defaults fo the namespace definition if not specified."
+  ([x] (ncy->school-phase x dictionary))
+  ([x dictionary]
+   (get (ncy->school-phase-map dictionary) x)))
