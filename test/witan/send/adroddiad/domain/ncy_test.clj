@@ -1,77 +1,77 @@
-(ns witan.send.adroddiad.ncy-test
+(ns witan.send.adroddiad.domain.ncy-test
   (:require [clojure.test :refer [deftest testing is]]
-            [witan.send.adroddiad.ncy :as ncy]
+            [witan.send.adroddiad.domain.ncy :as ncy]
             [tablecloth.api :as tc])
   (:import [java.time LocalDate]))
 
-(deftest age-at-start-of-school-year
+(deftest age-at-start-of-scholastic-year
   (testing "A child born on 01-Sep-2016 would be 3 at the start of the 2020/21 school year."
-    (is (=  3 (ncy/age-at-start-of-school-year-for-census-year 2021
-                                                               2016 9)))
-    (is (=  3 (ncy/age-at-start-of-school-year-for-census-year 2021
-                                                               (LocalDate/of 2016  9  1))))
-    (is (=  3 (ncy/age-at-start-of-school-year-for-date (LocalDate/of 2020  9  1)
-                                                        (LocalDate/of 2016  9  1))))
-    (is (=  3 (ncy/age-at-start-of-school-year-for-date (LocalDate/of 2021  1 14)
-                                                        (LocalDate/of 2016  9  1))))
-    (is (=  3 (ncy/age-at-start-of-school-year-for-date (LocalDate/of 2021  8 31)
-                                                        (LocalDate/of 2016  9  1)))))
+    (is (=  3 (ncy/age-at-start-of-scholastic-year-for-census-year 2021
+                                                                   2016 9)))
+    (is (=  3 (ncy/age-at-start-of-scholastic-year-for-census-year 2021
+                                                                   (LocalDate/of 2016  9  1))))
+    (is (=  3 (ncy/age-at-start-of-scholastic-year-for-date (LocalDate/of 2020  9  1)
+                                                            (LocalDate/of 2016  9  1))))
+    (is (=  3 (ncy/age-at-start-of-scholastic-year-for-date (LocalDate/of 2021  1 14)
+                                                            (LocalDate/of 2016  9  1))))
+    (is (=  3 (ncy/age-at-start-of-scholastic-year-for-date (LocalDate/of 2021  8 31)
+                                                            (LocalDate/of 2016  9  1)))))
 
   (testing "…but a child born on 31-Aug-2016 would be 4 at the start of the 2020/21 school year."
-    (is (=  4 (ncy/age-at-start-of-school-year-for-census-year 2021
-                                                               2016 8)))
-    (is (=  4 (ncy/age-at-start-of-school-year-for-census-year 2021
-                                                               (LocalDate/of 2016  8 31))))
-    (is (=  4 (ncy/age-at-start-of-school-year-for-date (LocalDate/of 2020 9  1)
-                                                        (LocalDate/of 2016 8 31)))))
+    (is (=  4 (ncy/age-at-start-of-scholastic-year-for-census-year 2021
+                                                                   2016 8)))
+    (is (=  4 (ncy/age-at-start-of-scholastic-year-for-census-year 2021
+                                                                   (LocalDate/of 2016  8 31))))
+    (is (=  4 (ncy/age-at-start-of-scholastic-year-for-date (LocalDate/of 2020 9  1)
+                                                            (LocalDate/of 2016 8 31)))))
 
   (testing "A child born on 31-Aug-2016 would be 0 at the start of the 2016/17 school year."
-    (is (=  0 (ncy/age-at-start-of-school-year-for-census-year 2017
-                                                               2016 8)))
-    (is (=  0 (ncy/age-at-start-of-school-year-for-census-year 2017
-                                                               (LocalDate/of 2016  8 31))))
-    (is (=  0 (ncy/age-at-start-of-school-year-for-date (LocalDate/of 2016  9  1)
-                                                        (LocalDate/of 2016  8 31)))))
+    (is (=  0 (ncy/age-at-start-of-scholastic-year-for-census-year 2017
+                                                                   2016 8)))
+    (is (=  0 (ncy/age-at-start-of-scholastic-year-for-census-year 2017
+                                                                   (LocalDate/of 2016  8 31))))
+    (is (=  0 (ncy/age-at-start-of-scholastic-year-for-date (LocalDate/of 2016  9  1)
+                                                            (LocalDate/of 2016  8 31)))))
 
   (testing "Note that the algorithm will return -ve ages."
-    (is (= -1 (ncy/age-at-start-of-school-year-for-census-year 2017
-                                                               2016 9)))
-    (is (= -1 (ncy/age-at-start-of-school-year-for-census-year 2017
-                                                               (LocalDate/of 2016  9  1))))
-    (is (= -1 (ncy/age-at-start-of-school-year-for-date (LocalDate/of 2016  9  1)
-                                                        (LocalDate/of 2016  9  1))))))
+    (is (= -1 (ncy/age-at-start-of-scholastic-year-for-census-year 2017
+                                                                   2016 9)))
+    (is (= -1 (ncy/age-at-start-of-scholastic-year-for-census-year 2017
+                                                                   (LocalDate/of 2016  9  1))))
+    (is (= -1 (ncy/age-at-start-of-scholastic-year-for-date (LocalDate/of 2016  9  1)
+                                                            (LocalDate/of 2016  9  1))))))
 
-(deftest ncy<->age-at-start-of-school-year
+(deftest ncy<->age-at-start-of-scholastic-year
   (testing "Age at start of reception should be 4 years, per gov.uk/schools-admissions/school-starting-age."
-    (is (= 4 (ncy/ncy->age-at-start-of-school-year 0))))
+    (is (= 4 (ncy/ncy->age-at-start-of-scholastic-year 0))))
 
   (testing "Age at start of NCY -4 to 20 should be 0 to 24 respectively."
     (is (= (->> (range -4 (inc 20))
-                (map ncy/ncy->age-at-start-of-school-year))
+                (map ncy/ncy->age-at-start-of-scholastic-year))
            (range 0  (inc 24)))))
 
   (testing "ncy->age… should return nil for non-integer NCYs outside -4 to 20 inclusive."
     (is (= (->> [-5 0.5 21]
-                (map ncy/ncy->age-at-start-of-school-year))
+                (map ncy/ncy->age-at-start-of-scholastic-year))
            '(nil nil nil))))
 
   (testing "NCY entered at age 4 should be 0 (reception), per gov.uk/schools-admissions/school-starting-age."
-    (is (= 0 (ncy/age-at-start-of-school-year->ncy 4))))
+    (is (= 0 (ncy/age-at-start-of-scholastic-year->ncy 4))))
 
   (testing "NCY entered at age 0 to 24 should be -4 to 20 respectively."
     (is (= (->> (range  0 (inc 24))
-                (map ncy/age-at-start-of-school-year->ncy))
+                (map ncy/age-at-start-of-scholastic-year->ncy))
            (range -4 (inc 20)))))
 
   (testing "Round trip test: ncy->age… followed by age…->ncy should return the same for integers -4 to 20 inclusive."
     (is (= (->> (range -4 (inc 20))
-                (map ncy/ncy->age-at-start-of-school-year)
-                (map ncy/age-at-start-of-school-year->ncy))
+                (map ncy/ncy->age-at-start-of-scholastic-year)
+                (map ncy/age-at-start-of-scholastic-year->ncy))
            (range -4 (inc 20)))))
 
   (testing "age…->ncy should return nil for non-integer age outside 0 to 24 inclusive."
     (is (= (->> [-1 0.5 25]
-                (map ncy/age-at-start-of-school-year->ncy))
+                (map ncy/age-at-start-of-scholastic-year->ncy))
            '(nil nil nil)))))
 
 (def test-impute-01-ds

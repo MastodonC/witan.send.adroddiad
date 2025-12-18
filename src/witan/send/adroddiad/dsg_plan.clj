@@ -5,7 +5,7 @@
             [tablecloth.api :as tc]
             [tech.v3.dataset.reductions :as ds-reduce]
             [tech.v3.datatype.functional :as dfn]
-            [witan.send.adroddiad.ncy :as ncy]
+            [witan.send.adroddiad.domain.ncy :as ncy]
             [witan.send.adroddiad.summary.report :as summary-report]
             [witan.send.adroddiad.transitions :as at]))
 
@@ -127,14 +127,14 @@
          "Age 16 to 19" "Age 16 to 19"
          "Age 20 to 25" "Age 20 to 25"}))
 
-(defn age-at-start-of-school-year->age-group
+(defn age-at-start-of-scholastic-year->age-group
   "Age groups for DSG management plan
 
   From the \"Introduction\" tab of the DSG Management Plan template v5
   and per section 2, part 1, item 1.1 of the [2022 SEN2
   guide](https://assets.publishing.service.gov.uk/government/uploads/system/uploads/attachment_data/file/1013751/SEN2_2022_Guide.pdf).
 
-  Age is age in whole number of years on 31st August prior to starting the school/academic year."
+  Age is age in whole number of years on 31st August prior to starting the scholastic/school/academic year."
   [age]
   (cond
     (<=  0 age  4) "Under 5"
@@ -148,8 +148,8 @@
   "Map National Curriculum Year to DSG Management Plan age group."
   (into (sorted-map)
         (map (fn [ncy] [ncy (-> ncy
-                                ncy/ncy->age-at-start-of-school-year
-                                age-at-start-of-school-year->age-group)])
+                                ncy/ncy->age-at-start-of-scholastic-year
+                                age-at-start-of-scholastic-year->age-group)])
              ncy/ncys)))
 
 
