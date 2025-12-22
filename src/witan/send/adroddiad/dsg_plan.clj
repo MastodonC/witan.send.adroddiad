@@ -148,7 +148,7 @@
   "Map National Curriculum Year to DSG Management Plan age group."
   (into (sorted-map)
         (map (fn [ncy] [ncy (-> ncy
-                                ncy/ncy->age-at-start-of-scholastic-year
+                                ncy/ncy->age-at-start-of-school-year
                                 age-at-start-of-scholastic-year->age-group)])
              ncy/ncys)))
 

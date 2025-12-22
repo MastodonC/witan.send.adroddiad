@@ -19,17 +19,17 @@
 
 
 
-;;; # Age at the start of the scholastic year
-(defn age-at-start-of-scholastic-year-for-census-year
+;;; # Age at the start of the school/academic/scholastic year
+(defn age-at-start-of-school-year-for-census-year
   "Age on 31st August in calendar year prior to `cy`, in completed years,
   for child with date of birth `dob` or year & month of birth `dob-year` & `dob-month`.
 
   NOTE: Age is on 31st August in calendar year *prior* to `cy`:
-        - E.g. for `cy`=2020, age is calculated on 31-Aug-2019, i.e. at the start of the 2019/20 scholastic year.
-        - The use of the second calendar year of the scholastic year reflects the timing of the SEN2 census in January.
+        - E.g. for `cy`=2020, age is calculated on 31-Aug-2019, i.e. at the start of the 2019/20 school year.
+        - The use of the second calendar year of the school year reflects the timing of the SEN2 census in January.
 
-  Age at the start of the scholastic/school/academic year is the age on 31st August
-  prior to the scholastic/school/academic year, per:
+  Age at the start of the school/academic/scholastic year is the age on 31st August
+  prior to the school/academic/scholastic year, per:
 
   - The [gov.uk website](https://www.gov.uk/schools-admissions/school-starting-age),
   which (as of 23-NOV-2022) states:
@@ -42,19 +42,19 @@
   - The [2022 SEN2 guide](https://assets.publishing.service.gov.uk/government/uploads/system/uploads/attachment_data/file/1013751/SEN2_2022_Guide.pdf),
   which states in section 2, part 1, item 1.1 that: \"age breakdown
   refers to age as at 31 August 2021\", implying (since this is for
-  the January 2022 SEN2 return) that age for SEN2 breakdowns is as of
-  31-AUG prior to starting the scholastic year.
+  the January 2022 SEN2 return) that age for SEN2 breakdowns is age on
+  the 31-AUG prior to the school/academic/scholastic year.
   "
-  ([cy dob] (age-at-start-of-scholastic-year-for-census-year cy (.getYear dob) (.getMonthValue dob)))
+  ([cy dob] (age-at-start-of-school-year-for-census-year cy (.getYear dob) (.getMonthValue dob)))
   ([cy dob-year dob-month] (- cy 1 dob-year (if (< 8 dob-month) 1 0))))
 
-(defn age-at-start-of-scholastic-year-for-date
+(defn age-at-start-of-school-year-for-date
   "Age on 31st August prior to `date` for child with date of birth `dob`.
 
   `dob` & `date` should be java.time.LocalDate objects
 
-  Age at the start of the scholastic/school/academic year is the age on 31st August
-  prior to the scholastic/school/academic year, per:
+  Age at the start of the school/academic/scholastic year is the age on 31st August
+  prior to the school/academic/scholastic year, per:
 
   - The [gov.uk website](https://www.gov.uk/schools-admissions/school-starting-age),
   which (as of 23-NOV-2022) states:
@@ -67,8 +67,8 @@
   - The [2022 SEN2 guide](https://assets.publishing.service.gov.uk/government/uploads/system/uploads/attachment_data/file/1013751/SEN2_2022_Guide.pdf),
   which states in section 2, part 1, item 1.1 that: \"age breakdown
   refers to age as at 31 August 2021\", implying (since this is for
-  the January 2022 SEN2 return) that age for SEN2 breakdowns is as of
-  31-AUG prior to starting the scholastic year."
+  the January 2022 SEN2 return) that age for SEN2 breakdowns is age on
+  the 31-AUG prior to the school/academic/scholastic year."
   [date dob]
   (- (- (.getYear date) (if (< (.getMonthValue date) 9) 1 0))
      (- (.getYear dob)  (if (< (.getMonthValue dob)  9) 1 0))
@@ -82,49 +82,49 @@
   reception as NCY 0 and earlier NCYs as negative integers."
   (into (sorted-set) (inclusive-range -4 20)))
 
-(def ncy->age-at-start-of-scholastic-year 
+(def ncy->age-at-start-of-school-year 
   "Maps national curriculum year (NCY) to age in whole number of years
-  on 31st August prior to starting the scholastic/school/academic year.
+  on 31st August prior to starting the school/academic/scholastic year.
 
   Early years NCYs are coded numerically, with reception as year 0 and
   earlier NCYs as negative integers.
 
   NCYs and ages for reception to NCY 11 (children aged 4 to 15 at the
-  start of the scholastic/school/academic year) are per https://www.gov.uk/national-curriculum.
+  start of the school/academic/scholastic year) are per https://www.gov.uk/national-curriculum.
   Extension to NCYs -4 to -1 (ages 0-3) and NCYs 12 to 20, (ages 16-24)
   is by linear extrapolation, such that the offset between NCY and age
-  at the beginning of the scholastic/school/academic year is +4.
+  at the beginning of the school/academic/scholastic year is +4.
 
   The maximum age for SEND is 25, but per the relevant legislation
   \"a local authority may continue to maintain an EHC plan for a young
   person until the end of the academic year during which the young
   person attains the age of 25\", such that they will have been 24 at
-  the start of that scholastic/school/academic year, hence the maximum NCY in
-  this map is 20 (age 24 at start of scholastic/school/academic year).
+  the start of that school/academic/scholastic year, hence the maximum NCY in
+  this map is 20 (age 24 at start of school/academic/scholastic year).
   "
   (apply sorted-map (interleave ncys (map #(+ % 4) ncys))))
 
-(def age-at-start-of-scholastic-year->ncy
+(def age-at-start-of-school-year->ncy
   "Maps age in whole number of years on 31st August prior to starting
-  the scholastic/school/academic year to the corresponding national curriculum year (NCY).
+  the school/academic/scholastic year to the corresponding national curriculum year (NCY).
 
   Early years NCYs are coded numerically, with reception as year 0 and
   earlier NCYs as negative integers.
 
-  Ages and NCYs for children aged 4 to 15 at the start of scholastic/school/academic
+  Ages and NCYs for children aged 4 to 15 at the start of school/academic/scholastic
   year (reception to NCY 11) are per https://www.gov.uk/national-curriculum.
   Extension to ages 0-3 (NCYs -4 to -1) and ages 16-24 (NCYs 12 to 20),
   is by linear extrapolation, such that the offset between NCY and age
-  at the beginning of the scholastic/school/academic year is -4.
+  at the beginning of the school/academic/scholastic year is -4.
 
   The maximum age for SEND is 25, but per the relevant legislation
   \"a local authority may continue to maintain an EHC plan for a young
   person until the end of the academic year during which the young
   person attains the age of 25\", such that they will have been 24 at
-  the start of that scholastic/school/academic year, hence the maximum age in
+  the start of that school/academic/scholastic year, hence the maximum age in
   this map is 24 (NCY 20).
   "
-  (->> ncy->age-at-start-of-scholastic-year
+  (->> ncy->age-at-start-of-school-year
        set/map-invert
        (into (sorted-map))))
 
@@ -136,11 +136,11 @@
   (-> (tc/dataset {:ncy ncys})
       (tc/map-columns :abbreviation [:ncy] identity) ; Note: integer rather than string.
       (tc/map-columns :order [:ncy] identity) ; Note: numbering as NCY rather than from 0.
-      (tc/map-columns :age-at-start-of-scholastic-year [:ncy] ncy->age-at-start-of-scholastic-year)
-      (tc/map-columns :age-at-end-of-scholastic-year [:age-at-start-of-scholastic-year] inc)
+      (tc/map-columns :age-at-start-of-school-year [:ncy] ncy->age-at-start-of-school-year)
+      (tc/map-columns :age-at-end-of-school-year [:age-at-start-of-school-year] inc)
       (tc/map-rows (fn [{:keys [ncy
-                                age-at-start-of-scholastic-year
-                                age-at-end-of-scholastic-year]}]
+                                age-at-start-of-school-year
+                                age-at-end-of-school-year]}]
                      (let [name       (cond
                                         ((set (inclusive-range -4 -3)) ncy)
                                         (format "Early Years %d" (+ ncy 5))
@@ -153,18 +153,19 @@
                                         ((set (inclusive-range 12 14)) ncy)
                                         (format "Year %d" ncy)
                                         ((set (inclusive-range 15 20)) ncy)
-                                        (format "Age %d–%d" age-at-start-of-scholastic-year age-at-end-of-scholastic-year))
+                                        (format "Age %d–%d" age-at-start-of-school-year age-at-end-of-school-year))
                            label      name
-                           definition (format (str "Aged %d on 31st August prior to the scholastic year,"
+                           definition (format (str "Aged %d on 31st August "
+                                                   "prior to the school/academic/scholastic year, "
                                                    "so reach age %d by the end of the year.")
-                                              age-at-start-of-scholastic-year
-                                              age-at-end-of-scholastic-year)]
+                                              age-at-start-of-school-year
+                                              age-at-end-of-school-year)]
                        {:name       name
                         :label      label
                         :definition definition})))
       (tc/reorder-columns [:abbreviation :ncy :order :name :label
-                           :age-at-start-of-scholastic-year
-                           :age-at-end-of-scholastic-year
+                           :age-at-start-of-school-year
+                           :age-at-end-of-school-year
                            :definition])
       (tc/order-by [:order])
       (tc/set-dataset-name "ncys")))
@@ -175,16 +176,16 @@
       (tc/select-columns [:col-name :datatype :n-valid :n-missing :min :max]))
   ;;=> ncys: descriptive-stats [8 6]:
   ;;   
-  ;;   |                        :col-name | :datatype | :n-valid | :n-missing | :min | :max |
-  ;;   |----------------------------------|-----------|---------:|-----------:|-----:|-----:|
-  ;;   |                    :abbreviation |    :int64 |       25 |          0 | -4.0 | 20.0 |
-  ;;   |                             :ncy |    :int64 |       25 |          0 | -4.0 | 20.0 |
-  ;;   |                           :order |    :int64 |       25 |          0 | -4.0 | 20.0 |
-  ;;   |                            :name |   :string |       25 |          0 |      |      |
-  ;;   |                           :label |   :string |       25 |          0 |      |      |
-  ;;   | :age-at-start-of-scholastic-year |    :int64 |       25 |          0 |  0.0 | 24.0 |
-  ;;   |   :age-at-end-of-scholastic-year |    :int64 |       25 |          0 |  1.0 | 25.0 |
-  ;;   |                      :definition |   :string |       25 |          0 |      |      |
+  ;;   |                    :col-name | :datatype | :n-valid | :n-missing | :min | :max |
+  ;;   |------------------------------|-----------|---------:|-----------:|-----:|-----:|
+  ;;   |                :abbreviation |    :int64 |       25 |          0 | -4.0 | 20.0 |
+  ;;   |                         :ncy |    :int64 |       25 |          0 | -4.0 | 20.0 |
+  ;;   |                       :order |    :int64 |       25 |          0 | -4.0 | 20.0 |
+  ;;   |                        :name |   :string |       25 |          0 |      |      |
+  ;;   |                       :label |   :string |       25 |          0 |      |      |
+  ;;   | :age-at-start-of-school-year |    :int64 |       25 |          0 |  0.0 | 24.0 |
+  ;;   |   :age-at-end-of-school-year |    :int64 |       25 |          0 |  1.0 | 25.0 |
+  ;;   |                  :definition |   :string |       25 |          0 |      |      |
   ;;   
   
   :rcf)
@@ -195,33 +196,33 @@
       (vary-meta assoc :print-index-range 1000))
   ;;=> ncys [25 7]:
   ;;   
-  ;;   | :abbreviation | :ncy | :order |         :name |        :label | :age-at-start-of-scholastic-year | :age-at-end-of-scholastic-year |
-  ;;   |--------------:|-----:|-------:|---------------|---------------|---------------------------------:|-------------------------------:|
-  ;;   |            -4 |   -4 |     -4 | Early Years 1 | Early Years 1 |                                0 |                              1 |
-  ;;   |            -3 |   -3 |     -3 | Early Years 2 | Early Years 2 |                                1 |                              2 |
-  ;;   |            -2 |   -2 |     -2 |     Nursery 1 |     Nursery 1 |                                2 |                              3 |
-  ;;   |            -1 |   -1 |     -1 |     Nursery 2 |     Nursery 2 |                                3 |                              4 |
-  ;;   |             0 |    0 |      0 |     Reception |     Reception |                                4 |                              5 |
-  ;;   |             1 |    1 |      1 |        Year 1 |        Year 1 |                                5 |                              6 |
-  ;;   |             2 |    2 |      2 |        Year 2 |        Year 2 |                                6 |                              7 |
-  ;;   |             3 |    3 |      3 |        Year 3 |        Year 3 |                                7 |                              8 |
-  ;;   |             4 |    4 |      4 |        Year 4 |        Year 4 |                                8 |                              9 |
-  ;;   |             5 |    5 |      5 |        Year 5 |        Year 5 |                                9 |                             10 |
-  ;;   |             6 |    6 |      6 |        Year 6 |        Year 6 |                               10 |                             11 |
-  ;;   |             7 |    7 |      7 |        Year 7 |        Year 7 |                               11 |                             12 |
-  ;;   |             8 |    8 |      8 |        Year 8 |        Year 8 |                               12 |                             13 |
-  ;;   |             9 |    9 |      9 |        Year 9 |        Year 9 |                               13 |                             14 |
-  ;;   |            10 |   10 |     10 |       Year 10 |       Year 10 |                               14 |                             15 |
-  ;;   |            11 |   11 |     11 |       Year 11 |       Year 11 |                               15 |                             16 |
-  ;;   |            12 |   12 |     12 |       Year 12 |       Year 12 |                               16 |                             17 |
-  ;;   |            13 |   13 |     13 |       Year 13 |       Year 13 |                               17 |                             18 |
-  ;;   |            14 |   14 |     14 |       Year 14 |       Year 14 |                               18 |                             19 |
-  ;;   |            15 |   15 |     15 |     Age 19–20 |     Age 19–20 |                               19 |                             20 |
-  ;;   |            16 |   16 |     16 |     Age 20–21 |     Age 20–21 |                               20 |                             21 |
-  ;;   |            17 |   17 |     17 |     Age 21–22 |     Age 21–22 |                               21 |                             22 |
-  ;;   |            18 |   18 |     18 |     Age 22–23 |     Age 22–23 |                               22 |                             23 |
-  ;;   |            19 |   19 |     19 |     Age 23–24 |     Age 23–24 |                               23 |                             24 |
-  ;;   |            20 |   20 |     20 |     Age 24–25 |     Age 24–25 |                               24 |                             25 |
+  ;;   | :abbreviation | :ncy | :order |         :name |        :label | :age-at-start-of-school-year | :age-at-end-of-school-year |
+  ;;   |--------------:|-----:|-------:|---------------|---------------|-----------------------------:|---------------------------:|
+  ;;   |            -4 |   -4 |     -4 | Early Years 1 | Early Years 1 |                            0 |                          1 |
+  ;;   |            -3 |   -3 |     -3 | Early Years 2 | Early Years 2 |                            1 |                          2 |
+  ;;   |            -2 |   -2 |     -2 |     Nursery 1 |     Nursery 1 |                            2 |                          3 |
+  ;;   |            -1 |   -1 |     -1 |     Nursery 2 |     Nursery 2 |                            3 |                          4 |
+  ;;   |             0 |    0 |      0 |     Reception |     Reception |                            4 |                          5 |
+  ;;   |             1 |    1 |      1 |        Year 1 |        Year 1 |                            5 |                          6 |
+  ;;   |             2 |    2 |      2 |        Year 2 |        Year 2 |                            6 |                          7 |
+  ;;   |             3 |    3 |      3 |        Year 3 |        Year 3 |                            7 |                          8 |
+  ;;   |             4 |    4 |      4 |        Year 4 |        Year 4 |                            8 |                          9 |
+  ;;   |             5 |    5 |      5 |        Year 5 |        Year 5 |                            9 |                         10 |
+  ;;   |             6 |    6 |      6 |        Year 6 |        Year 6 |                           10 |                         11 |
+  ;;   |             7 |    7 |      7 |        Year 7 |        Year 7 |                           11 |                         12 |
+  ;;   |             8 |    8 |      8 |        Year 8 |        Year 8 |                           12 |                         13 |
+  ;;   |             9 |    9 |      9 |        Year 9 |        Year 9 |                           13 |                         14 |
+  ;;   |            10 |   10 |     10 |       Year 10 |       Year 10 |                           14 |                         15 |
+  ;;   |            11 |   11 |     11 |       Year 11 |       Year 11 |                           15 |                         16 |
+  ;;   |            12 |   12 |     12 |       Year 12 |       Year 12 |                           16 |                         17 |
+  ;;   |            13 |   13 |     13 |       Year 13 |       Year 13 |                           17 |                         18 |
+  ;;   |            14 |   14 |     14 |       Year 14 |       Year 14 |                           18 |                         19 |
+  ;;   |            15 |   15 |     15 |     Age 19–20 |     Age 19–20 |                           19 |                         20 |
+  ;;   |            16 |   16 |     16 |     Age 20–21 |     Age 20–21 |                           20 |                         21 |
+  ;;   |            17 |   17 |     17 |     Age 21–22 |     Age 21–22 |                           21 |                         22 |
+  ;;   |            18 |   18 |     18 |     Age 22–23 |     Age 22–23 |                           22 |                         23 |
+  ;;   |            19 |   19 |     19 |     Age 23–24 |     Age 23–24 |                           23 |                         24 |
+  ;;   |            20 |   20 |     20 |     Age 24–25 |     Age 24–25 |                           24 |                         25 |
   ;;   
   
   :rcf)
