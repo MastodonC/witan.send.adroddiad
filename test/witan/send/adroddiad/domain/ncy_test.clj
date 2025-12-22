@@ -1,6 +1,6 @@
-(ns witan.send.adroddiad.ncy-test
+(ns witan.send.adroddiad.domain.ncy-test
   (:require [clojure.test :refer [deftest testing is]]
-            [witan.send.adroddiad.ncy :as ncy]
+            [witan.send.adroddiad.domain.ncy :as ncy]
             [tablecloth.api :as tc])
   (:import [java.time LocalDate]))
 
