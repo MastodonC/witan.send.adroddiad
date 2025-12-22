@@ -21,11 +21,11 @@
 
 ;;; # Age at the start of the school/academic/scholastic year
 (defn age-at-start-of-school-year-for-census-year
-  "Age on 31st August in calendar year prior to `cy`, in completed years,
+  "Age on 31st August in calendar year prior to `census-year`, in completed years,
   for child with date of birth `dob` or year & month of birth `dob-year` & `dob-month`.
 
-  NOTE: Age is on 31st August in calendar year *prior* to `cy`:
-        - E.g. for `cy`=2020, age is calculated on 31-Aug-2019, i.e. at the start of the 2019/20 school year.
+  NOTE: Age is on 31st August in calendar year *prior* to `census-year`:
+        - E.g. for `census-year`=2020, age is calculated on 31-Aug-2019, i.e. at the start of the 2019/20 school year.
         - The use of the second calendar year of the school year reflects the timing of the SEN2 census in January.
 
   Age at the start of the school/academic/scholastic year is the age on 31st August
@@ -45,8 +45,8 @@
   the January 2022 SEN2 return) that age for SEN2 breakdowns is age on
   the 31-AUG prior to the school/academic/scholastic year.
   "
-  ([cy dob] (age-at-start-of-school-year-for-census-year cy (.getYear dob) (.getMonthValue dob)))
-  ([cy dob-year dob-month] (- cy 1 dob-year (if (< 8 dob-month) 1 0))))
+  ([census-year dob] (age-at-start-of-school-year-for-census-year census-year (.getYear dob) (.getMonthValue dob)))
+  ([census-year dob-year dob-month] (- census-year 1 dob-year (if (< 8 dob-month) 1 0))))
 
 (defn age-at-start-of-school-year-for-date
   "Age on 31st August prior to `date` for child with date of birth `dob`.
