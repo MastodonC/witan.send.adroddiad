@@ -4,44 +4,44 @@
             [tablecloth.api :as tc])
   (:import [java.time LocalDate]))
 
-(deftest age-at-start-of-scholastic-year
+(deftest age-at-start-of-school-year
   (testing "A child born on 01-Sep-2016 would be 3 at the start of the 2020/21 school year."
     (is (=  3 (ncy/age-at-start-of-school-year-for-census-year 2021
-                                                                   2016 9)))
+                                                               2016 9)))
     (is (=  3 (ncy/age-at-start-of-school-year-for-census-year 2021
-                                                                   (LocalDate/of 2016  9  1))))
+                                                               (LocalDate/of 2016  9  1))))
     (is (=  3 (ncy/age-at-start-of-school-year-for-date (LocalDate/of 2020  9  1)
-                                                            (LocalDate/of 2016  9  1))))
+                                                        (LocalDate/of 2016  9  1))))
     (is (=  3 (ncy/age-at-start-of-school-year-for-date (LocalDate/of 2021  1 14)
-                                                            (LocalDate/of 2016  9  1))))
+                                                        (LocalDate/of 2016  9  1))))
     (is (=  3 (ncy/age-at-start-of-school-year-for-date (LocalDate/of 2021  8 31)
-                                                            (LocalDate/of 2016  9  1)))))
+                                                        (LocalDate/of 2016  9  1)))))
 
   (testing "…but a child born on 31-Aug-2016 would be 4 at the start of the 2020/21 school year."
     (is (=  4 (ncy/age-at-start-of-school-year-for-census-year 2021
-                                                                   2016 8)))
+                                                               2016 8)))
     (is (=  4 (ncy/age-at-start-of-school-year-for-census-year 2021
-                                                                   (LocalDate/of 2016  8 31))))
+                                                               (LocalDate/of 2016  8 31))))
     (is (=  4 (ncy/age-at-start-of-school-year-for-date (LocalDate/of 2020 9  1)
-                                                            (LocalDate/of 2016 8 31)))))
+                                                        (LocalDate/of 2016 8 31)))))
 
   (testing "A child born on 31-Aug-2016 would be 0 at the start of the 2016/17 school year."
     (is (=  0 (ncy/age-at-start-of-school-year-for-census-year 2017
-                                                                   2016 8)))
+                                                               2016 8)))
     (is (=  0 (ncy/age-at-start-of-school-year-for-census-year 2017
-                                                                   (LocalDate/of 2016  8 31))))
+                                                               (LocalDate/of 2016  8 31))))
     (is (=  0 (ncy/age-at-start-of-school-year-for-date (LocalDate/of 2016  9  1)
-                                                            (LocalDate/of 2016  8 31)))))
+                                                        (LocalDate/of 2016  8 31)))))
 
   (testing "Note that the algorithm will return -ve ages."
     (is (= -1 (ncy/age-at-start-of-school-year-for-census-year 2017
-                                                                   2016 9)))
+                                                               2016 9)))
     (is (= -1 (ncy/age-at-start-of-school-year-for-census-year 2017
-                                                                   (LocalDate/of 2016  9  1))))
+                                                               (LocalDate/of 2016  9  1))))
     (is (= -1 (ncy/age-at-start-of-school-year-for-date (LocalDate/of 2016  9  1)
-                                                            (LocalDate/of 2016  9  1))))))
+                                                        (LocalDate/of 2016  9  1))))))
 
-(deftest ncy<->age-at-start-of-scholastic-year
+(deftest ncy<->age-at-start-of-school-year
   (testing "Age at start of reception should be 4 years, per gov.uk/schools-admissions/school-starting-age."
     (is (= 4 (ncy/ncy->age-at-start-of-school-year 0))))
 
