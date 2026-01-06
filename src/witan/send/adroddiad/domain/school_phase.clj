@@ -4,15 +4,16 @@
    - early-childhood is everything before starting school in reception
    - primary         includes reception
    - secondary       ends at NCY 11 (age 15-16), and excludes sixth-form
-   - education after secondary is split into post-16 and post-19,
-     where the ages 16 & 19 indicated are the nominal ages for the NCYs included†, and are inclusive:
-     - post-16: NCYs 12–14 (corresponding to ages 16–18 at start of NCY†)
-     - post-19: NCYs 15–20 (corresponding to ages 18–24 at start of NCY†)
-     …with post-16 being 3 years (rather than the 2 of a sixth-form)
+   - education after secondary is split into age 16-19 and 19-25,
+     where the ages are the nominal ages for the NCYs included†, 
+     with the ranges indicating the minimum age on 31st August prior to the start of the school year 
+     and the maximum age on 31st August after the end of the school year, 
+     (to match the description of age for NCYs used by DfE, e.g. on www.gov.uk/national-curriculum):
+     - age-16-19: NCYs 12–14 (corresponding to age 16–18 on 31st August prior to the start of the school year†)
+     - age-19-25: NCYs 15–20 (corresponding to age 19–24 on 31st August prior to the start of the school year†)
+     …with age-16-19 being 3 school years (rather than the 2 of a sixth-form)
       matching the right of CYP to 3 years of post secondary education.
-
-   † Where ages are given, these relate to the nominal NCY for the age on 31st August prior to the start of the school year.
-     (For details and mapping of age to nominal NCY, see `witan.send.adroddiad.ncy`.)"
+   † For details and mapping of age to nominal NCY, see `witan.send.adroddiad.domain.ncy`."
   (:require [tablecloth.api :as tc]))
 
 
@@ -37,7 +38,11 @@
 ;;     is "from birth to 5 years old" which includes reception.
 ;; - Keys are abbreviations rather than keywords, to facilitate use in datasets & files as strings.
 ;; - Abbreviations are hyphenated so "keyword friendly" and can be converted to keywords if required.
-;; - The map is sorted so that `(keys school-phases)` returns the school phases in the correct order.
+;; - The map is sorted so that `(keys dictionary)` returns the school phases in the correct order.
+;; Note that in contrast to the previous implementation in `witan.send.adroddiad.school-phase`:
+;; - domain specific naming (e.g. `school-phases`) has been replaced by generic naming (e.g. `dictionary`).
+;; - "post-16" & "post-19" have been renamed "age-16-19" & "age-19-25" to avoid the risk of "post-16"
+;;   being interpreted as age 16-25 (NCYs 12-20).
 
 (def dictionary
   "Mastodon C School Phase dictionary"
@@ -50,25 +55,31 @@
        "primary"         {:order      1
                           :name       "Primary"
                           :label      "Primary"
-                          :definition "Primary school: Reception, KS1 & KS2 - Reception + NCYs 1 to 6"
+                          :definition "Primary school: Reception and Key Stages 1 & 2 - Reception + NCYs 1 to 6"
                           :ncy-from   0
                           :ncy-to     6}
        "secondary"       {:order      2
                           :name       "Secondary"
                           :label      "Secondary"
-                          :definition "Secondary school: Key Stages 3 + 4 - NCYs 7 to 11"
+                          :definition "Secondary school: Key Stages 3 & 4 - NCYs 7 to 11"
                           :ncy-from   7
                           :ncy-to     11}
-       "post-16"         {:order      3
-                          :name       "Post 16"
-                          :label      "Post 16"
-                          :definition "Post 16 - Key Stage 5 - NCYs 12 to 14"
+       "age-16-19"       {:order      3
+                          :name       "Age 16 to 19"
+                          :label      "Age 16 to 19"
+                          :definition (str "Age 16 (on 31st August prior to the school year) "
+                                           "to 19 (on 31st August after the school year) "
+                                           "- Key Stage 5 "
+                                           "- NCYs 12 to 14")
                           :ncy-from   12
                           :ncy-to     14}
-       "post-19"         {:order      4
-                          :name       "Post 19"
-                          :label      "Post 19"
-                          :definition "Post 19 - Post Key Stage 5 up to 25 years of age - NCYs 15 to 20"
+       "age-19-25"       {:order      4
+                          :name       "Age 19 to 25"
+                          :label      "Age 19 to 25"
+                          :definition (str "Age 19 (on 31st August prior to the school year) "
+                                           "to 25 (on 31st August after the school year) "
+                                           "- Post Key Stage 5 up to 25 years of age "
+                                           "- NCYs 15 to 20")
                           :ncy-from   15
                           :ncy-to     20}}
       (update-vals (fn [m] (assoc m :ncys (into (sorted-set) (range (:ncy-from m) (inc (:ncy-to m)))))))

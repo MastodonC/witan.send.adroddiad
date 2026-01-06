@@ -8,8 +8,8 @@
            (merge (zipmap [-4 -3 -2 -1]       (repeat "early-childhood"))
                   (zipmap [0 1 2 3 4 5 6]     (repeat "primary"))
                   (zipmap [7 8 9 10 11]       (repeat "secondary"))
-                  (zipmap [12 13 14]          (repeat "post-16"))
-                  (zipmap [15 16 17 18 19 20] (repeat "post-19"))))))
+                  (zipmap [12 13 14]          (repeat "age-16-19"))
+                  (zipmap [15 16 17 18 19 20] (repeat "age-19-25"))))))
 
   (testing "Custom `school-phases` definitions, with `:ncys` as sets."
     (is (= (-> {"Phase A" {:ncys #{109 108}}
@@ -94,15 +94,17 @@
              (map school-phase/ncy->school-phase)
              (every? #{"secondary"}))))
 
-  (testing "For NCYs 12 to 14 school-phase should be \"post-16\"."
+  (testing "For NCYs 12 to 14 school-phase should be \"age-16-19\"."
     (is (->> [12 13 14]
              (map school-phase/ncy->school-phase)
-             (every? #{"post-16"}))))
+             (every? #{"age-16-19"}))))
 
-  (testing "For NCYs 15 to 20 school-phase should be \"post-19\"."
+  (testing "For NCYs 15 to 20 school-phase should be \"age-19-25\"."
     (is (->> [15 16 17 18 19 20]
              (map school-phase/ncy->school-phase)
-             (every? #{"post-19"})))))
+             (every? #{"age-19-25"})))))
 
-(comment
-  (clojure.test/run-tests))
+(comment ;; Run tests
+  (clojure.test/run-tests)
+  
+  :rcf)
