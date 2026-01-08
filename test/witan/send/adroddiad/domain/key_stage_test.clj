@@ -116,9 +116,6 @@
              (map key-stage/ncy->key-stage)
              (every? #{"post-19"})))))
 
-
-
-;;; # Run tests
 (comment ;; Run tests
   (clojure.test/run-tests)
   

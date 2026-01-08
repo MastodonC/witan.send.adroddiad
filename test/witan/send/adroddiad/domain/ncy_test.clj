@@ -230,3 +230,7 @@
                           (tc/dataset {:id 17 :cy [2000 2001      2002] :ncy [  1   1       3] :ncy-imputed-from [nil nil {:cy 2000 :ncy 1}]})
                           (tc/dataset {:id 18 :cy [2000 2001      2002] :ncy [  1   0       3] :ncy-imputed-from [nil nil {:cy 2000 :ncy 1}]})))))))
 
+(comment ;; Run tests
+  (clojure.test/run-tests)
+
+  :rcf)
