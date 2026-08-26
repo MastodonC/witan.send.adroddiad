@@ -170,22 +170,38 @@
            x-field x-sort-field x-field-label x-field-desc
            y-field y-sort-field y-field-label y-field-desc
            color-field white-text-test data height width
-           color-scheme color-type color-domain]
+           color-scheme color-type color-domain
+           legend-title-size legend-font-size
+           x-axis-title-size x-axis-font-size
+           y-axis-title-size y-axis-font-size]
     :or {height 100
          width 550
          white-text-test "datum['% change'] > 10 || datum['% change'] < -10"
          color-scheme "viridis"
-         color-type "gradient"}}]
+         color-type "gradient"
+         legend-title-size 20
+         legend-font-size 14
+         x-axis-title-size 16
+         x-axis-font-size 12
+         y-axis-title-size 16
+         y-axis-font-size 12}}]
   (let [tooltip [{:field (or y-field-desc y-field) :type "ordinal" :title y-field-label}
                  {:field (or x-field-desc x-field) :type "ordinal" :title x-field-label}
                  {:field color-field :type "quantitative"}]]
     {:data {:values data}
-     :encoding {:x {:field (or x-field-desc x-field) :type "nominal" :sort {:field (or x-sort-field x-field)} :title (or x-field-label x-field)}
-                :y {:field (or y-field-desc y-field) :type "ordinal" :sort {:field (or y-sort-field y-field)} :title (or y-field-label y-field)}}
+     :encoding {:x {:field (or x-field-desc x-field)
+                    :type "nominal"
+                    :sort {:field (or x-sort-field x-field)}
+                    :title (or x-field-label x-field)
+                    :axis  {:titleFontSize x-axis-title-size :labelFontSize x-axis-font-size}}
+                :y {:field (or y-field-desc y-field)
+                    :type "ordinal"
+                    :sort {:field (or y-sort-field y-field)}
+                    :title (or y-field-label y-field)
+                    :axis  {:titleFontSize y-axis-title-size :labelFontSize y-axis-font-size}}}
      :config {:axis {:grid true
-                     :tickBand "extent"
-                     :titleFontSize 16
-                     :labelFontSize 12}}
+                     :tickBand "extent"}
+              :legend {:titleFontSize legend-title-size :labelFontSize legend-font-size :labelLimit 0}}
      :title {:text title
              :fontSize 24}
      :height height
@@ -780,4 +796,3 @@
        :color-field     color-field
        :title           (format "# EHCPs per Designation by Primary Need in %d" most-recent-year)
        :white-text-test white-text-test}))))
-
