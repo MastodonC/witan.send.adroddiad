@@ -81,13 +81,22 @@
            group group-title
            chart-height chart-width
            colors-and-shapes
-           legend]
+           legend
+           legend-title-size legend-font-size
+           x-axis-title-size x-axis-font-size
+           y-axis-title-size y-axis-font-size]
     :or   {y-format      ",.0f"
            y-zero        true
            tooltip-field :tooltip-column
            chart-height  vs/full-height
            chart-width   vs/full-width
-           legend        true}
+           legend        true
+           legend-title-size 20
+           legend-font-size 14
+           x-axis-title-size 16
+           x-axis-font-size 12
+           y-axis-title-size 16
+           y-axis-font-size 12}
     :as   plot-spec}]
   (let [y-tooltip-format      (or y-tooltip-format y-format)
         tooltip-formatf       (or tooltip-formatf
@@ -102,16 +111,15 @@
      :data     {:values (-> data (tc/rows :as-maps))}
      :height   chart-height
      :width    chart-width
-     :config   {:legend {:titleFontSize 20 :labelFontSize 14 :labelLimit 0}
-                :axisX  {:titleFontSize 16 :labelFontSize 12}
-                :axisY  {:titleFontSize 16 :labelFontSize 12}}
+     :config   {:legend {:titleFontSize legend-title-size :labelFontSize legend-font-size :labelLimit 0}}
      :encoding (cond->
-                {:x {:title x-title
-                     :field x
-                     :type  "temporal"
-                     :axis  {:format x-format :tickCount {:interval "month" :step 12}}}
-                 :y {:axis  {:format y-format}
-                     :scale {:zero y-zero}}}
+                   {:x {:title x-title
+                        :field x
+                        :type  "temporal"
+                        :axis  {:format x-format :tickCount {:interval "month" :step 12}
+                                :titleFontSize x-axis-title-size :labelFontSize x-axis-font-size}}
+                    :y {:axis  {:format y-format :titleFontSize y-axis-title-size :labelFontSize y-axis-font-size}
+                        :scale {:zero y-zero}}}
                  (boolean x-scale) (assoc-in [:x :scale :domain] x-scale)
                  (boolean y-scale) (assoc-in [:y :scale :domain] y-scale)
                  (not legend)      (assoc :color {:legend nil}))
@@ -174,13 +182,22 @@
            group group-title
            chart-height chart-width
            colors-and-shapes
-           legend]
+           legend
+           legend-title-size legend-font-size
+           x-axis-title-size x-axis-font-size
+           y-axis-title-size y-axis-font-size]
     :or   {y-format      ",.0f"
            y-zero        true
            tooltip-field :tooltip-column
            chart-height  vs/full-height
            chart-width   vs/full-width
-           legend        true}
+           legend        true
+           legend-title-size 20
+           legend-font-size 14
+           x-axis-title-size 16
+           x-axis-font-size 12
+           y-axis-title-size 16
+           y-axis-font-size 12}
     :as   plot-spec}]
   (let [y-tooltip-format (or y-tooltip-format y-format)
         tooltip-formatf  (or tooltip-formatf
@@ -197,18 +214,18 @@
                             (tc/rows :as-maps))}
      :height   chart-height
      :width    chart-width
-     :config   {:legend {:titleFontSize 20 :labelFontSize 14 :labelLimit 0}
-                :axisX  {:titleFontSize 16 :labelFontSize 12}
-                :axisY  {:titleFontSize 16 :labelFontSize 12}}
+     :config   {:legend {:titleFontSize 20 :labelFontSize 14 :labelLimit 0}}
      :encoding (cond->
-                {:x     {:title  x-title
-                         :field  x
-                         :type   "temporal"
-                         :axis   {:format x-format :tickCount {:interval "month" :step 12}}}
-                 :y     {:axis  {:format y-format}
-                         :scale {:zero y-zero}}
-                 :color (merge {:title group-title}
-                               (vs/color-map data group colors-and-shapes))}
+                   {:x     {:title  x-title
+                            :field  x
+                            :type   "temporal"
+                            :axis   {:format x-format :tickCount {:interval "month" :step 12}
+                                     :titleFontSize x-axis-title-size :labelFontSize x-axis-font-size}}
+                    :y     {:axis  {:format y-format :titleFontSize y-axis-title-size
+                                    :labelFontSize y-axis-font-size}
+                            :scale {:zero y-zero}}
+                    :color (merge {:title group-title}
+                                  (vs/color-map data group colors-and-shapes))}
                  (boolean x-scale) (assoc-in [:x :scale :domain] x-scale)
                  (boolean y-scale) (assoc-in [:y :scale :domain] y-scale)
                  (not legend)      (assoc :color {:legend nil}))
@@ -236,13 +253,22 @@
            group group-title
            chart-height chart-width
            colors-and-shapes
-           legend]
+           legend
+           legend-title-size legend-font-size
+           x-axis-title-size x-axis-font-size
+           y-axis-title-size y-axis-font-size]
     :or   {y-format      ",.0f"
            y-zero        true
            tooltip-field :tooltip-column
            chart-height  vs/full-height
            chart-width   vs/full-width
-           legend        true}
+           legend        true
+           legend-title-size 20
+           legend-font-size 14
+           x-axis-title-size 16
+           x-axis-font-size 12
+           y-axis-title-size 16
+           y-axis-font-size 12}
     :as   plot-spec}]
   (let [y-tooltip-format (or y-tooltip-format y-format)
         tooltip-formatf  (or tooltip-formatf
@@ -259,18 +285,18 @@
                             (tc/rows :as-maps))}
      :height   chart-height
      :width    chart-width
-     :config   {:legend {:titleFontSize 20 :labelFontSize 14 :labelLimit 0}
-                :axisX  {:titleFontSize 16 :labelFontSize 12}
-                :axisY  {:titleFontSize 16 :labelFontSize 12}}
+     :config   {:legend {:titleFontSize legend-title-size :labelFontSize legend-font-size :labelLimit 0}}
      :encoding (cond->
-                {:x     {:title x-title
-                         :field x
-                         :type  "temporal"
-                         :axis  {:format x-format :tickCount {:interval "month" :step 12}}}
-                 :y     {:axis  {:format y-format}
-                         :scale {:zero   y-zero}}
-                 :color (merge {:title group-title}
-                               (vs/color-map data group colors-and-shapes))}
+                   {:x     {:title x-title
+                            :field x
+                            :type  "temporal"
+                            :axis  {:format x-format :tickCount {:interval "month" :step 12}
+                                    :titleFontSize x-axis-title-size :labelFontSize x-axis-font-size}}
+                    :y     {:axis  {:format y-format :titleFontSize y-axis-title-size
+                                    :labelFontSize y-axis-font-size}
+                            :scale {:zero   y-zero}}
+                    :color (merge {:title group-title}
+                                  (vs/color-map data group colors-and-shapes))}
                  (boolean x-scale) (assoc-in [:x :scale :domain] x-scale)
                  (boolean y-scale) (assoc-in [:y :scale :domain] y-scale)
                  (not legend)      (assoc :color {:legend nil}))
@@ -301,34 +327,45 @@
            group group-title
            chart-height chart-width
            colors-and-shapes
-           legend]
+           legend
+           legend-title-size legend-font-size
+           x-axis-title-size x-axis-font-size
+           y-axis-title-size y-axis-font-size]
     :or   {y-format     ",.0f"
            y-zero       true
            y-scale      false
            chart-height vs/full-height
            chart-width  vs/full-width
-           legend       true}}]
+           legend       true
+           legend-title-size 20
+           legend-font-size 14
+           x-axis-title-size 16
+           x-axis-font-size 12
+           y-axis-title-size 16
+           y-axis-font-size 12}}]
   (let [y-tooltip-format (or y-tooltip-format y-format)
         tooltip          [{:field group :title group-title}
                           {:field x :title x-title :type "temporal"     :format x-format}
                           {:field y :title y-title :type "quantitative" :format y-tooltip-format}]]
-    {:title    {:text chart-title :fontSize 24}
+    {:$schema "https://vega.github.io/schema/vega-lite/v6.json"
+     :title    {:text chart-title :fontSize 24}
      :data     {:values (-> data
                             (tc/rows :as-maps))}
      :height   chart-height
      :width    chart-width
-     :config   {:legend {:titleFontSize 20 :labelFontSize 14 :labelLimit 0}
-                :axisX  {:titleFontSize 16 :labelFontSize 12}
-                :axisY  {:titleFontSize 16 :labelFontSize 12}}
+     :config   {:legend {:titleFontSize legend-title-size :labelFontSize legend-font-size
+                         :labelLimit 0}}
      :encoding (cond->
-                {:x     {:title  x-title
-                         :field  x
-                         :type   "temporal"
-                         :axis  {:format x-format :tickCount {:interval "month" :step 12}}}
-                 :y     {:axis  {:format y-format}
-                         :scale {:zero   y-zero}}
-                 :color (merge {:title group-title}
-                               (vs/color-map data group colors-and-shapes))}
+                   {:x     {:title  x-title
+                            :field  x
+                            :type   "temporal"
+                            :axis  {:format x-format :tickCount {:interval "month" :step 12}
+                                    :titleFontSize x-axis-title-size :labelFontSize x-axis-font-size}}
+                    :y     {:axis  {:format y-format :titleFontSize y-axis-title-size
+                                    :labelFontSize y-axis-font-size}
+                            :scale {:zero   y-zero}}
+                    :color (merge {:title group-title}
+                                  (vs/color-map data group colors-and-shapes))}
                  (boolean x-scale) (assoc-in [:x :scale :domain] x-scale)
                  (boolean y-scale) (assoc-in [:y :scale :domain] y-scale)
                  (not legend)      (assoc :color {:legend nil}))
@@ -347,11 +384,11 @@
 ;;; # Helper functions
 (defn plot-spec-by-group->plot-spec-by-group-label
   "Converts a `plot-spec` with `group`s identified by abbreviations to use labels:
-   Uses `:label` column from `colors-and-shapes` (if present) to update `data` 
+   Uses `:label` column from `colors-and-shapes` (if present) to update `data`
    `group` `colors-and-shapes` in a `plot-spec` to group by the labelled values
    as follows:
-   - The (domain) values in the `group` column of the `data` are mapped to the 
-     corresponding labels using the `colors-and-shapes` `:domain-value` -> `:label` 
+   - The (domain) values in the `group` column of the `data` are mapped to the
+     corresponding labels using the `colors-and-shapes` `:domain-value` -> `:label`
      mapping.
    - These group labels are added to the `data` in column `group-label`.
      - Any pre-existing column of this name will be overwritten.
@@ -366,7 +403,7 @@
     :as   plot-spec}]
   (let [group-label (or group-label
                         (cond (keyword? group) (-> group name (str "-label") keyword)
-                                (string?  group) (-> group (str " Label"))))]
+                              (string?  group) (-> group (str " Label"))))]
     (-> plot-spec
         (dissoc :group-label)
         (merge (when (some #{:label} (tc/column-names colors-and-shapes))

@@ -67,145 +67,6 @@
      :scale {:range (into [] (:shape filtered-shapes))
              :domain (into [] (:domain-value filtered-shapes))}}))
 
-(defn line-plot
-  [{:keys [data
-           chart-title
-           chart-height chart-width
-           clerk-width legend
-           x x-title x-format
-           y y-title y-format
-           y-zero y-scale
-           group group-title
-           colors-and-shapes
-           labelLimit]
-    :or {chart-height full-height
-         chart-width full-width
-         clerk-width :full
-         y-zero true
-         y-scale false
-         legend {:encode {:labels {:update {:text {:signal "[datum.value]"}}}}}
-         labelLimit 0}}]
-  (let [tooltip [{:field group, :title group-title},
-                 {:field x, :type "temporal", :format x-format, :title x-title},
-                 {:field y, :title y-title ;; :format y-format
-                  }]]
-    (clerk/vl
-     {::clerk/width clerk-width}
-     {:height chart-height
-      :width chart-width
-      ;; :autosize {:type "fit" :contains "padding"}
-      :title {:text chart-title
-              :fontSize 24}
-      :config {:legend {:titleFontSize 16
-                        :labelFontSize 14
-                        :labelLimit labelLimit}
-               :axisX {:tickcount 7
-                       :tickExtra true
-                       :labelalign "center"
-                       :titleFontSize 16
-                       :labelFontSize 12}
-               :axisY {:titleFontSize 16
-                       :labelFontSize 12}}
-      :data {:values (-> data
-                         (tc/rows :as-maps))}
-      :encoding {:y {:scale {:domain y-scale
-                             :zero y-zero}}
-                 :color {:legend (cond
-                                   (false? legend)
-                                   false
-                                   :else
-                                   legend)}}
-      :layer [{:mark {:type "line", :point {:filled false,
-                                            :fill "white",
-                                            :size 50
-                                            :strokewidth 0.5}},
-               :encoding {:y {:field y, :title y-title :type "quantitative"},
-                          :x {:field x, :title x-title :format x-format :type "temporal"},
-                          ;; color and shape scale and range must be specified or you get extra things in the legend
-                          :color (assoc (color-map data group colors-and-shapes) :title group-title)
-                          :shape (shape-map data group colors-and-shapes)
-                          :tooltip tooltip}}]})))
-
-(defn line-and-ribbon-plot
-  [{:keys [data
-           chart-title
-           chart-height chart-width
-           clerk-width legend
-           x x-title x-format
-           y y-title y-format
-           y-zero y-scale
-           irl iru ir-title
-           orl oru or-title
-           range-format-f
-           group group-title
-           colors-and-shapes
-           labelLimit]
-    :or {chart-height full-height
-         chart-width full-width
-         clerk-width :full
-         range-format-f (fn [lower upper]
-                          (format "%,f - %,1f" lower upper))
-         y-zero true
-         y-scale false
-         legend {:encode {:labels {:update {:text {:signal "[datum.value]"}}}}}
-         labelLimit 0}}]
-  (let [tooltip [{:field group, :title group-title},
-                 {:field x, :type "temporal", :format x-format, :title x-title},
-                 {:field y, :title y-title ;; :format y-format
-                  }
-                 {:field :ir :title ir-title}
-                 {:field :or :title or-title}]]
-    (clerk/vl
-     {::clerk/width clerk-width}
-     {:height chart-height
-      :width chart-width
-      ;; :autosize {:type "fit" :contains "padding"}
-      :title {:text chart-title
-              :fontSize 24}
-      :config {:legend {:titleFontSize 16
-                        :labelFontSize 14
-                        :labelLimit labelLimit}
-               :axisX {:tickcount 7
-                       :tickExtra true
-                       :labelalign "center"
-                       :titleFontSize 16
-                       :labelFontSize 12}
-               :axisY {:titleFontSize 16
-                       :labelFontSize 12}}
-      :data {:values (-> data
-                         (tc/map-columns :ir [irl iru] range-format-f)
-                         (tc/map-columns :or [orl oru] range-format-f)
-                         (tc/rows :as-maps))}
-      :encoding {:y {:scale {:domain y-scale
-                             :zero y-zero}}
-                 :color {:legend (cond
-                                   (false? legend)
-                                   false
-                                   :else
-                                   legend)}}
-      :layer [{:mark "errorband"
-               :encoding {:y {:field iru :title y-title :type "quantitative"}
-                          :y2 {:field irl}
-                          :x {:field x :title x-title :format x-format :type "temporal"}
-                          :color {:field group :title group-title}
-                          :tooltip tooltip}}
-              {:mark "errorband"
-               :encoding {:y {:field oru :title y-title :type "quantitative"}
-                          :y2 {:field orl}
-                          :x {:field x :title x-title :format x-format :type "temporal"}
-                          :color {:field group :title group-title}
-                          :tooltip tooltip}}
-              {:mark {:type "line", :point {:filled false,
-                                            :fill "white",
-                                            :size 50
-                                            :strokewidth 0.5}},
-               :encoding {:y {:field y, :title y-title :type "quantitative"},
-                          :x {:field x, :title x-title :format x-format :type "temporal"},
-                          ;; color and shape scale and range must be specified or you get extra things in the legend
-                          :color (color-map data group colors-and-shapes)
-                          :shape (shape-map data group colors-and-shapes)
-                          :tooltip tooltip}}]})))
-
 (def field-descriptions
   {:calendar-year   :calendar-year-label
    :setting         :setting-label
@@ -309,22 +170,38 @@
            x-field x-sort-field x-field-label x-field-desc
            y-field y-sort-field y-field-label y-field-desc
            color-field white-text-test data height width
-           color-scheme color-type color-domain]
+           color-scheme color-type color-domain
+           legend-title-size legend-font-size
+           x-axis-title-size x-axis-font-size
+           y-axis-title-size y-axis-font-size]
     :or {height 100
          width 550
          white-text-test "datum['% change'] > 10 || datum['% change'] < -10"
          color-scheme "viridis"
-         color-type "gradient"}}]
+         color-type "gradient"
+         legend-title-size 20
+         legend-font-size 14
+         x-axis-title-size 16
+         x-axis-font-size 12
+         y-axis-title-size 16
+         y-axis-font-size 12}}]
   (let [tooltip [{:field (or y-field-desc y-field) :type "ordinal" :title y-field-label}
                  {:field (or x-field-desc x-field) :type "ordinal" :title x-field-label}
                  {:field color-field :type "quantitative"}]]
     {:data {:values data}
-     :encoding {:x {:field (or x-field-desc x-field) :type "nominal" :sort {:field (or x-sort-field x-field)} :title (or x-field-label x-field)}
-                :y {:field (or y-field-desc y-field) :type "ordinal" :sort {:field (or y-sort-field y-field)} :title (or y-field-label y-field)}}
+     :encoding {:x {:field (or x-field-desc x-field)
+                    :type "nominal"
+                    :sort {:field (or x-sort-field x-field)}
+                    :title (or x-field-label x-field)
+                    :axis  {:titleFontSize x-axis-title-size :labelFontSize x-axis-font-size}}
+                :y {:field (or y-field-desc y-field)
+                    :type "ordinal"
+                    :sort {:field (or y-sort-field y-field)}
+                    :title (or y-field-label y-field)
+                    :axis  {:titleFontSize y-axis-title-size :labelFontSize y-axis-font-size}}}
      :config {:axis {:grid true
-                     :tickBand "extent"
-                     :titleFontSize 16
-                     :labelFontSize 12}}
+                     :tickBand "extent"}
+              :legend {:titleFontSize legend-title-size :labelFontSize legend-font-size :labelLimit 0}}
      :title {:text title
              :fontSize 24}
      :height height
@@ -919,4 +796,3 @@
        :color-field     color-field
        :title           (format "# EHCPs per Designation by Primary Need in %d" most-recent-year)
        :white-text-test white-text-test}))))
-
