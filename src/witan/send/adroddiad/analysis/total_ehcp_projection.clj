@@ -41,10 +41,10 @@
        (sio/simulated-transitions-files prefix)
        (sio/files->ds-vec)))
 
-(defn add-diff [ds value-col]
-  (let [ds' (tc/order-by ds [:calendar-year])
-        diff (gradient/diff1d (value-col ds'))
-        values (value-col ds')
+(defn add-diff [ds value-col order-col]
+  (let [ds' (tc/order-by ds [order-col])
+        values (get ds' value-col)
+        diff (gradient/diff1d values)
         pct-diff (sequence
                   (map (fn [d m] (cond
                                    (every? zero? [d m])
@@ -86,7 +86,7 @@
       (tr/transitions->census)
       (tc/group-by ks)
       (tc/aggregate {:transition-count #(dfn/sum (:transition-count %))})
-      (add-diff :transition-count)
+      (add-diff :transition-count :calendar-year)
       (tc/rename-columns
        {:diff :ehcp-diff
         :pct-diff :ehcp-pct-diff})
@@ -122,7 +122,7 @@
                                               0)))
         (tc/group-by ks)
         (tc/aggregate {:cost #(dfn/sum (:cost %))})
-        (add-diff :cost)
+        (add-diff :cost :calendar-year)
         (tc/rename-columns
          {:diff :cost-diff
           :pct-diff :cost-pct-diff})
