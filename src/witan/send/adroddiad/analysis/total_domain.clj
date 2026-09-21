@@ -215,18 +215,22 @@
 ;;; All Settings
  )
 (defn total-summary-plot
-  [{:keys [data chart-title colors-and-shapes order-field label-field group-title legend]
+  [{:keys [data chart-title colors-and-shapes order-field label-field group-title legend
+           legend-title-size legend-font-size x-axis-title-size x-axis-font-size
+           y-axis-title-size y-axis-font-size chart-height chart-width]
     :or {legend true}}]
   (line-and-ribbon-and-rule-plot
    {:data              (-> data
                            (tc/map-columns :calendar-year [:calendar-year] format-calendar-year))
     :chart-title       (or chart-title (str "# EHCP by " (or group-title (name label-field))))
-    :chart-height      vs/full-height :chart-width vs/two-thirds-width
+    :chart-height      (or chart-height vs/full-height) :chart-width (or chart-width vs/two-thirds-width)
     :tooltip-formatf   (vsl/number-summary-tooltip {:tooltip-field :tooltip-column})
     :colors-and-shapes colors-and-shapes :legend legend
     :x                 :calendar-year :x-title     "Census Year" :x-format    "%b %Y"
     :y-title           "# EHCPs"      :y-zero      true          :y-scale     false
-    :group             label-field    :group-title (or group-title (name label-field))     :order-field order-field}))
+    :group             label-field    :group-title (or group-title (name label-field))     :order-field order-field
+    :legend-title-size legend-title-size :legend-font-size legend-font-size :x-axis-title-size x-axis-title-size
+    :x-axis-font-size x-axis-font-size :y-axis-title-size y-axis-title-size :y-axis-font-size y-axis-font-size}))
 
 (defn min-max-year [ds]
   (let [years (:calendar-year ds)]
@@ -234,7 +238,10 @@
      :max (apply dfn/max years)}))
 
 (defn diff-summary-plot
-  [{:keys [data colors-and-shapes order-field label-field]}]
+  [{:keys [data colors-and-shapes order-field label-field group-title legend
+           legend-title-size legend-font-size x-axis-title-size x-axis-font-size
+           y-axis-title-size y-axis-font-size chart-height chart-width]
+    :or {legend true}}]
   (let [calendar-year-limits (min-max-year data)
         data (-> data
                  (tc/drop-rows #(= (:min calendar-year-limits)
@@ -243,16 +250,21 @@
     (line-and-ribbon-and-rule-plot
      {:data              data
       :chart-title       (str "EHCP change Year on Year by " (name label-field))
-      :chart-height      vs/full-height      :chart-width vs/two-thirds-width
+      :chart-height      (or chart-height vs/full-height)      :chart-width (or chart-width vs/two-thirds-width)
       :tooltip-formatf   (vsl/number-summary-tooltip {:tooltip-field :tooltip-column})
-      :colors-and-shapes colors-and-shapes
+      :colors-and-shapes colors-and-shapes   :legend legend
       :x                 :calendar-year      :x-title     "Census Year" :x-format "%b %Y"
       :x-scale (mapv format-calendar-year (range (:min calendar-year-limits) (+ 1 (:max calendar-year-limits))))
       :y-title            "# EHCPs" :y-zero      false         :y-scale  false
-      :group             label-field         :group-title (name label-field) :order-field order-field})))
+      :group             label-field         :group-title (or group-title (name label-field)) :order-field order-field
+      :legend-title-size legend-title-size :legend-font-size legend-font-size :x-axis-title-size x-axis-title-size
+      :x-axis-font-size x-axis-font-size :y-axis-title-size y-axis-title-size :y-axis-font-size y-axis-font-size})))
 
 (defn pct-diff-summary-plot
-  [{:keys [data colors-and-shapes order-field label-field group-title chart-title]}]
+  [{:keys [data colors-and-shapes order-field label-field group-title chart-title legend
+           legend-title-size legend-font-size x-axis-title-size x-axis-font-size
+           y-axis-title-size y-axis-font-size chart-height chart-width]
+    :or {legend true}}]
   (let [calendar-year-limits (min-max-year data)
         data (-> data
                  (tc/drop-rows #(= (:min calendar-year-limits)
@@ -261,13 +273,15 @@
     (line-and-ribbon-and-rule-plot
      {:data              data
       :chart-title       (or chart-title (str "% EHCP change year on year by " (name label-field)))
-      :chart-height      vs/full-height      :chart-width vs/two-thirds-width
+      :chart-height      (or chart-height vs/full-height)      :chart-width (or chart-width vs/two-thirds-width)
       :tooltip-formatf   (vsl/pct-summary-tooltip {:tooltip-field :tooltip-column})
-      :colors-and-shapes colors-and-shapes
+      :colors-and-shapes colors-and-shapes   :legend legend
       :x                 :calendar-year      :x-title     "Census Year" :x-format "%b %Y"
       :x-scale (mapv format-calendar-year (range (:min calendar-year-limits) (+ 1 (:max calendar-year-limits))))
       :y-title            "% change" :y-zero      false         :y-scale  false :y-format ".1%"
-      :group             label-field         :group-title (or group-title (name label-field)) :order-field order-field})))
+      :group             label-field         :group-title (or group-title (name label-field)) :order-field order-field
+      :legend-title-size legend-title-size :legend-font-size legend-font-size :x-axis-title-size x-axis-title-size
+      :x-axis-font-size x-axis-font-size :y-axis-title-size y-axis-title-size :y-axis-font-size y-axis-font-size})))
 
 #_
 (defn pct-of-total-summary-plot
