@@ -52,7 +52,7 @@
 
 (def previous-out-dir (str previous-baseline-wp "/"))
 
-(def previous-config-file (str previous-out-dir "config.edn"))
+(def previous-config-file (str "../???" previous-out-dir "config.edn"))
 
 (def previous-anchor-year (- anchor-year 1))
 
