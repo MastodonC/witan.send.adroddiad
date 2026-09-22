@@ -260,10 +260,6 @@
                    :simulation-count (get-in cfg [:projection-parameters :simulations])
                    :transform-simulation-f transform-setting-simulation})))
 
-(def joiners-by-setting-summaries (tbs/summarise-joiners-from-config config-file wp))
-
-(def leavers-by-setting-summaries (tbs/summarise-leavers-from-config config-file wp))
-
 (def setting-colours (acc/color-and-shape-lookup (into (sorted-set) (:setting (get-in setting-summaries [:total-summary :table])))))
 
 (def need-summaries (->> (td/summarise simulation-data
