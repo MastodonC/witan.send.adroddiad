@@ -7,7 +7,8 @@
             [tablecloth.api :as tc]
             [witan.send.adroddiad.clerk.html :as chtml]
             [witan.send.adroddiad.dataset :as ds]
-            [witan.send.adroddiad.clerk.charting-v2 :as chart]))
+            [witan.send.adroddiad.clerk.charting-v2 :as chart]
+            [clojure.string :as s]))
 
 {:nextjournal.clerk/visibility {:result :hide}}
 (
@@ -52,11 +53,42 @@
    :range-format-f    (fn [lower upper]
                         (format "%,.2f - %,.2f" lower upper))
    :x                 :calendar-year :x-title     "Year"    :x-format "%Y"
-   :y                 :median        :y-title     "# EHCPs" :y-format "%,.2f" :y-zero true
+   :y                 :median        :y-title     "# EHCPs" :y-zero true
    :irl               :q1            :iru         :q3       :ir-title "50% range"
    :orl               :p05           :oru         :p95      :or-title "90% range"
    :group             :baseline      :group-title nil
    :colors-and-shapes nil})
+
+(def setting-rules
+  (mapv (fn [[setting simple-setting]] (conj [#(s/includes? % setting) simple-setting]))
+        [["6FC" "Further Education"]
+         ["APRU" "APRU"]
+         ["EHE" "Other"]
+         ["EYP" "Early Years"]
+         ["EYS" "Early Years"]
+         ["MsMdA" "Mainstream"]
+         ["MsIn" "Independent"]
+         ["SENU" "Resource Provision/Units"]
+         ["RP" "Resource Provision/Units"]
+         ["SpMdA" "Maintained Special"]
+         ["SpNm" "NMI"]
+         ["SpIn" "NMI"]
+         ["GFE" "Further Education"]
+         ["SP16" "Specialist Post-16"]
+         ["OLAS" "Other"]
+         ["OPA" "Other"]
+         ["NEET" "Not in education"]
+         ["NIEC" "Not in education"]
+         ["NIEO" "Not in education"]
+         ["UKN" "Other"]]))
+
+(defn classify
+  ([record rules]
+   (or (some (fn [[pred result]] (when (pred record) result))
+             rules)
+       record))
+  ([record]
+   (classify record setting-rules)))
 
 (
  ;; Notebook
