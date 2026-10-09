@@ -156,7 +156,7 @@
                                               :colors-and-shapes (chart/color-and-shape-lookup ["2025 Baseline"])
                                               :projection "2025 Baseline"})))
 
-(def summarised-pop-data
+(def summarised-send-age-pop-data
   (-> (tc/dataset population {:key-fn keyword})
       (tc/group-by [:calendar-year])
       (tc/aggregate {:population #(dfn/sum (:population %))})))
@@ -176,7 +176,7 @@
                       (tc/rename-columns
                        {:diff :ehcp-diff
                         :pct-diff :ehcp-pct-diff})
-                      (tc/inner-join summarised-pop-data [:calendar-year])
+                      (tc/inner-join summarised-send-age-pop-data [:calendar-year])
                       (tc/map-columns :pct-ehcps [:transition-count :population] #(dfn// %1 %2))
                       (tc/add-column :dataset "SEN2"))]
     (-> summarise
