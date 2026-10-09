@@ -223,48 +223,50 @@
 
 (defn ehcp-heatmap-per-year
   [census x-field]
-  (clerk/vl
-   {::clerk/width :full}
-   (let [color-field     "Row Count"
-         x-field         x-field
-         x-order-field   (sort-field x-field)
-         x-value->order  (zipmap (census x-field) (census x-order-field))
-         x-desc-field    (field-descriptions x-field)
-         x-value->desc   (zipmap (census x-field) (census x-desc-field))
-         y-field         :calendar-year
-         data            (-> census
-                             (tc/group-by [x-field y-field])
-                             (tc/aggregate {color-field tc/row-count})
-                             (tc/complete x-field y-field)
-                             (tc/replace-missing color-field :value 0)
-                             (tc/map-columns x-order-field [x-field] #(get x-value->order % %))
-                             (tc/map-columns x-desc-field [x-field] #(get x-value->desc % %))
-                             (tc/order-by [x-order-field :calendar-year]))
-         white-text-test (format "datum['%s'] > %d"
-                                 (name color-field)
-                                 (int (+ (reduce dfn/min (data color-field))
-                                         (* 0.450 (- (reduce dfn/max (data color-field))
-                                                     (reduce dfn/min (data color-field)))))))]
-     (heatmap-desc
-      {:data            (-> data
-                            (tc/rows :as-maps))
-       :height          150
-       :width           (cond
-                          (= x-field :academic-year)
-                          full-width
-                          (= x-field :scenario)
-                          two-rows
-                          :else
-                          half-width)
-       :y-field         y-field
-       :y-field-label   (axis-labels y-field)
-       :x-field         x-field
-       :x-field-desc    x-desc-field
-       :x-field-label   (axis-labels x-field)
-       :x-sort-field    x-order-field
-       :color-field     color-field
-       :title           (str "# EHCPs for " (sweet-column-names x-field x-field) " by Year")
-       :white-text-test white-text-test}))))
+  (let [color-field     "Row Count"
+        x-field         x-field
+        x-order-field   (sort-field x-field)
+        x-value->order  (zipmap (census x-field) (census x-order-field))
+        x-desc-field    (field-descriptions x-field)
+        x-value->desc   (zipmap (census x-field) (census x-desc-field))
+        y-field         :calendar-year
+        data            (-> census
+                            (tc/group-by [x-field y-field])
+                            (tc/aggregate {color-field tc/row-count})
+                            (tc/complete x-field y-field)
+                            (tc/replace-missing color-field :value 0)
+                            (tc/map-columns x-order-field [x-field] #(get x-value->order % %))
+                            (tc/map-columns x-desc-field [x-field] #(get x-value->desc % %))
+                            (tc/order-by [x-order-field :calendar-year]))
+        white-text-test (format "datum['%s'] > %d"
+                                (name color-field)
+                                (int (+ (reduce dfn/min (data color-field))
+                                        (* 0.450 (- (reduce dfn/max (data color-field))
+                                                    (reduce dfn/min (data color-field)))))))]
+    (heatmap-desc
+     {:data            (-> data
+                           (tc/rows :as-maps))
+      :height          150
+      :width           (cond
+                         (= x-field :academic-year)
+                         full-width
+                         (= x-field :scenario)
+                         two-rows
+                         :else
+                         half-width)
+      :y-field         y-field
+      :y-field-label   (axis-labels y-field)
+      :x-field         x-field
+      :x-field-desc    x-desc-field
+      :x-field-label   (axis-labels x-field)
+      :x-sort-field    x-order-field
+      :color-field     color-field
+      :title           (str "# EHCPs for " (sweet-column-names x-field x-field) " by Year")
+      :white-text-test white-text-test
+      :x-axis-font-size 16
+      :x-axis-title-size 16
+      :y-axis-title-size 16
+      :y-axis-font-size 16})))
 
 (defn ehcps-total-by-year
   ([census {:keys [scenario] :as opts :or {scenario "Baseline"}}]
@@ -272,7 +274,9 @@
        (tc/add-column :scenario scenario)
        (ehcp-heatmap-per-year :scenario)))
   ([census]
-   (ehcps-total-by-year census {})))
+   (-> census
+       (ehcps-total-by-year {})
+       (assoc-in [:encoding :x :axis :labelAngle] 0))))
 
 (defn ehcps-by-setting-per-year
   [census]
@@ -301,56 +305,55 @@
         domain-value->order (zipmap (census domain) (census domain-order-field))
         domain-desc-field (field-descriptions domain)
         domain-value->desc (zipmap (census domain) (census domain-desc-field))]
-    (clerk/vl
-     {:data {:values (as-> census $
-                       (tc/group-by $ [domain :calendar-year])
-                       (tc/aggregate $ {:count tc/row-count})
-                       (tc/order-by $ [domain :calendar-year])
-                       (tc/group-by $ [domain] {:result-type :as-map})
-                       (map #(ds/add-diff-and-pct-diff (val %) :count :calendar-year) $)
-                       (apply tc/concat $)
-                       (tc/replace-missing $ :diff :value 0)
-                       (tc/select-rows $ #(= most-recent-year (:calendar-year %)))
-                       (tc/map-columns $ domain-order-field [domain] #(get domain-value->order % %))
-                       (tc/map-columns $ domain-desc-field [domain] #(get domain-value->desc % %))
-                       (tc/order-by $ [domain-order-field :calendar-year])
-                       (tc/rename-columns $ {:diff "Count"})
-                       (tc/rows $ :as-maps))}
-      :title {:text  (format "%d→%d YoY EHCP Count Change by %s"
-                             (- most-recent-year 1) most-recent-year
-                             (axis-labels domain))
-              :fontsize 24}
-      :height full-height
-      :width half-width
-      :encoding {:x {:field "Count" :type "quantitative"}
-                 :y {:field (or domain-desc-field domain), :type "ordinal", :sort {:field (or domain-order-field domain)}, :title (axis-labels domain)}
-                 :tooltip [{:field domain-desc-field, :type "nominal", :title (sweet-column-names domain)},
-                           {:field "Count", :title "Count"}]}
-      :mark "bar"})))
+    {:data {:values (as-> census $
+                      (tc/group-by $ [domain :calendar-year])
+                      (tc/aggregate $ {:count tc/row-count})
+                      (tc/order-by $ [domain :calendar-year])
+                      (tc/group-by $ [domain] {:result-type :as-map})
+                      (map #(ds/add-diff-and-pct-diff (val %) :count :calendar-year) $)
+                      (apply tc/concat $)
+                      (tc/replace-missing $ :diff :value 0)
+                      (tc/select-rows $ #(= most-recent-year (:calendar-year %)))
+                      (tc/map-columns $ domain-order-field [domain] #(get domain-value->order % %))
+                      (tc/map-columns $ domain-desc-field [domain] #(get domain-value->desc % %))
+                      (tc/order-by $ [domain-order-field :calendar-year])
+                      (tc/rename-columns $ {:diff "Count"})
+                      (tc/rows $ :as-maps))}
+     :title {:text  (format "%d→%d YoY EHCP Count Change by %s"
+                            (- most-recent-year 1) most-recent-year
+                            (axis-labels domain))
+             :fontSize 24}
+     :height full-height
+     :width half-width
+     :encoding {:x {:field "Count" :type "quantitative"}
+                :y {:field (or domain-desc-field domain), :type "ordinal", :sort {:field (or domain-order-field domain)}, :title (axis-labels domain)}
+                :tooltip [{:field domain-desc-field, :type "nominal", :title (sweet-column-names domain)},
+                          {:field "Count", :title "Count"}]}
+     :mark "bar"}))
 
 (defn echps-total-yoy-change
   [census]
   (let [min-year (reduce dfn/min (:calendar-year census))]
-    (clerk/vl
-     {:data {:values (as-> census $
-                       (tc/group-by $ [:calendar-year])
-                       (tc/aggregate $ {:count tc/row-count})
-                       (tc/order-by $ [:calendar-year])
-                       (ds/add-diff-and-pct-diff $ :count :calendar-year)
-                       (tc/replace-missing $ :diff :value 0)
-                       (tc/order-by $ [:calendar-year])
-                       (tc/rename-columns $ {:diff "Count"})
-                       (tc/drop-rows $ #(= min-year (:calendar-year %)))
-                       (tc/rows $ :as-maps))}
-      :title {:text  "YoY EHCP Count Change"
-              :fontsize 24}
-      :height full-height
-      :width 400
-      :encoding {:x {:field "Count" :type "quantitative"}
-                 :y {:field :calendar-year, :type "ordinal", :sort "ascending", :title (axis-labels :calendar-year)}
-                 :tooltip [{:field :calendar-year, :type "nominal", :title (sweet-column-names :calendar-year)},
-                           {:field "Count", :title "Count"}]}
-      :mark "bar"})))
+    {:data {:values (as-> census $
+                      (tc/group-by $ [:calendar-year])
+                      (tc/aggregate $ {:count tc/row-count})
+                      (tc/order-by $ [:calendar-year])
+                      (ds/add-diff-and-pct-diff $ :count :calendar-year)
+                      (tc/replace-missing $ :diff :value 0)
+                      (tc/order-by $ [:calendar-year])
+                      (tc/rename-columns $ {:diff "Count"})
+                      (tc/drop-rows $ #(= min-year (:calendar-year %)))
+                      (tc/rows $ :as-maps))}
+     :title {:text  "YoY EHCP Count Change"
+             :fontSize 24}
+     :height full-height
+     :width 400
+     :encoding {:x {:field "Count" :type "quantitative" :axis {:titleFontSize 16 :labelFontSize 16}}
+                :y {:field :calendar-year, :type "ordinal", :sort "ascending", :title (axis-labels :calendar-year)
+                    :axis {:titleFontSize 16 :labelFontSize 16}}
+                :tooltip [{:field :calendar-year, :type "nominal", :title (sweet-column-names :calendar-year)},
+                          {:field "Count", :title "Count"}]}
+     :mark "bar"}))
 
 (defn ehcps-by-setting-yoy-change
   [census]
@@ -379,56 +382,55 @@
         domain-value->order (zipmap (census domain) (census domain-order-field))
         domain-desc-field (field-descriptions domain)
         domain-value->desc (zipmap (census domain) (census domain-desc-field))]
-    (clerk/vl
-     {:data {:values (as-> census $
-                       (tc/group-by $ [domain :calendar-year])
-                       (tc/aggregate $ {:count tc/row-count})
-                       (tc/order-by $ [domain :calendar-year])
-                       (tc/group-by $ [domain] {:result-type :as-map})
-                       (map #(ds/add-diff-and-pct-diff (val %) :count :calendar-year) $)
-                       (apply tc/concat $)
-                       (tc/replace-missing $ :pct-change)
-                       (tc/select-rows $ #(= most-recent-year (:calendar-year %)))
-                       (tc/map-columns $ domain-order-field [domain] #(get domain-value->order % %))
-                       (tc/map-columns $ domain-desc-field [domain] #(get domain-value->desc % %))
-                       (tc/order-by $ [domain-order-field :calendar-year])
-                       (tc/rename-columns $ {:pct-change "% Change"})
-                       (tc/rows $ :as-maps))}
-      :title {:text  (format "%d→%d YoY EHCP Percentage Change by %s"
-                             (- most-recent-year 1) most-recent-year
-                             (axis-labels domain))
-              :fontsize 24}
-      :height full-height
-      :width half-width
-      :encoding {:x {:field "% Change" :type "quantitative"}
-                 :y {:field domain-desc-field, :type "ordinal", :sort {:field (or domain-order-field domain)}, :title (axis-labels domain)}
-                 :tooltip [{:field domain-desc-field, :type "nominal", :title (sweet-column-names domain)},
-                           {:field "% Change", :title "% Change"}]}
-      :mark "bar"})))
+    {:data {:values (as-> census $
+                      (tc/group-by $ [domain :calendar-year])
+                      (tc/aggregate $ {:count tc/row-count})
+                      (tc/order-by $ [domain :calendar-year])
+                      (tc/group-by $ [domain] {:result-type :as-map})
+                      (map #(ds/add-diff-and-pct-diff (val %) :count :calendar-year) $)
+                      (apply tc/concat $)
+                      (tc/replace-missing $ :pct-change)
+                      (tc/select-rows $ #(= most-recent-year (:calendar-year %)))
+                      (tc/map-columns $ domain-order-field [domain] #(get domain-value->order % %))
+                      (tc/map-columns $ domain-desc-field [domain] #(get domain-value->desc % %))
+                      (tc/order-by $ [domain-order-field :calendar-year])
+                      (tc/rename-columns $ {:pct-change "% Change"})
+                      (tc/rows $ :as-maps))}
+     :title {:text  (format "%d→%d YoY EHCP Percentage Change by %s"
+                            (- most-recent-year 1) most-recent-year
+                            (axis-labels domain))
+             :fontSize 24}
+     :height full-height
+     :width half-width
+     :encoding {:x {:field "% Change" :type "quantitative"}
+                :y {:field domain-desc-field, :type "ordinal", :sort {:field (or domain-order-field domain)}, :title (axis-labels domain)}
+                :tooltip [{:field domain-desc-field, :type "nominal", :title (sweet-column-names domain)},
+                          {:field "% Change", :title "% Change"}]}
+     :mark "bar"}))
 
 (defn echps-total-yoy-pct-change
   [census]
   (let [min-year (reduce dfn/min (:calendar-year census))]
-    (clerk/vl
-     {:data {:values (as-> census $
-                       (tc/group-by $ [:calendar-year])
-                       (tc/aggregate $ {:count tc/row-count})
-                       (tc/order-by $ [:calendar-year])
-                       (ds/add-diff-and-pct-diff $ :count :calendar-year)
-                       (tc/replace-missing $ :pct-change :value 0)
-                       (tc/order-by $ [:calendar-year])
-                       (tc/rename-columns $ {:pct-change "% Change"})
-                       (tc/drop-rows $ #(= min-year (:calendar-year %)))
-                       (tc/rows $ :as-maps))}
-      :title {:text  "YoY EHCP Percentage Change"
-              :fontsize 24}
-      :height full-height
-      :width 400
-      :encoding {:x {:field "% Change" :type "quantitative"}
-                 :y {:field :calendar-year, :type "ordinal", :sort "ascending", :title (axis-labels :calendar-year)}
-                 :tooltip [{:field :calendar-year, :type "nominal", :title (sweet-column-names :calendar-year)},
-                           {:field "% Change", :title "% Change"}]}
-      :mark "bar"})))
+    {:data {:values (as-> census $
+                      (tc/group-by $ [:calendar-year])
+                      (tc/aggregate $ {:count tc/row-count})
+                      (tc/order-by $ [:calendar-year])
+                      (ds/add-diff-and-pct-diff $ :count :calendar-year)
+                      (tc/replace-missing $ :pct-change :value 0)
+                      (tc/order-by $ [:calendar-year])
+                      (tc/rename-columns $ {:pct-change "% Change"})
+                      (tc/drop-rows $ #(= min-year (:calendar-year %)))
+                      (tc/rows $ :as-maps))}
+     :title {:text  "YoY EHCP Percentage Change"
+             :fontSize 24}
+     :height full-height
+     :width 400
+     :encoding {:x {:field "% Change" :type "quantitative" :axis {:titleFontSize 16 :labelFontSize 16}}
+                :y {:field :calendar-year, :type "ordinal", :sort "ascending", :title (axis-labels :calendar-year)
+                    :axis {:titleFontSize 16 :labelFontSize 16}}
+                :tooltip [{:field :calendar-year, :type "nominal", :title (sweet-column-names :calendar-year)},
+                          {:field "% Change", :title "% Change"}]}
+     :mark "bar"}))
 
 (defn ehcps-by-setting-yoy-pct-change
   [census]
@@ -456,69 +458,67 @@
 
 (defn transitions-heatmap-per-year
   [transitions x-field predicate]
-  (clerk/vl
-   {::clerk/width :full}
-   (let [color-field     "Row Count"
-         y-field         :calendar-year
-         x-order-field   (sort-field x-field)
-         x-value->order  (zipmap (transitions x-field) (transitions x-order-field))
-         y-desc-field     (field-descriptions y-field)
-         x-desc-field    (field-descriptions x-field)
-         x-value->desc   (zipmap (transitions x-field) (transitions x-desc-field))
-         x-field-label   (as-> x-field $ (transitions-labels->census-labels $ $) (axis-labels $ $))
-         title           (str "# "
-                              (cond
-                                (= predicate tr/joiner?) "Joiners"
-                                (= predicate tr/leaver?) "Leavers")
-                              " by " x-field-label " by Year "
-                              (cond
-                                (= predicate tr/joiner?) "Joined"
-                                (= predicate tr/leaver?) "Left"))
-         data            (-> transitions
-                             (tc/select-rows predicate)
-                             (tc/group-by [x-field y-field])
-                             (tc/aggregate {color-field tc/row-count})
-                             (tc/complete x-field y-field)
-                             (tc/replace-missing color-field :value 0)
-                             (tc/map-columns :calendar-year [:calendar-year]
-                                             (fn [cy]
-                                               (cond
-                                                 (= predicate tr/joiner?) (inc cy)
-                                                 (= predicate tr/leaver?) cy)))
-                             (tc/map-columns x-order-field [x-field] #(get x-value->order % %))
-                             (tc/map-columns y-desc-field [y-field]
-                                             #(cond
-                                                (= predicate tr/joiner?) (format "→%d" %)
-                                                (= predicate tr/leaver?) (format "%d→" %)))
-                             (tc/map-columns x-desc-field [x-field] #(get x-value->desc % %))
-                             (tc/order-by [x-order-field :calendar-year]))
-         white-text-test (format "datum['%s'] > %d"
-                                 (name color-field)
-                                 (int (+ (reduce dfn/min (data color-field))
-                                         (* 0.450 (- (reduce dfn/max (data color-field))
-                                                     (reduce dfn/min (data color-field)))))))]
-     (heatmap-desc
-      {:data            (-> data
-                            (tc/rows :as-maps))
-       :height          two-rows
-       :width           (cond
-                          (or (= x-field :academic-year-1)
-                              (= x-field :academic-year-2))
-                          full-width
-                          (= x-field :scenario)
-                          two-rows
-                          :else
-                          half-width)
-       :y-field         y-field
-       :y-field-desc    y-desc-field
-       :y-field-label   (axis-labels y-field)
-       :x-field         x-field
-       :x-field-desc    x-desc-field
-       :x-field-label   x-field-label
-       :x-sort-field    x-order-field
-       :color-field     color-field
-       :title           title
-       :white-text-test white-text-test}))))
+  (let [color-field     "Row Count"
+        y-field         :calendar-year
+        x-order-field   (sort-field x-field)
+        x-value->order  (zipmap (transitions x-field) (transitions x-order-field))
+        y-desc-field     (field-descriptions y-field)
+        x-desc-field    (field-descriptions x-field)
+        x-value->desc   (zipmap (transitions x-field) (transitions x-desc-field))
+        x-field-label   (as-> x-field $ (transitions-labels->census-labels $ $) (axis-labels $ $))
+        title           (str "# "
+                             (cond
+                               (= predicate tr/joiner?) "Joiners"
+                               (= predicate tr/leaver?) "Leavers")
+                             " by " x-field-label " by Year "
+                             (cond
+                               (= predicate tr/joiner?) "Joined"
+                               (= predicate tr/leaver?) "Left"))
+        data            (-> transitions
+                            (tc/select-rows predicate)
+                            (tc/group-by [x-field y-field])
+                            (tc/aggregate {color-field tc/row-count})
+                            (tc/complete x-field y-field)
+                            (tc/replace-missing color-field :value 0)
+                            (tc/map-columns :calendar-year [:calendar-year]
+                                            (fn [cy]
+                                              (cond
+                                                (= predicate tr/joiner?) (inc cy)
+                                                (= predicate tr/leaver?) cy)))
+                            (tc/map-columns x-order-field [x-field] #(get x-value->order % %))
+                            (tc/map-columns y-desc-field [y-field]
+                                            #(cond
+                                               (= predicate tr/joiner?) (format "→%d" %)
+                                               (= predicate tr/leaver?) (format "%d→" %)))
+                            (tc/map-columns x-desc-field [x-field] #(get x-value->desc % %))
+                            (tc/order-by [x-order-field :calendar-year]))
+        white-text-test (format "datum['%s'] > %d"
+                                (name color-field)
+                                (int (+ (reduce dfn/min (data color-field))
+                                        (* 0.450 (- (reduce dfn/max (data color-field))
+                                                    (reduce dfn/min (data color-field)))))))]
+    (heatmap-desc
+     {:data            (-> data
+                           (tc/rows :as-maps))
+      :height          two-rows
+      :width           (cond
+                         (or (= x-field :academic-year-1)
+                             (= x-field :academic-year-2))
+                         full-width
+                         (= x-field :scenario)
+                         two-rows
+                         :else
+                         half-width)
+      :y-field         y-field
+      :y-field-desc    y-desc-field
+      :y-field-label   (axis-labels y-field)
+      :x-field         x-field
+      :x-field-desc    x-desc-field
+      :x-field-label   x-field-label
+      :x-sort-field    x-order-field
+      :color-field     color-field
+      :title           title
+      :white-text-test white-text-test})))
 
 (defn joiners-by-ehcp-per-year
   ([transitions {:keys [scenario] :as opts :or {scenario "Baseline"}}]
@@ -578,122 +578,20 @@
 
 (defn setting-to-setting-heatmap
   [transitions]
-  (clerk/vl
-   {::clerk/width :full}
-   (let [color-field      "Row Count"
-         most-recent-year (reduce dfn/max (:calendar-year transitions))
-         y-field          :setting-1
-         x-field          :setting-2
-         y-order-field    :setting-1-order
-         x-order-field    :setting-2-order
-         y-value->order   (zipmap (transitions y-field) (transitions y-order-field))
-         x-value->order   (zipmap (transitions x-field) (transitions x-order-field))
-         y-desc-field     (field-descriptions y-field)
-         x-desc-field     (field-descriptions x-field)
-         y-value->desc    (zipmap (transitions y-field) (transitions y-desc-field))
-         x-value->desc    (zipmap (transitions x-field) (transitions x-desc-field))
-         data             (-> transitions
-                              (tc/select-rows #(= most-recent-year (% :calendar-year)))
-                              (tc/group-by [x-field y-field])
-                              (tc/aggregate {color-field tc/row-count})
-                              (tc/complete x-field y-field)
-                              (tc/replace-missing color-field :value 0)
-                              (tc/map-columns y-order-field [y-field] #(get y-value->order % %))
-                              (tc/map-columns x-order-field [x-field] #(get x-value->order % %))
-                              (tc/map-columns y-desc-field [y-field] #(get y-value->desc % %))
-                              (tc/map-columns x-desc-field [x-field] #(get x-value->desc % %))
-                              (tc/order-by [x-order-field y-order-field]))
-         white-text-test  (format "datum['%s'] > %d"
-                                  (name color-field)
-                                  (int (+ (reduce dfn/min (data color-field))
-                                          (* 0.450 (- (reduce dfn/max (data color-field))
-                                                      (reduce dfn/min (data color-field)))))))]
-     (heatmap-desc
-      {:data            (-> data
-                            (tc/rows :as-maps))
-       :height          full-height
-       :width           full-width
-       :y-field         y-field
-       :y-field-desc    y-desc-field
-       :y-field-label   (str most-recent-year " " (-> y-field transitions-labels->census-labels axis-labels))
-       :y-sort-field    y-order-field
-       :x-field         x-field
-       :x-field-desc    x-desc-field
-       :x-field-label   (str (inc most-recent-year) " " (-> x-field transitions-labels->census-labels axis-labels))
-       :x-sort-field    x-order-field
-       :color-field     color-field
-       :title           (str most-recent-year "→" (+ most-recent-year 1) " Setting to Setting Transitions")
-       :white-text-test white-text-test}))))
-
-(defn setting-mover-heatmap
-  [transitions]
-  (clerk/vl
-   {::clerk/width :full}
-   (let [color-field      "Row Count"
-         most-recent-year (reduce dfn/max (:calendar-year transitions))
-         y-field          :setting-1
-         x-field          :setting-2
-         y-order-field    :setting-1-order
-         x-order-field    :setting-2-order
-         y-value->order   (zipmap (transitions y-field) (transitions y-order-field))
-         x-value->order   (zipmap (transitions x-field) (transitions x-order-field))
-         y-desc-field     (field-descriptions y-field)
-         x-desc-field     (field-descriptions x-field)
-         y-value->desc    (zipmap (transitions y-field) (transitions y-desc-field))
-         x-value->desc    (zipmap (transitions x-field) (transitions x-desc-field))
-         data             (-> transitions
-                              (tc/select-rows #(= most-recent-year (% :calendar-year)))
-                              (tc/select-rows tr/mover?)
-                              (tc/group-by [x-field y-field])
-                              (tc/aggregate {color-field tc/row-count})
-                              (tc/complete x-field y-field)
-                              (tc/replace-missing color-field :value 0)
-                              (tc/map-columns y-order-field [y-field] #(get y-value->order % %))
-                              (tc/map-columns x-order-field [x-field] #(get x-value->order % %))
-                              (tc/map-columns y-desc-field [y-field] #(get y-value->desc % %))
-                              (tc/map-columns x-desc-field [x-field] #(get x-value->desc % %))
-                              (tc/order-by [x-order-field y-order-field]))
-         white-text-test  (format "datum['%s'] > %d"
-                                  (name color-field)
-                                  (int (+ (reduce dfn/min (data color-field))
-                                          (* 0.450 (- (reduce dfn/max (data color-field))
-                                                      (reduce dfn/min (data color-field)))))))]
-     (heatmap-desc
-      {:data            (-> data
-                            (tc/rows :as-maps))
-       :height          full-height
-       :width           full-width
-       :y-field         y-field
-       :y-field-desc    y-desc-field
-       :y-field-label   (str most-recent-year " " (-> y-field transitions-labels->census-labels axis-labels))
-       :y-sort-field    y-order-field
-       :x-field         x-field
-       :x-field-desc    x-desc-field
-       :x-field-label   (str (inc most-recent-year) " " (-> x-field transitions-labels->census-labels axis-labels))
-       :x-sort-field    x-order-field
-       :color-field     color-field
-       :title           (str most-recent-year "→" (+ most-recent-year 1) " Setting to Setting Movers")
-       :white-text-test white-text-test}))))
-
-(defn joiners-by-two-domains
-  [transitions x-field y-field]
-  (clerk/vl
-   {::clerk/width :full}
-   (let [color-field      "Row Count"
-         most-recent-year (reduce dfn/max (:calendar-year transitions))
-         y-order-field   (sort-field y-field)
-         x-order-field   (sort-field x-field)
-         y-value->order   (zipmap (transitions y-field) (transitions y-order-field))
-         x-value->order   (zipmap (transitions x-field) (transitions x-order-field))
-         y-desc-field     (field-descriptions y-field)
-         x-desc-field     (field-descriptions x-field)
-         y-value->desc    (zipmap (transitions y-field) (transitions y-desc-field))
-         x-value->desc    (zipmap (transitions x-field) (transitions x-desc-field))
-         y-field-label   (as-> y-field $ (transitions-labels->census-labels $ $) (axis-labels $ $))
-         x-field-label   (as-> x-field $ (transitions-labels->census-labels $ $) (axis-labels $ $))
-         data            (-> transitions
-                             (tc/select-rows #(and (= "NONSEND" (:setting-1 %))
-                                                   (= most-recent-year (% :calendar-year))))
+  (let [color-field      "Row Count"
+        most-recent-year (reduce dfn/max (:calendar-year transitions))
+        y-field          :setting-1
+        x-field          :setting-2
+        y-order-field    :setting-1-order
+        x-order-field    :setting-2-order
+        y-value->order   (zipmap (transitions y-field) (transitions y-order-field))
+        x-value->order   (zipmap (transitions x-field) (transitions x-order-field))
+        y-desc-field     (field-descriptions y-field)
+        x-desc-field     (field-descriptions x-field)
+        y-value->desc    (zipmap (transitions y-field) (transitions y-desc-field))
+        x-value->desc    (zipmap (transitions x-field) (transitions x-desc-field))
+        data             (-> transitions
+                             (tc/select-rows #(= most-recent-year (% :calendar-year)))
                              (tc/group-by [x-field y-field])
                              (tc/aggregate {color-field tc/row-count})
                              (tc/complete x-field y-field)
@@ -703,29 +601,125 @@
                              (tc/map-columns y-desc-field [y-field] #(get y-value->desc % %))
                              (tc/map-columns x-desc-field [x-field] #(get x-value->desc % %))
                              (tc/order-by [x-order-field y-order-field]))
-         white-text-test (format "datum['%s'] > %d"
+        white-text-test  (format "datum['%s'] > %d"
                                  (name color-field)
                                  (int (+ (reduce dfn/min (data color-field))
                                          (* 0.450 (- (reduce dfn/max (data color-field))
                                                      (reduce dfn/min (data color-field)))))))]
-     (heatmap-desc
-      {:data            (-> data
-                            (tc/rows :as-maps))
-       :height          full-height
-       :width           full-width
-       :y-field         y-field
-       :y-field-desc    y-desc-field
-       :y-field-label   y-field-label
-       :y-sort-field    y-order-field
-       :x-field         x-field
-       :x-field-desc    x-desc-field
-       :x-field-label   x-field-label
-       :x-sort-field    x-order-field
-       :color-field     color-field
-       :title           (format "New EHCPs %d→%d by %s and %s"
-                                most-recent-year (inc most-recent-year)
-                                y-field-label x-field-label)
-       :white-text-test white-text-test}))))
+    (heatmap-desc
+     {:data            (-> data
+                           (tc/rows :as-maps))
+      :height          full-height
+      :width           full-width
+      :y-field         y-field
+      :y-field-desc    y-desc-field
+      :y-field-label   (str most-recent-year " " (-> y-field transitions-labels->census-labels axis-labels))
+      :y-sort-field    y-order-field
+      :x-field         x-field
+      :x-field-desc    x-desc-field
+      :x-field-label   (str (inc most-recent-year) " " (-> x-field transitions-labels->census-labels axis-labels))
+      :x-sort-field    x-order-field
+      :color-field     color-field
+      :title           (str most-recent-year "→" (+ most-recent-year 1) " Setting to Setting Transitions")
+      :white-text-test white-text-test})))
+
+(defn setting-mover-heatmap
+  [transitions]
+  (let [color-field      "Row Count"
+        most-recent-year (reduce dfn/max (:calendar-year transitions))
+        y-field          :setting-1
+        x-field          :setting-2
+        y-order-field    :setting-1-order
+        x-order-field    :setting-2-order
+        y-value->order   (zipmap (transitions y-field) (transitions y-order-field))
+        x-value->order   (zipmap (transitions x-field) (transitions x-order-field))
+        y-desc-field     (field-descriptions y-field)
+        x-desc-field     (field-descriptions x-field)
+        y-value->desc    (zipmap (transitions y-field) (transitions y-desc-field))
+        x-value->desc    (zipmap (transitions x-field) (transitions x-desc-field))
+        data             (-> transitions
+                             (tc/select-rows #(= most-recent-year (% :calendar-year)))
+                             (tc/select-rows tr/mover?)
+                             (tc/group-by [x-field y-field])
+                             (tc/aggregate {color-field tc/row-count})
+                             (tc/complete x-field y-field)
+                             (tc/replace-missing color-field :value 0)
+                             (tc/map-columns y-order-field [y-field] #(get y-value->order % %))
+                             (tc/map-columns x-order-field [x-field] #(get x-value->order % %))
+                             (tc/map-columns y-desc-field [y-field] #(get y-value->desc % %))
+                             (tc/map-columns x-desc-field [x-field] #(get x-value->desc % %))
+                             (tc/order-by [x-order-field y-order-field]))
+        white-text-test  (format "datum['%s'] > %d"
+                                 (name color-field)
+                                 (int (+ (reduce dfn/min (data color-field))
+                                         (* 0.450 (- (reduce dfn/max (data color-field))
+                                                     (reduce dfn/min (data color-field)))))))]
+    (heatmap-desc
+     {:data            (-> data
+                           (tc/rows :as-maps))
+      :height          full-height
+      :width           full-width
+      :y-field         y-field
+      :y-field-desc    y-desc-field
+      :y-field-label   (str most-recent-year " " (-> y-field transitions-labels->census-labels axis-labels))
+      :y-sort-field    y-order-field
+      :x-field         x-field
+      :x-field-desc    x-desc-field
+      :x-field-label   (str (inc most-recent-year) " " (-> x-field transitions-labels->census-labels axis-labels))
+      :x-sort-field    x-order-field
+      :color-field     color-field
+      :title           (str most-recent-year "→" (+ most-recent-year 1) " Setting to Setting Movers")
+      :white-text-test white-text-test})))
+
+(defn joiners-by-two-domains
+  [transitions x-field y-field]
+  (let [color-field      "Row Count"
+        most-recent-year (reduce dfn/max (:calendar-year transitions))
+        y-order-field   (sort-field y-field)
+        x-order-field   (sort-field x-field)
+        y-value->order   (zipmap (transitions y-field) (transitions y-order-field))
+        x-value->order   (zipmap (transitions x-field) (transitions x-order-field))
+        y-desc-field     (field-descriptions y-field)
+        x-desc-field     (field-descriptions x-field)
+        y-value->desc    (zipmap (transitions y-field) (transitions y-desc-field))
+        x-value->desc    (zipmap (transitions x-field) (transitions x-desc-field))
+        y-field-label   (as-> y-field $ (transitions-labels->census-labels $ $) (axis-labels $ $))
+        x-field-label   (as-> x-field $ (transitions-labels->census-labels $ $) (axis-labels $ $))
+        data            (-> transitions
+                            (tc/select-rows #(and (= "NONSEND" (:setting-1 %))
+                                                  (= most-recent-year (% :calendar-year))))
+                            (tc/group-by [x-field y-field])
+                            (tc/aggregate {color-field tc/row-count})
+                            (tc/complete x-field y-field)
+                            (tc/replace-missing color-field :value 0)
+                            (tc/map-columns y-order-field [y-field] #(get y-value->order % %))
+                            (tc/map-columns x-order-field [x-field] #(get x-value->order % %))
+                            (tc/map-columns y-desc-field [y-field] #(get y-value->desc % %))
+                            (tc/map-columns x-desc-field [x-field] #(get x-value->desc % %))
+                            (tc/order-by [x-order-field y-order-field]))
+        white-text-test (format "datum['%s'] > %d"
+                                (name color-field)
+                                (int (+ (reduce dfn/min (data color-field))
+                                        (* 0.450 (- (reduce dfn/max (data color-field))
+                                                    (reduce dfn/min (data color-field)))))))]
+    (heatmap-desc
+     {:data            (-> data
+                           (tc/rows :as-maps))
+      :height          full-height
+      :width           full-width
+      :y-field         y-field
+      :y-field-desc    y-desc-field
+      :y-field-label   y-field-label
+      :y-sort-field    y-order-field
+      :x-field         x-field
+      :x-field-desc    x-desc-field
+      :x-field-label   x-field-label
+      :x-sort-field    x-order-field
+      :color-field     color-field
+      :title           (format "New EHCPs %d→%d by %s and %s"
+                               most-recent-year (inc most-recent-year)
+                               y-field-label x-field-label)
+      :white-text-test white-text-test})))
 
 (defn joiners-by-setting-and-school-phase
   [transitions]
@@ -741,58 +735,56 @@
 
 (defn needs-by-designation
   [census]
-  (clerk/vl
-   {::clerk/width :full}
-   (let [color-field      "Row Count"
-         most-recent-year (reduce dfn/max (:calendar-year census))
-         y-field          :designation
-         x-field          :need
-         y-order-field    (sort-field y-field)
-         x-order-field    (sort-field x-field)
-         y-value->order   (zipmap (census y-field) (census y-order-field))
-         x-value->order   (zipmap (census x-field) (census x-order-field))
-         y-desc-field     (field-descriptions y-field)
-         x-desc-field     (field-descriptions x-field)
-         y-value->desc    (zipmap (census y-field) (census y-desc-field))
-         x-value->desc    (zipmap (census x-field) (census x-desc-field))
-         data             (-> census
-                              (tc/map-columns :designation [:setting]
-                                              (fn [s] (cond
-                                                        (clojure.string/includes? s "_")
-                                                        (-> s
-                                                            (clojure.string/split #"_")
-                                                            second)
-                                                        :else nil)))
-                              (tc/drop-missing [:designation])
-                              (tc/drop-rows (comp #{"InA" "OoA"} :designation))
-                              (tc/select-rows #(= most-recent-year (:calendar-year %)))
-                              (tc/group-by [x-field y-field])
-                              (tc/aggregate {"Row Count" tc/row-count})
-                              (tc/complete x-field y-field)
-                              (tc/replace-missing "Row Count" :value 0)
-                              (tc/map-columns y-order-field [y-field] #(get y-value->order % %))
-                              (tc/map-columns x-order-field [x-field] #(get x-value->order % %))
-                              (tc/map-columns y-desc-field [y-field] #(get y-value->desc % %))
-                              (tc/map-columns x-desc-field [x-field] #(get x-value->desc % %))
-                              (tc/order-by [x-order-field y-order-field]))
-         white-text-test  (format "datum['%s'] > %d"
-                                  (name color-field)
-                                  (int (+ (reduce dfn/min (data color-field))
-                                          (* 0.450 (- (reduce dfn/max (data color-field))
-                                                      (reduce dfn/min (data color-field)))))))]
-     (heatmap-desc
-      {:data            (-> data
-                            (tc/rows :as-maps))
-       :height          full-height
-       :width           half-width
-       :y-field         y-field
-       :y-field-desc    y-desc-field
-       :y-field-label   (axis-labels y-field)
-       :y-sort-field    y-order-field
-       :x-field         x-field
-       :x-field-desc    x-desc-field
-       :x-field-label   (axis-labels x-field)
-       :x-sort-field    x-order-field
-       :color-field     color-field
-       :title           (format "# EHCPs per Designation by Primary Need in %d" most-recent-year)
-       :white-text-test white-text-test}))))
+  (let [color-field      "Row Count"
+        most-recent-year (reduce dfn/max (:calendar-year census))
+        y-field          :designation
+        x-field          :need
+        y-order-field    (sort-field y-field)
+        x-order-field    (sort-field x-field)
+        y-value->order   (zipmap (census y-field) (census y-order-field))
+        x-value->order   (zipmap (census x-field) (census x-order-field))
+        y-desc-field     (field-descriptions y-field)
+        x-desc-field     (field-descriptions x-field)
+        y-value->desc    (zipmap (census y-field) (census y-desc-field))
+        x-value->desc    (zipmap (census x-field) (census x-desc-field))
+        data             (-> census
+                             (tc/map-columns :designation [:setting]
+                                             (fn [s] (cond
+                                                       (clojure.string/includes? s "_")
+                                                       (-> s
+                                                           (clojure.string/split #"_")
+                                                           second)
+                                                       :else nil)))
+                             (tc/drop-missing [:designation])
+                             (tc/drop-rows (comp #{"InA" "OoA"} :designation))
+                             (tc/select-rows #(= most-recent-year (:calendar-year %)))
+                             (tc/group-by [x-field y-field])
+                             (tc/aggregate {"Row Count" tc/row-count})
+                             (tc/complete x-field y-field)
+                             (tc/replace-missing "Row Count" :value 0)
+                             (tc/map-columns y-order-field [y-field] #(get y-value->order % %))
+                             (tc/map-columns x-order-field [x-field] #(get x-value->order % %))
+                             (tc/map-columns y-desc-field [y-field] #(get y-value->desc % %))
+                             (tc/map-columns x-desc-field [x-field] #(get x-value->desc % %))
+                             (tc/order-by [x-order-field y-order-field]))
+        white-text-test  (format "datum['%s'] > %d"
+                                 (name color-field)
+                                 (int (+ (reduce dfn/min (data color-field))
+                                         (* 0.450 (- (reduce dfn/max (data color-field))
+                                                     (reduce dfn/min (data color-field)))))))]
+    (heatmap-desc
+     {:data            (-> data
+                           (tc/rows :as-maps))
+      :height          full-height
+      :width           half-width
+      :y-field         y-field
+      :y-field-desc    y-desc-field
+      :y-field-label   (axis-labels y-field)
+      :y-sort-field    y-order-field
+      :x-field         x-field
+      :x-field-desc    x-desc-field
+      :x-field-label   (axis-labels x-field)
+      :x-sort-field    x-order-field
+      :color-field     color-field
+      :title           (format "# EHCPs per Designation by Primary Need in %d" most-recent-year)
+      :white-text-test white-text-test})))
