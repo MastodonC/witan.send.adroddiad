@@ -441,7 +441,7 @@
           :tooltip-formatf   (vsl/pct-summary-tooltip {:group :projection :x :calendar-year :tooltip-field :tooltip-column})
           :colors-and-shapes colors-and-shapes
           :x                 :calendar-year      :x-title     "Census Year" :x-format "%b %Y"
-          :x-scale (mapv format-calendar-year [(:min calendar-year-limits)] (+ 1 (:max calendar-year-limits)))
+          :x-scale (mapv format-calendar-year [(:min calendar-year-limits) (+ 1 (:max calendar-year-limits))])
           :y-title            "% change" :y-zero      false         :y-scale  false :y-format ".1%"
           :group             :projection         :group-title "Projection"})
         pct-ehcps-summary-plot
