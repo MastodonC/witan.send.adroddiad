@@ -441,7 +441,7 @@
           :tooltip-formatf   (vsl/pct-summary-tooltip {:group :projection :x :calendar-year :tooltip-field :tooltip-column})
           :colors-and-shapes colors-and-shapes
           :x                 :calendar-year      :x-title     "Census Year" :x-format "%b %Y"
-          :x-scale (mapv format-calendar-year [(:min calendar-year-limits) (+ 1 (:max calendar-year-limits))])
+          :x-scale (mapv format-calendar-year [(:min calendar-year-limits) (:max calendar-year-limits)])
           :y-title            "% change" :y-zero      false         :y-scale  false :y-format ".1%"
           :group             :projection         :group-title "Projection"})
         pct-ehcps-summary-plot
@@ -502,7 +502,7 @@
                                                                          :tooltip-field :tooltip-column :decimal-places 2})
                          :colors-and-shapes colors-and-shapes
                          :x                 :calendar-year      :x-title     "Census Year" :x-format "%b %Y"
-                         :x-scale (mapv format-calendar-year [(:min calendar-year-limits) (+ 1 (:max calendar-year-limits))])
+                         :x-scale (mapv format-calendar-year [(:min calendar-year-limits) (:max calendar-year-limits)])
                          :y-title            "£ change (millions)" :y-zero      false         :y-scale  false :y-format ".2f"
                          :group             :projection         :group-title "Projection"})
         cost-pct-diff-plot (line-and-ribbon-and-rule-plot
@@ -518,7 +518,7 @@
                              :tooltip-formatf   (vsl/pct-summary-tooltip {:group :projection :x :calendar-year :tooltip-field :tooltip-column})
                              :colors-and-shapes colors-and-shapes
                              :x                 :calendar-year      :x-title     "Census Year" :x-format "%b %Y"
-                             :x-scale (mapv format-calendar-year [(:min calendar-year-limits) (+ 1 (:max calendar-year-limits))])
+                             :x-scale (mapv format-calendar-year [(:min calendar-year-limits) (:max calendar-year-limits)])
                              :y-title            "% change" :y-zero      false         :y-scale  false :y-format ".1%"
                              :group             :projection         :group-title "Projection"})]
     (-> summary
